@@ -172,7 +172,10 @@ enum PhotoStore {
             kCGImageSourceThumbnailMaxPixelSize: maxPixel,
         ]
         guard let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) else { return nil }
-        let img = UIImage(cgImage: cg)
+        // Decoded once into what the screen draws as it is. A HEIC sticker decodes with straight
+        // (not premultiplied) alpha, which the screen otherwise converts again on every redraw:
+        // scrolling past stickers jittered.
+        let img = UIImage(cgImage: cg).preparingForDisplay() ?? UIImage(cgImage: cg)
         cache.setObject(img, forKey: key)
         return img
     }
