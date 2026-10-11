@@ -1304,13 +1304,18 @@ struct HuntView: View {
         if let focusId, !next.contains(where: { $0.id == focusId }), let pin = searchedPin(focusId, in: snapshot) {
             next.append(pin)
         }
-        // Only what the map can show gets placed on its route: it's the costly part.
+        // The selected vehicle too, while it's still running: a stop picked far down its route
+        // takes the map well away from it, and dropping it there closed the card (#73).
+        if let selectedId, !next.contains(where: { $0.id == selectedId }), let pin = searchedPin(selectedId, in: snapshot) {
+            next.append(pin)
+        }
+        // Only what the map can show, and the selected one, gets placed on its route: it's the costly part.
         var placed: [String: RouteMatch] = [:]
         var coordinates: [String: CLLocationCoordinate2D] = [:]
         if let book = routes.book {
             let now = Date()
             let region = mapRegion
-            for pin in next where region.map({ r in
+            for pin in next where pin.id == selectedId || region.map({ r in
                 abs(pin.vehicle.latitude - r.center.latitude) < r.span.latitudeDelta
                     && abs(pin.vehicle.longitude - r.center.longitude) < r.span.longitudeDelta
             }) ?? true {
