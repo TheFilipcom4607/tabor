@@ -11,6 +11,7 @@ struct MeView: View {
     @State private var showStats = false
     @State private var showWidgetHowTo = false
     @AppStorage(WidgetTip.seenKey) private var widgetTipSeen = false
+    @AppStorage(SupportTip.seenKey) private var supportTipSeen = false
     private let catalog = Fleet.catalog
 
     var body: some View {
@@ -81,12 +82,22 @@ struct MeView: View {
                 .buttonStyle(StickerPressStyle())
                 .padding(.horizontal, 22)
 
+                // One nudge at a time: the widgets first, then (much later) the tips.
                 if !widgetTipSeen, sightings.count >= WidgetTip.afterCatches {
-                    WidgetTipCard {
+                    TipCard(icon: "square.grid.2x2.fill", kicker: "NEW: WIDGETS", title: "Put your book on your Home Screen") {
                         showWidgetHowTo = true
                         widgetTipSeen = true
                     } dismiss: {
                         withAnimation(.snappy) { widgetTipSeen = true }
+                    }
+                    .padding(.top, 18)
+                    .padding(.horizontal, 22)
+                } else if !supportTipSeen, !TipJar.shared.tipped, sightings.count >= SupportTip.afterCatches {
+                    TipCard(icon: "heart.fill", kicker: "ENJOYING TABOR?", title: "Consider supporting it with a tip") {
+                        showSettings = true
+                        supportTipSeen = true
+                    } dismiss: {
+                        withAnimation(.snappy) { supportTipSeen = true }
                     }
                     .padding(.top, 18)
                     .padding(.horizontal, 22)
@@ -462,6 +473,8 @@ struct SettingsSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                // First, so it shows at the sheet's half height (the support tip on ME opens here).
+                TipJarSection()
                 Section {
                     Toggle("Haptics", isOn: $haptics)
                         .onChange(of: haptics) { _, on in if on { Haptics.shared.completed() } }
@@ -555,7 +568,6 @@ struct SettingsSheet: View {
                         Text("District outlines for the badges: © OpenStreetMap contributors.")
                     }
                 }
-                TipJarSection()
                 Section {
                     Button("Home Screen widgets") { showWidgetHowTo = true }
                     Button("Catch from the Lock Screen") { showControlHowTo = true }

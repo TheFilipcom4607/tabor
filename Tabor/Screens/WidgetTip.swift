@@ -14,7 +14,11 @@ enum WidgetTip {
     }
 }
 
-struct WidgetTipCard: View {
+/// A one-line nudge on ME (the widget tip, the support tip): tap to see more, ✕ to never see it again.
+struct TipCard: View {
+    let icon: String
+    let kicker: LocalizedStringKey
+    let title: LocalizedStringKey
     var open: () -> Void
     var dismiss: () -> Void
 
@@ -22,14 +26,14 @@ struct WidgetTipCard: View {
         HStack(spacing: 12) {
             Button(action: open) {
                 HStack(spacing: 11) {
-                    Image(systemName: "square.grid.2x2.fill")
+                    Image(systemName: icon)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Palette.bg)
                         .frame(width: 34, height: 34)
                         .background(Palette.yellow, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                     VStack(alignment: .leading, spacing: 3) {
-                        Mono("NEW: WIDGETS", size: 9.5, weight: 700, spacing: 0.12, color: Palette.yellow)
-                        Text("Put your book on your Home Screen")
+                        Mono(kicker, size: 9.5, weight: 700, spacing: 0.12, color: Palette.yellow)
+                        Text(title)
                             .font(TaborFont.grotesk(13.5, 600))
                             .foregroundStyle(Palette.ink)
                             .lineLimit(1)

@@ -1,6 +1,14 @@
 import StoreKit
 import SwiftUI
 
+/// Once you've caught a fair few, ME asks once whether you'd like to leave a tip: a card that
+/// opens Settings (the tips are at the top) or goes away for good. Never to anyone who has
+/// tipped, and never in the middle of a catch.
+enum SupportTip {
+    static let seenKey = "supportTipSeen"
+    static let afterCatches = 25
+}
+
 /// Settings › Support TABOR: three tips. Any tip unlocks three extra app icons (#62); badges and
 /// everything else stay free.
 struct TipJarSection: View {

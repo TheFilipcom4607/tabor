@@ -1523,6 +1523,16 @@
         }
       }
     },
+    "Consider supporting it with a tip": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wesprzyj go napiwkiem"
+          }
+        }
+      }
+    },
     "Couldn't reach the App Store. Try again later.": {
       "localizations": {
         "pl": {
@@ -2833,6 +2843,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ELEKTRYCZNY"
+          }
+        }
+      }
+    },
+    "ENJOYING TABOR?": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PODOBA CI SIĘ TABOR?"
           }
         }
       }
