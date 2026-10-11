@@ -139,36 +139,33 @@ enum TaborStore {
     /// Stickers are saved as cut (PNG), then swapped for a HEIC copy off the main thread, the
     /// way photos are compacted: after each catch, and at launch for older catches and restored
     /// backups. Each sighting gets its own copy, so deleting one leaves the others whole; a PNG
-    /// goes once nothing points at it.
+    /// goes once nothing points at it. The files are all written first and the book saved once:
+    /// every save redraws whatever shows the book, and a first launch converting a few hundred
+    /// stickers 25 at a time made ME lag for a minute.
     @MainActor static func compactStickers(_ sightings: [Sighting], in context: ModelContext) async {
         let due = Dictionary(grouping: sightings.filter { $0.stickerFile?.hasSuffix(".png") == true }) { $0.stickerFile! }
-        var replaced: [String] = []
-        func flush() {
-            guard !replaced.isEmpty else { return }
-            try? context.save()
-            replaced.forEach(PhotoStore.delete)
-            replaced.removeAll()
-        }
-        for (file, owners) in due {
-            if Task.isCancelled { break }
-            let url = PhotoStore.url(file)
-            guard let small = await Task.detached(priority: .utility, operation: {
-                (try? Data(contentsOf: url)).flatMap { PhotoStore.compactSticker($0) }
-            }).value else { continue }
-            // Deleted, or given another cut meanwhile: leave it be.
-            let still = owners.filter { !$0.isDeleted && $0.modelContext != nil && $0.stickerFile == file }
-            var moved = 0
-            for s in still {
-                guard let name = PhotoStore.save(small, ext: "heic") else { break }
-                s.stickerFile = name
-                moved += 1
+        guard !due.isEmpty else { return }
+        let copies = due.mapValues(\.count)
+        let made = await Task.detached(priority: .utility) {
+            var made: [String: [String]] = [:]
+            for (file, count) in copies {
+                guard let png = try? Data(contentsOf: PhotoStore.url(file)),
+                      let small = PhotoStore.compactSticker(png) else { continue }
+                made[file] = (0..<count).compactMap { _ in PhotoStore.save(small, ext: "heic") }
             }
-            guard moved == still.count, moved > 0 else { continue }
-            replaced.append(file)
-            // In batches: each save redraws whatever shows the book.
-            if replaced.count == 25 { flush() }
+            return made
+        }.value
+        var replaced: [String] = []
+        for (file, names) in made {
+            // Deleted, or given another cut meanwhile: leave it be.
+            let still = due[file, default: []].filter { !$0.isDeleted && $0.modelContext != nil && $0.stickerFile == file }
+            for (s, name) in zip(still, names) { s.stickerFile = name }
+            names.dropFirst(still.count).forEach(PhotoStore.delete)
+            if !still.isEmpty, names.count >= still.count { replaced.append(file) }
         }
-        flush()
+        guard !replaced.isEmpty else { return }
+        try? context.save()
+        replaced.forEach(PhotoStore.delete)
     }
 }
 
