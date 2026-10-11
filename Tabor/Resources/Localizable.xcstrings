@@ -6959,41 +6959,7 @@
         }
       }
     },
-    "caption.sightings.few": {
-      "extractionState": "extracted_with_value",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "sightings"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "obserwacje"
-          }
-        }
-      }
-    },
-    "caption.sightings.many": {
-      "extractionState": "extracted_with_value",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "sightings"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "obserwacji"
-          }
-        }
-      }
-    },
-    "caption.sightings.one": {
+    "caption.sighting": {
       "extractionState": "extracted_with_value",
       "localizations": {
         "en": {
@@ -7204,6 +7170,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "."
+          }
+        }
+      }
+    },
+    "reveal.your.sighting": {
+      "comment": "Reveal tile: your Nth sighting of this vehicle",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "YOUR"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TWOJA"
           }
         }
       }

@@ -136,10 +136,15 @@ struct RevealView: View {
                 if ready, let model, let number {
                     HStack(spacing: 10) {
                         let seen = (existing?.timesSeen ?? 0) + 1
-                        StatTile(label: String(localized: "YOUR", comment: "Reveal tile: your Nth of this model"),
-                                 value: isNewVehicle ? Ordinal.string(modelOwned + added) : "×\(seen)",
+                        // YOUR 12th of 60 for a new vehicle, YOUR 3rd sighting for one you have:
+                        // its own "YOUR", since Polish says TWÓJ 12. but TWOJA 3. obserwacja.
+                        StatTile(label: isNewVehicle ? String(localized: "YOUR", comment: "Reveal tile: your Nth of this model")
+                                     : String(localized: "reveal.your.sighting", defaultValue: "YOUR",
+                                              comment: "Reveal tile: your Nth sighting of this vehicle"),
+                                 value: Ordinal.string(isNewVehicle ? modelOwned + added : seen),
                                  valueColor: Palette.yellow,
-                                 caption: isNewVehicle ? String(localized: "of \(model.fleet)") : PluralCaption.sightings(seen))
+                                 caption: isNewVehicle ? String(localized: "of \(model.fleet)")
+                                     : String(localized: "caption.sighting", defaultValue: "sighting"))
                         StatTile(label: String(localized: "MODEL"), value: isNewModel ? String(localized: "NEW", comment: "Reveal tile: a model new to you") : "\(modelOwned + added)",
                                  valueColor: isNewModel ? Palette.green : Palette.ink,
                                  caption: isNewModel ? String(localized: "species") : String(localized: "of \(model.fleet)"))
@@ -955,14 +960,6 @@ enum PluralCaption {
         case "one": String(localized: "caption.days.one", defaultValue: "day")
         case "few": String(localized: "caption.days.few", defaultValue: "days")
         default: String(localized: "caption.days.many", defaultValue: "days")
-        }
-    }
-
-    static func sightings(_ n: Int) -> String {
-        switch form(n) {
-        case "one": String(localized: "caption.sightings.one", defaultValue: "sighting")
-        case "few": String(localized: "caption.sightings.few", defaultValue: "sightings")
-        default: String(localized: "caption.sightings.many", defaultValue: "sightings")
         }
     }
 }
