@@ -125,7 +125,7 @@ struct MeView: View {
                 .padding(.bottom, 9)
                 .padding(.horizontal, 22)
 
-                SpotMap(sightings: sightings, interactive: false)
+                SpotSnapshot(sightings: sightings)
                     .frame(height: 190)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.06)))
@@ -326,7 +326,7 @@ struct SpotMap: View {
     /// The catch whose card is open. Tapping empty map clears it.
     @State private var selectedId: UUID?
     @Namespace private var mapScope
-    private static let warsaw = MKCoordinateRegion(
+    static let warsaw = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 52.2297, longitude: 21.0122),
         span: MKCoordinateSpan(latitudeDelta: 0.22, longitudeDelta: 0.22))
 
@@ -343,8 +343,12 @@ struct SpotMap: View {
                     let picked = s.id == selectedId
                     Annotation("", coordinate: CLLocationCoordinate2D(latitude: s.latitude!, longitude: s.longitude!)) {
                         ZStack {
-                            Circle().fill(color.opacity(picked ? 0.45 : 0.28)).frame(width: picked ? 34 : 22, height: picked ? 34 : 22)
-                                .blur(radius: 4)
+                            // A soft glow drawn as a gradient: a blur on each of a few hundred pins
+                            // made the map lag whenever it moved.
+                            Circle()
+                                .fill(RadialGradient(colors: [color.opacity(picked ? 0.5 : 0.35), color.opacity(0)],
+                                                     center: .center, startRadius: 0, endRadius: picked ? 20 : 13))
+                                .frame(width: picked ? 40 : 26, height: picked ? 40 : 26)
                             Circle().fill(color).frame(width: picked ? 13 : 7, height: picked ? 13 : 7)
                                 .overlay(Circle().stroke(picked ? Palette.ink : Palette.bg.opacity(0.8), lineWidth: 2))
                         }
@@ -379,6 +383,102 @@ struct SpotMap: View {
         .mapScope(mapScope)
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: selectedId)
         .onChange(of: selectedId) { _, id in if id != nil { Haptics.shared.tick() } }
+    }
+}
+
+/// ME's map of where you've caught things: a still picture of the map with your catches drawn
+/// on it. A live map in the scrolling page lagged it by a frame and wobbled; a picture scrolls
+/// with the page. Tapping it opens the real one.
+private struct SpotSnapshot: View {
+    let sightings: [Sighting]
+    @State private var image: UIImage?
+    @Environment(\.displayScale) private var scale
+
+    private struct Pin: Hashable {
+        let latitude: Double
+        let longitude: Double
+        let tier: Tier
+    }
+
+    /// What the picture shows: redrawn when a catch or the size changes.
+    private struct Request: Hashable {
+        let width: Double
+        let height: Double
+        let pins: [Pin]
+    }
+
+    var body: some View {
+        // The full map's pins: one for a coupled pair.
+        let pins = sightings.compactMap { s -> Pin? in
+            guard s.pairedWith == nil, let lat = s.latitude, let lon = s.longitude else { return nil }
+            return Pin(latitude: lat, longitude: lon, tier: Fleet.catalog.model(id: s.modelId)?.tier ?? .common)
+        }
+        GeometryReader { geo in
+            ZStack {
+                Palette.card
+                if let image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .transition(.opacity)
+                }
+            }
+            .task(id: Request(width: geo.size.width, height: geo.size.height, pins: pins)) {
+                let drawn = await Self.render(pins, size: geo.size, scale: scale)
+                withAnimation(.easeOut(duration: 0.25)) { image = drawn ?? image }
+            }
+        }
+        .accessibilityLabel("Map of where you've caught vehicles")
+    }
+
+    private static func render(_ pins: [Pin], size: CGSize, scale: CGFloat) async -> UIImage? {
+        guard size.width > 0, size.height > 0 else { return nil }
+        let options = MKMapSnapshotter.Options()
+        options.region = region(fitting: pins)
+        options.size = size
+        options.traitCollection = UITraitCollection {
+            $0.userInterfaceStyle = .dark
+            $0.displayScale = scale
+        }
+        let map = MKStandardMapConfiguration(elevationStyle: .flat, emphasisStyle: .muted)
+        map.pointOfInterestFilter = .excludingAll
+        options.preferredConfiguration = map
+        guard let snapshot = try? await MKMapSnapshotter(options: options).start() else { return nil }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = scale
+        return UIGraphicsImageRenderer(size: size, format: format).image { ctx in
+            snapshot.image.draw(at: .zero)
+            let cg = ctx.cgContext
+            let edge = UIColor(Palette.bg).withAlphaComponent(0.8).cgColor
+            // As the full map draws them: a glow, then a dot with a dark edge.
+            for pin in pins {
+                let p = snapshot.point(for: CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude))
+                let color = UIColor(pin.tier.mapColor)
+                let glow = [color.withAlphaComponent(0.35).cgColor, color.withAlphaComponent(0).cgColor] as CFArray
+                if let gradient = CGGradient(colorsSpace: nil, colors: glow, locations: [0, 1]) {
+                    cg.drawRadialGradient(gradient, startCenter: p, startRadius: 0, endCenter: p, endRadius: 13, options: [])
+                }
+                let dot = CGRect(x: p.x - 3.5, y: p.y - 3.5, width: 7, height: 7)
+                cg.setFillColor(color.cgColor)
+                cg.fillEllipse(in: dot)
+                cg.setStrokeColor(edge)
+                cg.setLineWidth(2)
+                cg.strokeEllipse(in: dot)
+            }
+        }
+    }
+
+    /// Every catch with room round the edge, as the live map's automatic view does.
+    private static func region(fitting pins: [Pin]) -> MKCoordinateRegion {
+        guard let first = pins.first else { return SpotMap.warsaw }
+        var lat = (first.latitude, first.latitude), lon = (first.longitude, first.longitude)
+        for p in pins {
+            lat = (min(lat.0, p.latitude), max(lat.1, p.latitude))
+            lon = (min(lon.0, p.longitude), max(lon.1, p.longitude))
+        }
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: (lat.0 + lat.1) / 2, longitude: (lon.0 + lon.1) / 2),
+            span: MKCoordinateSpan(latitudeDelta: max((lat.1 - lat.0) * 1.3, 0.01),
+                                   longitudeDelta: max((lon.1 - lon.0) * 1.3, 0.01)))
     }
 }
 
