@@ -209,6 +209,8 @@ struct RootView: View {
         }
         .task { await FleetUpdater.checkIfDue() }
         .task { TipJar.shared.start() }
+        // Stickers from before they were kept as HEIC, or from a restored backup.
+        .task { await TaborStore.compactStickers(sightings, in: context) }
         // Badges: celebrate anything newly earned, and fill in weather for the weather ones.
         // A catch saves several times in its first seconds (photo, sticker, place, weather):
         // let it settle, then work the rules out off the main thread, which animates the book.

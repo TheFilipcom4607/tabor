@@ -78,6 +78,20 @@ enum PhotoStore {
         return out.length < data.count ? out as Data : nil
     }
 
+    /// A sticker as stored: cut as PNG for its see-through edge, which runs to 0.5–2 MB, while
+    /// HEIC keeps the edge too at about a tenth of that. 0.75, not the photos'
+    /// 0.6: at 100% the white border's edge and the livery can't be told from the PNG.
+    /// Nil if it can't be re-encoded or wouldn't be smaller.
+    static func compactSticker(_ png: Data, quality: Double = 0.75) -> Data? {
+        guard let src = CGImageSourceCreateWithData(png as CFData, nil),
+              let image = CGImageSourceCreateImageAtIndex(src, 0, nil) else { return nil }
+        let out = NSMutableData()
+        guard let dest = CGImageDestinationCreateWithData(out, UTType.heic.identifier as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(dest, image, [kCGImageDestinationLossyCompressionQuality: quality] as CFDictionary)
+        guard CGImageDestinationFinalize(dest) else { return nil }
+        return out.length < png.count ? out as Data : nil
+    }
+
     /// "heic" for the book's own copies and imports shot on an iPhone, "jpg" for other shots — so shared
     /// files open everywhere with the right type.
     static func fileExtension(of data: Data) -> String {

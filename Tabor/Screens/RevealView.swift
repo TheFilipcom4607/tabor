@@ -855,6 +855,9 @@ struct RevealView: View {
                 replaced.forEach(PhotoStore.delete)
             }
         }
+        // Stickers the same way: as cut (PNG) for now, HEIC once it's re-encoded.
+        let stickered = cars
+        Task { @MainActor in await TaborStore.compactStickers(stickered, in: context) }
         // After the reveal, never during it: the Photos permission prompt may appear here.
         if draft.fromCamera, saveToGallery {
             let data = draft.photo
@@ -869,6 +872,7 @@ struct RevealView: View {
                     car.stickerFile = PhotoStore.save(png, ext: "png")
                 }
                 try? context.save()
+                await TaborStore.compactStickers(shot, in: context)
             }
         }
         if let tagTask = draft.geotag {
