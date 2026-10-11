@@ -3418,6 +3418,16 @@
         }
       }
     },
+    "Hides the stops": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ukrywa przystanki"
+          }
+        }
+      }
+    },
     "High floor": {
       "localizations": {
         "pl": {
@@ -4273,6 +4283,17 @@
         }
       }
     },
+    "NOW": {
+      "comment": "HUNT stop list: the vehicle is at this stop",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TERAZ"
+          }
+        }
+      }
+    },
     "NUMBER": {
       "comment": "Sort stickers by",
       "localizations": {
@@ -4991,6 +5012,17 @@
         }
       }
     },
+    "ROUTE": {
+      "comment": "HUNT card: the selected vehicle's whole run",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TRASA"
+          }
+        }
+      }
+    },
     "RUNNING RIGHT HERE NOW": {
       "localizations": {
         "pl": {
@@ -5528,6 +5560,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pokaż wprowadzenie ponownie"
+          }
+        }
+      }
+    },
+    "Shows every stop to the end of its run": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pokazuje wszystkie przystanki do końca kursu"
+          }
+        }
+      }
+    },
+    "Shows the stop on the map": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pokazuje przystanek na mapie"
           }
         }
       }
@@ -6692,6 +6744,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "TWOJE OBSERWACJE"
+          }
+        }
+      }
+    },
+    "YOUR STOP": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TWÓJ PRZYSTANEK"
           }
         }
       }
@@ -9388,6 +9450,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Coś nie działa albo autobus rozpoznany źle? Napisz do mnie:"
+          }
+        }
+      }
+    },
+    "→ %@": {
+      "comment": "HUNT card: where the run ends",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "→ %@"
           }
         }
       }

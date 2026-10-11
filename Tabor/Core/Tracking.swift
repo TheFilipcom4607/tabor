@@ -28,24 +28,16 @@ public struct TrackPlan: Sendable {
     /// you somewhere ahead (as `RouteMatch.motion` decides COMING).
     public static func make(match: RouteMatch, lat: Double, lon: Double, near: Double = 150) -> TrackPlan? {
         let shape = match.shape
-        let here = match.coordinate
-        let straight = Geo.km((lat, lon), (here.latitude, here.longitude)) * 1000
-        let horizon = min(match.along + straight * 2 + 300, shape.length)
-        guard horizon > match.along,
-              let fit = shape.project((lat, lon), in: match.along...horizon),
-              fit.offset <= near, fit.along > match.along + 20 else { return nil }
-
-        let ahead = shape.stops.filter { $0.along > match.along + 15 }
-        let yours = ahead.min { abs($0.along - fit.along) < abs($1.along - fit.along) }
-            .flatMap { abs($0.along - fit.along) <= stopReach ? $0 : nil }
-        let targetAlong = yours?.along ?? fit.along
-        let target = yours.map { ($0.latitude, $0.longitude) } ?? shape.coordinate(at: fit.along)
+        guard let (yours, fit) = match.yourStop(lat: lat, lon: lon, near: near) else { return nil }
+        let targetAlong = yours?.along ?? fit
+        let target = yours.map { ($0.latitude, $0.longitude) } ?? shape.coordinate(at: fit)
 
         let from = max(0, match.along - margin), to = min(shape.length, targetAlong + margin)
         return TrackPlan(
-            stop: yours?.name, target: target, distance: targetAlong - match.along,
-            stops: ahead.filter { $0.along <= targetAlong + 1 }.count,
-            at: shape.stops.last { $0.along <= match.along + 15 }?.name,
+            // With its platform: the one to wait at.
+            stop: yours?.label, target: target, distance: targetAlong - match.along,
+            stops: match.remaining.filter { $0.along <= targetAlong + 1 }.count,
+            at: match.lastStop?.name,
             path: shape.path(from: from, to: to),
             pathStops: shape.stops.filter { $0.along >= from && $0.along <= to })
     }

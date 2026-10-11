@@ -138,14 +138,16 @@ public struct RouteBook: Sendable {
         let stops: [StopRow]
     }
 
-    /// `[name, lat, lon, metres along]`: an array keeps the file small.
-    private struct StopRow: Decodable {
+    /// `[name, lat, lon, metres along, number]`: an array keeps the file small. The number came
+    /// later and is left out where a stop has none (a depot's), so it's read only if it's there.
+    struct StopRow: Decodable {
         let stop: RouteStop
 
         init(from decoder: Decoder) throws {
             var c = try decoder.unkeyedContainer()
             stop = RouteStop(name: try c.decode(String.self), latitude: try c.decode(Double.self),
-                             longitude: try c.decode(Double.self), along: try c.decode(Double.self))
+                             longitude: try c.decode(Double.self), along: try c.decode(Double.self),
+                             code: c.isAtEnd ? nil : try c.decode(String.self))
         }
     }
 }
@@ -156,13 +158,20 @@ public struct RouteStop: Sendable, Hashable {
     public let longitude: Double
     /// Metres from the start of its shape.
     public let along: Double
+    /// Which of the stop's platforms ("06" in "Centrum 06"): a big stop has a dozen, often on
+    /// different streets.
+    public let code: String?
 
-    public init(name: String, latitude: Double, longitude: Double, along: Double) {
+    public init(name: String, latitude: Double, longitude: Double, along: Double, code: String? = nil) {
         self.name = name
         self.latitude = latitude
         self.longitude = longitude
         self.along = along
+        self.code = code
     }
+
+    /// The name with its platform, as on the stop's own sign: "Centrum 06".
+    public var label: String { code.map { "\(name) \($0)" } ?? name }
 }
 
 /// One way a line runs: its street path and stops, in order.
@@ -376,6 +385,28 @@ public struct RouteMatch: Sendable {
     public func upcoming(stops count: Int = 4) -> (stops: [RouteStop], path: [(latitude: Double, longitude: Double)]) {
         let next = Array(shape.stops.filter { $0.along > along + 15 }.prefix(count))
         return (next, shape.path(from: along, to: next.last?.along ?? shape.length))
+    }
+
+    /// Every stop left on its run, to the last.
+    public var remaining: [RouteStop] { shape.stops.filter { $0.along > along + 15 } }
+
+    /// The stop it's standing at or last passed.
+    public var lastStop: RouteStop? { shape.stops.last { $0.along <= along + 15 } }
+
+    /// The stop you'd wait at for it: on its route ahead, within `near` metres of where the
+    /// route passes you, and within `TrackPlan.stopReach` of that point along the route. Nil
+    /// when its route doesn't come your way, or passes you between stops. `fit` is where it
+    /// passes you, metres along the shape.
+    public func yourStop(lat: Double, lon: Double, near: Double = 150) -> (stop: RouteStop?, fit: Double)? {
+        let here = coordinate
+        let straight = Geo.km((lat, lon), (here.latitude, here.longitude)) * 1000
+        let horizon = min(along + straight * 2 + 300, shape.length)
+        guard horizon > along,
+              let fit = shape.project((lat, lon), in: along...horizon),
+              fit.offset <= near, fit.along > along + 20 else { return nil }
+        let stop = remaining.min { abs($0.along - fit.along) < abs($1.along - fit.along) }
+            .flatMap { abs($0.along - fit.along) <= TrackPlan.stopReach ? $0 : nil }
+        return (stop, fit.along)
     }
 
     /// Slid forward along the route by `seconds` at its recent speed: where it probably is

@@ -1202,6 +1202,27 @@ private func drive(from lon0: Double, step: Double, fixes: Int, lat: Double = ro
     #expect(RouteMatch(shape: eastbound, along: eastbound.stops[1].along, speed: 0).upcoming(stops: 1).stops.first?.name == "east30")
 }
 
+@Test func routeMatchListsEveryStopLeft() {
+    let m = RouteMatch(shape: eastbound, along: eastbound.stops[1].along, speed: 0)
+    // Standing at the second stop: it's the last one passed, and the rest are to come.
+    #expect(m.lastStop?.name == "east20")
+    #expect(m.remaining.map(\.name) == ["east30", "east40", "east50", "east60"])
+    #expect(RouteMatch(shape: eastbound, along: 10, speed: 0).lastStop == nil)
+    #expect(RouteMatch(shape: eastbound, along: eastbound.length, speed: 0).remaining.isEmpty)
+}
+
+@Test func routeMatchFindsYourStop() throws {
+    let m = RouteMatch(shape: eastbound, along: 100, speed: 8)
+    // Just off the street by the third stop.
+    let yours = try #require(m.yourStop(lat: routeLat + 0.0004, lon: 21.0151))
+    #expect(yours.stop?.name == "east30")
+    // A little past the midpoint between two stops: the nearer one.
+    #expect(m.yourStop(lat: routeLat, lon: 21.0080)?.stop?.name == "east20")
+    // Off the route, or behind it.
+    #expect(m.yourStop(lat: routeLat + 0.005, lon: 21.02) == nil)
+    #expect(RouteMatch(shape: eastbound, along: 700, speed: 8).yourStop(lat: routeLat, lon: 21.002) == nil)
+}
+
 @Test func routeMatchSaysWhenItTurnsOffBeforeYou() {
     // You stand on the street, 700 m ahead; the bus is heading straight for you.
     let you = (lat: routeLat, lon: 21.025)
@@ -1223,7 +1244,7 @@ private func drive(from lon0: Double, step: Double, fixes: Int, lat: Double = ro
     let json = """
     {"feed":"schedule_test","built":"2026-09-28","lines":{"175":{"kind":"BUS","shapes":[
       {"id":"1","trips":3,"path":"\(Polyline.encode(street(lat: routeLat, from: 21.0, to: 21.01)))",
-       "stops":[["Centrum",52.23,21.005,342]]}]},
+       "stops":[["Centrum",52.23,21.005,342,"06"],["Zajezdnia Woronicza",52.23,21.009,610]]}]},
       "9":{"kind":"TRAM","shapes":[]},"X":{"kind":"BOAT","shapes":[]}}}
     """
     let book = try RouteBook(json: Data(json.utf8))
@@ -1231,6 +1252,9 @@ private func drive(from lon0: Double, step: Double, fixes: Int, lat: Double = ro
     #expect(book.lineCount == 2)
     let s = book.shapes(line: "175", kind: .bus)
     #expect(s.count == 1 && s[0].stops.first?.name == "Centrum")
+    // The platform number, where the file has one; older files and depots have none.
+    #expect(s[0].stops.map(\.label) == ["Centrum 06", "Zajezdnia Woronicza"])
+    #expect(s[0].stops.map(\.code) == ["06", nil])
     // Metres along agree with the script's (both haversine), within a metre.
     #expect(abs(s[0].project((52.23, 21.005))!.along - 342) < 1.5)
 }

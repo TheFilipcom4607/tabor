@@ -69,6 +69,12 @@ struct HuntView: View {
     @State private var following = false
     /// A small bubble you tapped: its vehicles, listed so you can pick one.
     @State private var openGroup: [String]?
+    /// The selected vehicle's whole run, stop by stop, on the card and the map.
+    @State private var routeOpen = false
+    /// Where the card starts and the map ends, in points from the top: what's left of the map
+    /// between the header and the card is where things are shown.
+    @State private var cardTop: CGFloat?
+    @State private var mapBottom: CGFloat?
     /// What the map is showing: pins cover it, however far you zoom out.
     @State private var mapRegion: MKCoordinateRegion?
     /// The map's rotation, for your dot and the pins' arrows. Not state of this view: it changes
@@ -103,6 +109,7 @@ struct HuntView: View {
         ZStack(alignment: .top) {
             map(onMap(shown))
                 .ignoresSafeArea()
+                .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { mapBottom = $0 }
 
             LinearGradient(colors: [Palette.bg.opacity(0.85), Palette.bg.opacity(0)], startPoint: .top, endPoint: .bottom)
                 .frame(height: picked.isEmpty ? 150 : 196)
@@ -138,6 +145,7 @@ struct HuntView: View {
                 bottomCard(shown: shown, selected: selected)
                     .padding(.horizontal, 14)
                     .padding(.bottom, 10)
+                    .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { cardTop = $0 }
             }
             .animation(.snappy, value: offDefaultView)
             .animation(.snappy, value: facing)
@@ -190,7 +198,10 @@ struct HuntView: View {
             recompute(animated: false)
         }
         // A searched vehicle stays on the map only while it's the one selected.
-        .onChange(of: selectedId) { if selectedId != focusId, pendingFocus == nil { focusId = nil } }
+        .onChange(of: selectedId) {
+            if selectedId != focusId, pendingFocus == nil { focusId = nil }
+            routeOpen = false
+        }
         // Caught vehicles are only fetched for the ALL view.
         .onChange(of: filter) { recompute(animated: false) }
         // SHOW ON MAP in the book: go to where that model is running, not the 3 km around you.
@@ -241,30 +252,44 @@ struct HuntView: View {
                         .stroke(pin.accent.opacity(0.25 + 0.75 * Double(i + 1) / Double(path.count - 1)),
                                 style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
                 }
-                // Where it goes next: a dotted line along its route to the next few stops,
-                // fainter the further ahead, and lighter than the solid trail behind it since
-                // it's a forecast. Stops are white beads, as on a transit map, so they don't
-                // read as more of the dots.
+                // Where it goes next: a dotted line along its route to the next few stops (to
+                // the end of its run with the route open), fainter the further ahead, and
+                // lighter than the solid trail behind it since it's a forecast. Stops are white
+                // beads, as on a transit map, so they don't read as more of the dots.
                 if let now {
-                    let ahead = now.upcoming(stops: 4)
-                    let legs = legs(of: now, to: ahead.stops)
+                    let ahead = routeOpen ? now.remaining : now.upcoming(stops: 4).stops
+                    let yours = yourStop(now)
+                    // Zoomed in far enough that names don't pile up: each bead says which stop
+                    // (and which of its platforms) it is.
+                    let named = (mapRegion?.span.longitudeDelta ?? 1) < Self.stopNameSpan
+                    let legs = legs(of: now, to: ahead)
                     ForEach(legs.indices, id: \.self) { i in
                         MapPolyline(coordinates: legs[i])
                             .stroke(pin.accent.opacity(Self.aheadOpacity(i)),
                                     style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round, dash: [0.01, 5.5]))
                     }
                     // On the line rather than at the platform, a few metres off it.
-                    ForEach(Array(ahead.stops.enumerated()), id: \.offset) { i, stop in
-                        Annotation(stop.name, coordinate: CLLocationCoordinate2D(now.shape.coordinate(at: stop.along)),
+                    ForEach(Array(ahead.enumerated()), id: \.offset) { i, stop in
+                        Annotation(stop.label, coordinate: CLLocationCoordinate2D(now.shape.coordinate(at: stop.along)),
                                    anchor: .center) {
                             // The last stop of its run: a square, like a line's end on a transit map.
                             let terminus = now.end != nil && stop == now.shape.stops.last
                             RoundedRectangle(cornerRadius: terminus ? 2 : 3.5, style: .continuous)
-                                .fill(Palette.ink)
+                                .fill(stop == yours ? Palette.yellow : Palette.ink)
                                 .overlay(RoundedRectangle(cornerRadius: terminus ? 2 : 3.5, style: .continuous)
                                     .strokeBorder(Palette.bg, lineWidth: 1.5))
                                 .frame(width: terminus ? 9 : 7, height: terminus ? 9 : 7)
-                                .opacity(terminus ? 1 : Self.aheadOpacity(i))
+                                .opacity(terminus || stop == yours ? 1 : Self.aheadOpacity(i))
+                                // Beside the bead, so the bead stays on the line.
+                                .overlay(alignment: .leading) {
+                                    if named {
+                                        StopName(text: stop.label, accent: stop == yours ? Palette.yellow : pin.accent)
+                                            .fixedSize()
+                                            .offset(x: terminus ? 15 : 13)
+                                            .transition(.opacity)
+                                    }
+                                }
+                                .animation(.easeInOut(duration: 0.2), value: named)
                                 .accessibilityHidden(true)
                         }
                         .annotationTitles(.hidden)
@@ -354,10 +379,76 @@ struct HuntView: View {
     /// the open part above it. North-up, so latitude runs up the screen.
     private func region(showing coordinate: CLLocationCoordinate2D) -> MKCoordinateRegion? {
         guard let span = mapRegion?.span else { return nil }
-        return MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: coordinate.latitude - span.latitudeDelta * 0.15,
+        // With the route open the card covers more: the middle of what's left.
+        let middle = routeOpen ? openPart.middle : 0.35
+        return MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: coordinate.latitude - span.latitudeDelta * (0.5 - middle),
                                                                  longitude: coordinate.longitude),
                                   span: span)
     }
+
+    /// The part of the map between the header and the map buttons over the card, as fractions
+    /// of its height from the top.
+    private var openPart: (top: Double, bottom: Double, middle: Double) {
+        let top = targets.isEmpty ? 0.19 : 0.24
+        guard let cardTop, let mapBottom, mapBottom > 0 else { return (top, 0.5, (top + 0.5) / 2) }
+        // The row of map buttons (FOLLOW, 3 KM, the globe) stands on the card.
+        let bottom = min(max((cardTop - 56) / mapBottom, top + 0.1), 0.9)
+        return (top, bottom, (top + bottom) / 2)
+    }
+
+    /// A region with `points` in the open part of the map, no closer than `minSpan` degrees of
+    /// latitude. North-up; the span keeps the map's own shape, so MapKit takes it as it is.
+    private func region(fitting points: [(latitude: Double, longitude: Double)], minSpan: Double) -> MKCoordinateRegion? {
+        guard let current = mapRegion, !points.isEmpty else { return nil }
+        let lats = points.map(\.latitude), lons = points.map(\.longitude)
+        let midLat = (lats.min()! + lats.max()!) / 2, midLon = (lons.min()! + lons.max()!) / 2
+        let k = cos(midLat * .pi / 180)
+        // Width over height, in metres.
+        let shape = current.span.longitudeDelta * k / current.span.latitudeDelta
+        let open = openPart
+        // Room to spare: a pin's tag stands above its point.
+        let tall = (lats.max()! - lats.min()!) * 1.35 / (open.bottom - open.top)
+        let wide = (lons.max()! - lons.min()!) * k * 1.2 / shape
+        let lat = max(tall, wide, minSpan)
+        return MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: midLat - (0.5 - open.middle) * lat, longitude: midLon),
+                                  span: MKCoordinateSpan(latitudeDelta: lat, longitudeDelta: lat * shape / k))
+    }
+
+    /// Opens or closes the selected vehicle's whole run. Open, the map pulls back to show all of
+    /// it above the taller card; closed, it goes back to following the vehicle.
+    private func toggleRoute(_ pin: WantedPin) {
+        Haptics.shared.tick()
+        withAnimation(.snappy) { routeOpen.toggle() }
+        guard routeOpen else { return follow(pin) }
+        following = false
+        // Once the card has grown, so the open part is measured with it.
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(80))
+            guard routeOpen, let now = creeping(pin),
+                  let region = region(fitting: [now.coordinate] + now.shape.path(from: now.along, to: now.shape.length),
+                                      minSpan: Self.stopSpan) else { return }
+            withAnimation(.easeInOut(duration: 0.7)) { position = .region(region) }
+        }
+    }
+
+    /// A stop picked on the card: close enough on the map to read its name.
+    private func show(stop: RouteStop) {
+        Haptics.shared.tick()
+        following = false
+        guard let region = region(fitting: [(stop.latitude, stop.longitude)], minSpan: Self.stopSpan) else { return }
+        withAnimation(.easeInOut(duration: 0.6)) { position = .region(region) }
+    }
+
+    /// Where you'd wait for it, when its route comes past you.
+    private func yourStop(_ match: RouteMatch) -> RouteStop? {
+        guard let here else { return nil }
+        return match.yourStop(lat: here.latitude, lon: here.longitude)?.stop
+    }
+
+    /// Stop names show on the map below this span (degrees of longitude, about 1 km across).
+    private static let stopNameSpan = 0.015
+    /// A stop shown on its own: a few streets, close enough for the names (degrees of latitude).
+    private static let stopSpan = 0.008
 
     /// Glide to a vehicle, keeping the zoom, and keep it in view from now on.
     private func follow(_ pin: WantedPin) {
@@ -720,6 +811,10 @@ struct HuntView: View {
                         showDistance: hasFix, motion: motion(of: selected),
                         nextStops: creeping(selected)?.upcoming(stops: 3).stops.map(\.name) ?? [],
                         ending: creeping(selected)?.ending(within: 3),
+                        route: creeping(selected).map { PinCard.Route(match: $0, yours: yourStop($0)) },
+                        routeOpen: routeOpen,
+                        onRoute: { toggleRoute(selected) },
+                        onStop: show(stop:),
                         track: trackButton(selected),
                         onOpen: {
                             if selected.kind == .caught {
@@ -1550,6 +1645,102 @@ private struct Triangle: Shape {
     }
 }
 
+/// A selected vehicle's run, stop by stop, drawn like a line on a transit map: the stop it's
+/// at or just passed, faded, then every stop to the end, yours marked. Each stop with its
+/// platform ("Centrum 06"), so you can tell whether you're waiting on the right side.
+private struct StopList: View {
+    let route: PinCard.Route
+    let accent: Color
+    let onStop: (RouteStop) -> Void
+
+    private struct Row: Identifiable {
+        let stop: RouteStop
+        let passed: Bool
+        var id: Double { stop.along }
+    }
+
+    private static let rowHeight: CGFloat = 28
+
+    var body: some View {
+        let rows = (route.last.map { [Row(stop: $0, passed: true)] } ?? []) + route.ahead.map { Row(stop: $0, passed: false) }
+        ScrollViewReader { reader in
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
+                        Button { onStop(row.stop) } label: { line(row, first: i == 0, last: i == rows.count - 1) }
+                            .buttonStyle(.plain)
+                            .id(row.id)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+            // Four and a bit stops at a time: the map above keeps room to show the route.
+            .frame(height: min(CGFloat(rows.count) * Self.rowHeight, Self.rowHeight * 4.5))
+            .onAppear {
+                // Yours, a couple of rows down from the top so the stops before it show too.
+                guard let yours = route.yours,
+                      let i = rows.firstIndex(where: { $0.stop == yours }), i > 3 else { return }
+                reader.scrollTo(rows[i - 2].id, anchor: .top)
+            }
+        }
+    }
+
+    private func line(_ row: Row, first: Bool, last: Bool) -> some View {
+        let yours = row.stop == route.yours
+        let terminus = last && route.end != nil
+        return HStack(spacing: 10) {
+            // The line through the stops, the bead on it.
+            ZStack {
+                VStack(spacing: 0) {
+                    Rectangle().fill(first ? .clear : accent.opacity(row.passed ? 0.25 : 0.5))
+                    Rectangle().fill(last ? .clear : accent.opacity(0.5))
+                }
+                .frame(width: 2)
+                RoundedRectangle(cornerRadius: terminus ? 2 : 4.5, style: .continuous)
+                    .fill(yours ? Palette.yellow : row.passed ? Palette.faint : Palette.ink)
+                    .overlay(RoundedRectangle(cornerRadius: terminus ? 2 : 4.5, style: .continuous)
+                        .strokeBorder(Palette.card, lineWidth: 2))
+                    .frame(width: yours || terminus ? 11 : 9, height: yours || terminus ? 11 : 9)
+            }
+            .frame(width: 14)
+            Text(row.stop.label)
+                .font(TaborFont.grotesk(13.5, yours ? 600 : 500))
+                .foregroundStyle(yours ? Palette.yellow : row.passed ? Palette.faint : Palette.routeInk)
+                .lineLimit(1)
+            Spacer(minLength: 6)
+            if row.passed {
+                if route.atLast { Mono("NOW", size: 9.5, weight: 700, spacing: 0.12, color: accent) }
+            } else if yours {
+                Mono("YOUR STOP", size: 9.5, weight: 700, spacing: 0.12, color: Palette.yellow)
+            } else if terminus, let end = route.end {
+                Image(systemName: end.symbol)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Palette.sub)
+            }
+        }
+        .frame(height: Self.rowHeight)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Shows the stop on the map")
+    }
+}
+
+/// A stop's name beside its bead on the map, once zoomed in.
+private struct StopName: View {
+    let text: String
+    let accent: Color
+
+    var body: some View {
+        Text(text)
+            .font(TaborFont.grotesk(11, 600))
+            .foregroundStyle(Palette.ink)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Palette.bg.opacity(0.85), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(accent.opacity(0.7), lineWidth: 1))
+    }
+}
+
 private struct PinCard: View {
     let pin: WantedPin
     let owned: Int
@@ -1562,11 +1753,37 @@ private struct PinCard: View {
     let nextStops: [String]
     /// Its route ends within those stops, or it's at the last one.
     let ending: (end: RouteEnd, arrived: Bool)?
+    /// Its whole run from here, for the stop list.
+    let route: Route?
+    let routeOpen: Bool
+    let onRoute: () -> Void
+    /// A stop tapped in the list: shown on the map.
+    let onStop: (RouteStop) -> Void
     /// Follow it on the Lock Screen (#42).
     let track: Track
     let onOpen: () -> Void
     /// Why TRACK is greyed out, shown for a few seconds after tapping it.
     @State private var trackHint: String?
+
+    /// The stop list's rows: where it is, every stop left, and yours among them.
+    struct Route {
+        /// At or last passed.
+        let last: RouteStop?
+        let ahead: [RouteStop]
+        let yours: RouteStop?
+        /// The run ends at the last stop (rather than the street's shape just stopping there).
+        let end: RouteEnd?
+        /// Standing at `last` rather than between it and the next.
+        let atLast: Bool
+
+        init(match: RouteMatch, yours: RouteStop?) {
+            last = match.lastStop
+            ahead = match.remaining
+            self.yours = yours
+            end = match.end
+            atLast = last.map { match.along - $0.along <= 15 } ?? false
+        }
+    }
 
     struct Track {
         enum State: Equatable {
@@ -1634,35 +1851,65 @@ private struct PinCard: View {
                 }
                 .animation(.easeInOut(duration: 0.3), value: motionLine.text)
             }
-            if let route = routeLine {
-                HStack(alignment: .firstTextBaseline, spacing: 7) {
-                    if let label = route.label {
-                        Mono(label, size: 10, weight: 700, spacing: 0.12, color: pin.accent)
-                    } else if let symbol = route.symbol {
-                        Image(systemName: symbol)
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(pin.accent)
+            if let line = routeLine {
+                // Tapping it opens the whole run, stop by stop.
+                let opens = !(route?.ahead.isEmpty ?? true)
+                Button(action: onRoute) {
+                    HStack(alignment: .firstTextBaseline, spacing: 7) {
+                        if routeOpen, let terminus = route?.ahead.last {
+                            Mono("ROUTE", size: 10, weight: 700, spacing: 0.12, color: pin.accent)
+                            Text("→ \(terminus.name)")
+                                .font(TaborFont.grotesk(13, 500))
+                                .foregroundStyle(Palette.routeInk)
+                                .lineLimit(1)
+                        } else {
+                            if let label = line.label {
+                                Mono(label, size: 10, weight: 700, spacing: 0.12, color: pin.accent)
+                            } else if let symbol = line.symbol {
+                                Image(systemName: symbol)
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(pin.accent)
+                            }
+                            line.text
+                                .font(TaborFont.grotesk(13, 500))
+                                .foregroundStyle(Palette.routeInk)
+                                .lineLimit(1)
+                                .contentTransition(.opacity)
+                        }
+                        Spacer(minLength: 4)
+                        if opens {
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(Palette.sub)
+                                .rotationEffect(.degrees(routeOpen ? 180 : 0))
+                        }
                     }
-                    route.text
-                        .font(TaborFont.grotesk(13, 500))
-                        .foregroundStyle(Palette.routeInk)
-                        .lineLimit(1)
-                        .contentTransition(.opacity)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .disabled(!opens)
                 .animation(.easeInOut(duration: 0.3), value: nextStops)
                 .accessibilityElement(children: .combine)
-            }
-            Group {
-                if let mine {
-                    Text("In your book since \(mine.firstSeen.formatted(.dateTime.day().month())) · seen \(mine.timesSeen)×")
-                } else if pin.kind == .newModel {
-                    Text("Not in your book yet — catching it opens a new page.")
-                } else {
-                    Text("You have \(owned) of \(pin.model.fleet). This one isn't among them.")
+                .accessibilityHint(!opens ? Text(verbatim: "") : routeOpen ? Text("Hides the stops") : Text("Shows every stop to the end of its run"))
+                if routeOpen, let route, !route.ahead.isEmpty {
+                    StopList(route: route, accent: pin.accent, onStop: onStop)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
+            // With the route open the map needs the room more than this line does.
+            if !routeOpen {
+                Group {
+                    if let mine {
+                        Text("In your book since \(mine.firstSeen.formatted(.dateTime.day().month())) · seen \(mine.timesSeen)×")
+                    } else if pin.kind == .newModel {
+                        Text("Not in your book yet — catching it opens a new page.")
+                    } else {
+                        Text("You have \(owned) of \(pin.model.fleet). This one isn't among them.")
+                    }
+                }
                 .font(TaborFont.grotesk(13))
                 .foregroundStyle(pin.kind == .newModel ? Palette.greenInk : Palette.sub)
+            }
             HStack(spacing: 8) {
                 Button(action: onOpen) {
                     HStack(spacing: 6) {

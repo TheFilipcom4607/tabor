@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Build build/routes.json (and routes.json.gz, for upload_routes.sh) from ZTM's official GTFS (https://gtfs.ztm.waw.pl/last/): the street
-shape of every bus and tram route variant, how many trips run it, and its stops in order, so
-HUNT can draw where a vehicle goes next.
+shape of every bus and tram route variant, how many trips run it, and its stops in order (with each stop's own
+number, the "06" in "Centrum 06", which tells its platforms apart), so HUNT can draw where a
+vehicle goes next.
 
 The feed is a 52 MB zip holding a 380 MB stop_times.txt; it's read straight from the zip,
 never extracted. The feed repeats every route and trip once per day it covers (ids start
@@ -98,7 +99,7 @@ def place_stops(path, cumulative, stops):
     """Metres along the shape for each stop, never going backwards: a loop passes the same
     corner twice, and the stop belongs to the pass that comes next."""
     out, floor, start = [], 0.0, 0
-    for name, lat, lon in stops:
+    for name, code, lat, lon in stops:
         best = None
         for i in range(start, len(path) - 1):
             t, off = project((lat, lon), path[i], path[i + 1])
@@ -114,7 +115,9 @@ def place_stops(path, cumulative, stops):
         if best is None or best[1] > STOP_SNAP:
             continue
         floor, start = best[0], best[2]
-        out.append([name, round(lat, 5), round(lon, 5), round(best[0])])
+        # The number goes last, and only when there is one: builds before it read four fields
+        # and ignore the rest.
+        out.append([name, round(lat, 5), round(lon, 5), round(best[0])] + ([code] if code else []))
     return out
 
 
@@ -158,7 +161,9 @@ def build(z, today=None):
         if r["shape_id"] in shape_line:
             paths[r["shape_id"]].append((int(r["shape_pt_sequence"]), float(r["shape_pt_lat"]), float(r["shape_pt_lon"])))
 
-    stop_names = {r["stop_id"]: (r["stop_name"], float(r["stop_lat"]), float(r["stop_lon"])) for r in rows(z, "stops.txt")}
+    # Names are stripped: a few carry a stray no-break space ("Wspólna\xa0").
+    stop_names = {r["stop_id"]: (r["stop_name"].strip(), r["stop_code"].strip(), float(r["stop_lat"]), float(r["stop_lon"]))
+                  for r in rows(z, "stops.txt")}
 
     # The big one: only the sample trips' rows are parsed; the trip id is checked on the raw
     # line first, which skips the csv module for the other 99%.
@@ -200,12 +205,14 @@ def build(z, today=None):
         for _, s in sorted(stop_seq[shape]):
             if s not in stop_names:
                 continue
-            name, lat, lon = stop_names[s]
-            name = DEPOT_STOPS.get(name, name)
+            name, code, lat, lon = stop_names[s]
+            # A depot's technical stop has no platform to tell apart.
+            if name in DEPOT_STOPS:
+                name, code = DEPOT_STOPS[name], None
             # The yard right behind the depot's own passenger stop: one stop, not two.
             if stops and stops[-1][0] == name:
                 continue
-            stops.append((name, lat, lon))
+            stops.append((name, code, lat, lon))
         entry["shapes"][encoded] = {
             "id": shape, "trips": trips[shape], "path": encoded,
             "stops": place_stops(path, cumulative, stops),
