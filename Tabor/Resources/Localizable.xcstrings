@@ -9394,22 +9394,12 @@
         }
       }
     },
-    "A few of them carry a code like S-9 instead of a number.": {
+    "A few works trams carry a code like S-9 instead of a number.": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Niektóre mają zamiast numeru oznaczenie, np. S-9."
-          }
-        }
-      }
-    },
-    "TYPE THE CODE": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "WPISZ OZNACZENIE"
+            "value": "Niektóre tramwaje techniczne mają zamiast numeru oznaczenie, np. S-9."
           }
         }
       }

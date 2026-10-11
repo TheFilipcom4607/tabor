@@ -70,19 +70,24 @@ struct CorrectionSheet: View {
                     HStack(alignment: .firstTextBaseline) {
                         Mono(status(match, number: number), size: 10.5, color: statusColor(match, number: number))
                         Spacer(minLength: 8)
-                        // A few works cars have a code painted on instead of a number.
-                        if !offersCode || codeMode {
-                            Button(action: toggleCode) {
-                                Mono(codeMode ? String(localized: "A NUMBER") : String(localized: "A CODE, LIKE S-9?"),
-                                     size: 10.5, weight: 600, color: Palette.yellow)
-                            }
-                            .buttonStyle(.plain)
+                        // A few works cars have a code painted on instead of a number. Nothing read
+                        // is all the camera gets off one, so then it asks in the works colour.
+                        Button(action: toggleCode) {
+                            Mono(codeMode ? String(localized: "A NUMBER")
+                                 : offersCode ? String(localized: "A WORKS TRAM?") : String(localized: "A CODE, LIKE S-9?"),
+                                 size: 10.5, weight: 600, color: offersCode && !codeMode ? Tier.works.color : Palette.yellow)
                         }
+                        .buttonStyle(.plain)
                     }
                     .padding(.top, 8)
 
-                    if offersCode, !codeMode {
-                        codeBanner.padding(.top, 16)
+                    // Said once it's asked for, not up front: a box saying it took half the sheet (#73).
+                    if codeMode {
+                        Text("A few works trams carry a code like S-9 instead of a number.")
+                            .font(TaborFont.grotesk(12.5))
+                            .foregroundStyle(Palette.sub)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 8)
                     }
 
                     // Missed the number? What was running right there when you shot (#41).
@@ -347,32 +352,8 @@ struct CorrectionSheet: View {
     }
 
     /// Nothing was read, which is all the camera gets off a works car with a code painted on
-    /// instead of a number (S-9, P1): say so up front. They're all trams, so not in BUS mode.
+    /// instead of a number (S-9, P1). They're all trams, so not in BUS mode.
     private var offersCode: Bool { draft.number == nil && draft.mode != .bus }
-
-    private var codeBanner: some View {
-        let tint = Tier.works.color
-        return VStack(alignment: .leading, spacing: 8) {
-            Mono(String(localized: "A WORKS TRAM?"), size: 11, weight: 600, spacing: 0.14, color: tint)
-            Text("A few of them carry a code like S-9 instead of a number.")
-                .font(TaborFont.grotesk(13))
-                .foregroundStyle(Palette.ink.opacity(0.85))
-                .fixedSize(horizontal: false, vertical: true)
-            Button(action: toggleCode) {
-                Mono(String(localized: "TYPE THE CODE"), size: 11, weight: 700, spacing: 0.1, color: Palette.bg)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 14)
-                    .background(tint, in: Capsule())
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 2)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 13)
-        .padding(.horizontal, 15)
-        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(tint.opacity(0.28)))
-    }
 
     private func toggleCode() {
         Haptics.shared.tick()
