@@ -9454,6 +9454,16 @@
         }
       }
     },
+    "Thanks to everyone who tested the beta, above all %@.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dzięki wszystkim, którzy testowali betę, a zwłaszcza: %@."
+          }
+        }
+      }
+    },
     "Something broken, or a bus it got wrong? Write to me:": {
       "localizations": {
         "pl": {

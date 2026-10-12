@@ -770,6 +770,10 @@ extension SettingsSheet {
             Link("tabor@thefilip.com", destination: URL(string: "mailto:tabor@thefilip.com")!)
                 .font(TaborFont.grotesk(14, 600))
                 .foregroundStyle(Palette.yellow)
+            // The testers whose GitHub issues shaped the app (#76). Handles, so never translated.
+            Text("Thanks to everyone who tested the beta, above all \(["Szpieg0", "Pepe-PL", "flyingkonstal"].formatted(.list(type: .and))).")
+                .multilineTextAlignment(.center)
+                .padding(.top, 6)
             Mono(line, size: 10, spacing: 0.12, color: debugUnlocked ? Palette.yellow : Palette.faint)
                 .padding(.top, 4)
                 .contentShape(Rectangle())
