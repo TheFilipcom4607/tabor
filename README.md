@@ -13,7 +13,11 @@
   <img src="https://img.shields.io/badge/iOS-18%2B-1d1d1f?style=flat-square&logo=apple&logoColor=white" alt="iOS 18 or later">
   <img src="https://img.shields.io/badge/Xcode-27-1d1d1f?style=flat-square&logo=xcode&logoColor=white" alt="Xcode 27">
   <img src="https://img.shields.io/badge/SwiftUI-1d1d1f?style=flat-square&logo=swift&logoColor=white" alt="SwiftUI">
-  <img src="https://img.shields.io/badge/fleet-2%20711%20vehicles-1d1d1f?style=flat-square" alt="2 711 vehicles">
+  <img src="https://img.shields.io/badge/fleet-2%20684%20vehicles-1d1d1f?style=flat-square" alt="2 684 vehicles">
+</p>
+
+<p>
+  <a href="https://apps.apple.com/app/tabor/id6816408610"><img src="https://toolbox.marketingtools.apple.com/api/v2/badges/download-on-the-app-store/black/en-us" height="48" alt="Download on the App Store"></a>
 </p>
 
 <img src="docs/reveal.png" width="330" alt="The reveal after catching Ursus City Smile #1996: NEW BUS · YOUR 3rd, the bus cut out of its photo as a die-cut sticker with a thick white border, a 1996 number tag, R-1 WORONICZA · 2017, LEGENDARY · 12, and the line: 7 left in the 2017 batch, 9 Ursus City Smile to find overall. Below it, Hold to stick it in the book.">
@@ -24,16 +28,16 @@
 
 </div>
 
-"Tabor" is Polish for rolling stock. Warsaw runs about 2 700 buses and trams
+"Tabor" is Polish for rolling stock. Warsaw runs about 2 600 buses and trams
 in regular service, split across 44 models. Some models have hundreds of
-vehicles, and some have four. On top of that come 35 kinds of museum and club
-vehicles, and the odd bus on trial. Every vehicle carries a fleet number, and
+vehicles, and some have four. On top of that come 36 kinds of museum and club
+vehicles, Tramwaje Warszawskie's works cars, and the odd bus on trial. Every vehicle carries a fleet number, and
 ZTM's database says which model each number belongs to. So a photo of a bus is
 enough to know exactly what you've seen, and a list of every number is enough to
 know what you haven't.
 
-TABOR does both halves. **CATCH** reads the fleet number on the phone while you
-frame the shot. **BOOK** files the vehicle under its model and batch. **HUNT**
+TABOR does both halves. **CATCH** reads the fleet number off your photo, on the
+phone. **BOOK** files the vehicle under its model and batch. **HUNT**
 shows every vehicle you haven't caught yet, live, on a map, and follows one to
 your stop on the Lock Screen. **ME** keeps the score.
 
@@ -46,14 +50,12 @@ your stop on the Lock Screen. **ME** keeps the score.
 
 ## Install
 
-**Po polsku:** opis i instalacja na [thefilip.com/tabor](https://thefilip.com/tabor).
-
 **Get it on the App Store:** [apps.apple.com/app/tabor/id6816408610](https://apps.apple.com/app/tabor/id6816408610)
-(iPhone, iOS 18 or later).
+(iPhone, iOS 18 or later, free). Bug reports and ideas go in
+[issues](https://github.com/TheFilipcom4607/tabor/issues), and questions in
+[discussions](https://github.com/TheFilipcom4607/tabor/discussions).
 
-**Or try what's next on TestFlight:** [testflight.apple.com/join/rt5RfQJ1](https://testflight.apple.com/join/rt5RfQJ1).
-Screenshots with TestFlight's feedback are the best bug reports, and issues here
-work too.
+**Po polsku:** opis i instalacja na [thefilip.com/tabor](https://thefilip.com/tabor).
 
 Or build it yourself. Open the project in Xcode 27 and run it on your phone:
 
@@ -81,12 +83,12 @@ cd proxy && npx wrangler secret put DANE_TOKEN && npx wrangler deploy
 
 ## CATCH
 
-- **The number is read while you frame the shot.** Vision's text recogniser
-  looks at about five frames a second. A number only counts once it has won
-  three of the last six frames, so one bad frame can't lock the wrong one. Once
-  it locks, the brackets tighten and turn yellow, the pill says which model it
-  is and which year its batch was built, and the phone gives one click (two if
-  you've never seen that vehicle).
+- **The number is read from the shot.** Take the photo and Vision's text
+  recogniser reads the part inside the brackets, on the phone. If the whole
+  frame gives nothing, or only a short number, it's read again as nine
+  overlapping tiles, so a small number on a whole-vehicle shot has enough
+  pixels. The live preview isn't read at all: that only cost battery and heat,
+  and you can see the bus coming anyway.
 - **Only fleet numbers count.** A photo of a bus is full of other digits: line
   numbers, times on the destination display, and the registration plate.
   - Runs glued to letters are dropped, and so are runs after a two- or three-letter
@@ -102,8 +104,9 @@ cd proxy && npx wrangler secret put DANE_TOKEN && npx wrangler deploy
   that belongs to a vehicle within 300 m gets a boost. If the read is one digit
   off a vehicle within 150 m (OCR turning 4235 into 1235), that vehicle is
   offered too, though a clean read of a real number still wins. When a number
-  belongs to both a bus and a tram, whichever one is actually nearby settles it,
-  and the catch gets its line number from the feed.
+  belongs to both a bus and a tram, whichever one is actually nearby settles it
+  (otherwise the reveal asks which one it is), and the catch gets its line
+  number from the feed.
 - **More than one in the shot.** Other vehicles in the photo are offered on the
   reveal as chips ("+ 5918 · ALSO IN SHOT"), each with its own sticker, and saved
   as catches of their own. With the live feed they have to be running nearby.
@@ -125,9 +128,7 @@ cd proxy && npx wrangler secret put DANE_TOKEN && npx wrangler deploy
 - **Or import one.** A photo from the library works too, with its own date and
   place from the EXIF data. It doesn't touch today's streak. **TABOR** is also in
   the share sheet, so a photo from Photos or any other app goes straight to the
-  catch. Reading a still image takes longer: if the whole frame gives nothing,
-  it's read again as nine overlapping tiles, so a small number on a whole-vehicle
-  shot has enough pixels.
+  catch. An imported photo is read whole, not cropped to the brackets.
 - **Wrong read?** The correction sheet takes a number, a model and a line. It lists
   the database's matches first, then the vehicles running nearby. A model you pick
   by hand is remembered for that number, but only when it disagrees with ZTM.
@@ -388,3 +389,12 @@ node proxy/src/trackgeo.test.mjs
 
 GitHub Actions runs the Swift tests on every push to `main` and every pull request that
 touches `Tabor/Core`, the tests or `fleet.json`.
+
+---
+
+## Thanks
+
+To everyone who tested the beta, and above all to
+[@Szpieg0](https://github.com/Szpieg0), [@Pepe-PL](https://github.com/Pepe-PL)
+and [@flyingkonstal](https://github.com/flyingkonstal), whose issues found the
+bugs, named the vehicles and shaped a lot of what's here.
