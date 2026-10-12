@@ -48,9 +48,12 @@ your stop on the Lock Screen. **ME** keeps the score.
 
 **Po polsku:** opis i instalacja na [thefilip.com/tabor](https://thefilip.com/tabor).
 
-**Try the beta on TestFlight:** [testflight.apple.com/join/rt5RfQJ1](https://testflight.apple.com/join/rt5RfQJ1)
-(iPhone, iOS 18 or later). Screenshots with TestFlight's feedback are the best
-bug reports, and issues here work too.
+**Get it on the App Store:** [apps.apple.com/app/tabor/id6816408610](https://apps.apple.com/app/tabor/id6816408610)
+(iPhone, iOS 18 or later).
+
+**Or try what's next on TestFlight:** [testflight.apple.com/join/rt5RfQJ1](https://testflight.apple.com/join/rt5RfQJ1).
+Screenshots with TestFlight's feedback are the best bug reports, and issues here
+work too.
 
 Or build it yourself. Open the project in Xcode 27 and run it on your phone:
 
