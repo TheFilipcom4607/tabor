@@ -71,8 +71,9 @@ private struct CatchButton: View {
     }
 }
 
-/// Its sticker when it's in your book, else a dashed outline in its rarity's colour, like an
-/// empty slot in the book.
+/// Its sticker when this very vehicle is in your book. Otherwise its line, big, like the
+/// board on its front: that's what you watch for at the stop, and a placeholder told you
+/// nothing (#75).
 struct TrackArt: View {
     let a: TrackAttributes
 
@@ -81,16 +82,15 @@ struct TrackArt: View {
             WidgetPicture(image: a.image, cutout: a.cutout, number: a.number, tier: a.tier, tag: 0)
         } else {
             let color = WidgetPalette.tier(a.tier)
-            ZStack {
-                Image(systemName: a.tram ? "tram" : "bus")
-                    .font(.system(size: 24, weight: .light))
-                    .foregroundStyle(color.opacity(0.9))
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(color, style: StrokeStyle(lineWidth: 1.4, dash: [4, 3]))
-            }
-            .overlay(alignment: .topTrailing) {
-                Text("?").font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundStyle(color).padding(4)
-            }
+            Text(a.line)
+                .font(.system(size: 26, weight: .bold, design: .monospaced))
+                .foregroundStyle(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .padding(.horizontal, 6)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(color, lineWidth: 1.4))
         }
     }
 }
@@ -121,11 +121,14 @@ private struct TrackLockScreen: View {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 6) {
                             WidgetNumberTag(number: a.number, tier: a.tier, size: 11)
-                            Text(a.line)
-                                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                .foregroundStyle(.black)
-                                .padding(.horizontal, 5).padding(.vertical, 2)
-                                .background(WidgetPalette.ink, in: RoundedRectangle(cornerRadius: 4))
+                            // The board beside it already says the line, unless it's a sticker.
+                            if a.image != nil {
+                                Text(a.line)
+                                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(.black)
+                                    .padding(.horizontal, 5).padding(.vertical, 2)
+                                    .background(WidgetPalette.ink, in: RoundedRectangle(cornerRadius: 4))
+                            }
                             WidgetKey(text: TrackText.kind(a), color: WidgetPalette.tier(a.tier))
                         }
                         Text(a.model).font(.system(size: 16, weight: .medium)).foregroundStyle(WidgetPalette.ink)
