@@ -239,11 +239,11 @@ private func sampleModel() -> VehicleModel {
     #expect(Wanted.huntRank(.works) == Tier.legendary.rank)
 }
 
-@Test func firstWorksCarSaysItOpenedTheBookSection() {
+@Test func firstWorksCarIsCelebrated() {
     let m = catalog.model(id: "tram-works-measuring-konstal-13n")!
     let first = RevealHint.text(model: m, number: 388, owned: [388], isNewVehicle: true, timesSeen: 1, firstWorks: true)
     let later = RevealHint.text(model: m, number: 388, owned: [388], isNewVehicle: true, timesSeen: 1)
-    #expect(first.contains("first works car") && first.contains("section"))
+    #expect(first.contains("first works car"))
     #expect(later.hasPrefix("A works car"))
 }
 

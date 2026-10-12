@@ -80,10 +80,10 @@ struct BookIndexView: View {
                         sectionHeader(.vintage, note: String(localized: "TOURIST LINES ON SUMMER WEEKENDS · NOT PART OF THE FLEET %"))
                         ForEach(vintage) { m in row(m, stats: stats) }
                     }
-                    // Hidden until the first one is caught: most people don't know works cars
-                    // exist, so the intro mentions them and the section opens as a surprise.
+                    // Shown from the start: hidden until the first catch, nobody could find
+                    // them to go looking (#78).
                     let works = rows.filter(\.works)
-                    if works.contains(where: { stats.ownedCount(modelId: $0.id) > 0 }) {
+                    if !works.isEmpty {
                         sectionHeader(.works, note: String(localized: "TRAMWAJE WARSZAWSKIE'S OWN CARS · NOT PART OF THE FLEET %"))
                         ForEach(works) { m in row(m, stats: stats) }
                     }

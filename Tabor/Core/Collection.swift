@@ -128,8 +128,7 @@ public enum Ordinal {
 
 public enum RevealHint {
     /// The green hint line on the reveal screen. `owned` includes the new catch.
-    /// `firstWorks`: no works car was in the book before this one, so this catch is what
-    /// opens their book section.
+    /// `firstWorks`: no works car was in the book before this one.
     /// Model names are kept after the word "model" in the sentences, so languages that
     /// decline nouns never have to bend a name like "Solaris Urbino 18".
     public static func text(model: VehicleModel, number: Int, owned: Set<Int>,
@@ -150,7 +149,7 @@ public enum RevealHint {
             return String(localized: "Caught on its trial run — it's only in Warsaw for a few weeks. Nice timing.")
         }
         if model.works, firstWorks {
-            return String(localized: "Your first works car! It carries no passengers and runs to no timetable. Works cars now have a section at the end of your book.")
+            return String(localized: "Your first works car! It carries no passengers and runs to no timetable.")
         }
         if model.works {
             return String(localized: "A works car — it carries no passengers and runs to no timetable. Good eye.")

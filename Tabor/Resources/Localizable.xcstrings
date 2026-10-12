@@ -7462,12 +7462,12 @@
         }
       }
     },
-    "Your first works car! It carries no passengers and runs to no timetable. Works cars now have a section at the end of your book.": {
+    "Your first works car! It carries no passengers and runs to no timetable.": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Twój pierwszy tramwaj techniczny! Nie wozi pasażerów i nie jeździ według rozkładu. Tramwaje techniczne mają teraz swój dział na końcu albumu."
+            "value": "Twój pierwszy tramwaj techniczny! Nie wozi pasażerów i nie jeździ według rozkładu."
           }
         }
       }
