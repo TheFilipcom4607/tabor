@@ -64,6 +64,8 @@ struct HuntView: View {
     @State private var nowCoordinates: [String: CLLocationCoordinate2D] = [:]
     /// Moves on while a vehicle is selected, so its pin creeps along between polls.
     @State private var tick = Date()
+    /// The stop list being scrolled (#74). Not observed: flipping it mustn't redraw the map.
+    @State private var stopScroll = StopScroll()
     @State private var selectedId: String?
     /// The map keeps the selected vehicle in view as it drives, until you move the map yourself.
     @State private var following = false
@@ -177,7 +179,11 @@ struct HuntView: View {
             if phase == .active, onScreen { live.start("hunt") }
             if phase == .background { live.stop("hunt") }
         }
-        .onChange(of: live.snapshot?.fetched, initial: true) { recompute(animated: true) }
+        .onChange(of: live.snapshot?.fetched, initial: true) {
+            // Gliding every pin redraws the whole map, which stutters a stop list being
+            // scrolled (#74): it waits for the list to settle.
+            if stopScroll.active { stopScroll.missed = true } else { recompute(animated: true) }
+        }
         // MapKit follows you on its own while facing; whatever ends facing leaves the map
         // where it is rather than letting it keep turning.
         .onChange(of: facing) { _, on in
@@ -815,6 +821,7 @@ struct HuntView: View {
                         routeOpen: routeOpen,
                         onRoute: { toggleRoute(selected) },
                         onStop: show(stop:),
+                        onScrolling: stopsScrolling,
                         track: trackButton(selected),
                         onOpen: {
                             if selected.kind == .caught {
@@ -1409,6 +1416,11 @@ struct HuntView: View {
     /// frame rate, and a stopped vehicle (or one already at its next stop) doesn't tick.
     private func creep() async {
         while !Task.isCancelled, let id = selectedId {
+            // No steps while the stop list scrolls (#74); the next one catches up.
+            if stopScroll.active {
+                try? await Task.sleep(for: .seconds(0.5))
+                continue
+            }
             var wait = 2.0
             if let pin = pins.first(where: { $0.id == id }), let now = creeping(pin), now.speed >= 0.5,
                !live.trails.isStopped(id), let region = mapRegion {
@@ -1422,6 +1434,13 @@ struct HuntView: View {
             }
             try? await Task.sleep(for: .seconds(wait))
         }
+    }
+
+    private func stopsScrolling(_ on: Bool) {
+        stopScroll.active = on
+        guard !on, stopScroll.missed else { return }
+        stopScroll.missed = false
+        recompute(animated: true)
     }
 
     /// Screen points a creeping pin moves per step.
@@ -1650,6 +1669,13 @@ private struct Triangle: Shape {
     }
 }
 
+/// Whether HUNT's stop list is being scrolled. A plain class, so setting it doesn't redraw.
+private final class StopScroll {
+    var active = false
+    /// A feed update came in meanwhile.
+    var missed = false
+}
+
 /// A selected vehicle's run, stop by stop, drawn like a line on a transit map: the stop it's
 /// at or just passed, faded, then every stop to the end, yours marked. Each stop with its
 /// platform ("Centrum 06"), so you can tell whether you're waiting on the right side.
@@ -1657,6 +1683,7 @@ private struct StopList: View {
     let route: PinCard.Route
     let accent: Color
     let onStop: (RouteStop) -> Void
+    let onScrolling: (Bool) -> Void
 
     private struct Row: Identifiable {
         let stop: RouteStop
@@ -1679,6 +1706,8 @@ private struct StopList: View {
                 }
             }
             .scrollIndicators(.hidden)
+            .onScrollPhaseChange { _, phase in onScrolling(phase.isScrolling) }
+            .onDisappear { onScrolling(false) }
             // Four and a bit stops at a time: the map above keeps room to show the route.
             .frame(height: min(CGFloat(rows.count) * Self.rowHeight, Self.rowHeight * 4.5))
             .onAppear {
@@ -1764,6 +1793,7 @@ private struct PinCard: View {
     let onRoute: () -> Void
     /// A stop tapped in the list: shown on the map.
     let onStop: (RouteStop) -> Void
+    let onScrolling: (Bool) -> Void
     /// Follow it on the Lock Screen (#42).
     let track: Track
     let onOpen: () -> Void
@@ -1897,7 +1927,7 @@ private struct PinCard: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityHint(!opens ? Text(verbatim: "") : routeOpen ? Text("Hides the stops") : Text("Shows every stop to the end of its run"))
                 if routeOpen, let route, !route.ahead.isEmpty {
-                    StopList(route: route, accent: pin.accent, onStop: onStop)
+                    StopList(route: route, accent: pin.accent, onStop: onStop, onScrolling: onScrolling)
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
