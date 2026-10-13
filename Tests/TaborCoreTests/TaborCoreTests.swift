@@ -363,6 +363,12 @@ private func badge(_ id: String, _ sightings: [SightingRecord]) -> Achievement {
     #expect(badge("legendary-all", all).earned)
     #expect(badge("legendary-all", all.dropLast()).progress == legendary.count - 1)
     #expect(badge("legendary-all", all).title == "All \(legendary.count) legendary")
+    // The ones still to find, each opening its model (#80); none once earned.
+    let left = badge("legendary-all", all.dropLast()).missing
+    #expect(left == [Achievement.Missing(legendary.last!.name, modelId: legendary.last!.id)])
+    #expect(badge("legendary-all", all).missing.isEmpty)
+    let gold = catalog.models.filter { $0.tier == .gold }
+    #expect(Set(badge("gold-set", []).missing.compactMap(\.modelId)) == Set(gold.map(\.id)))
 }
 
 @Test func districtNamesFromTheGeocoder() {

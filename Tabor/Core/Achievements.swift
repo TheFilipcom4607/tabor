@@ -22,7 +22,7 @@ public struct Achievement: Identifiable, Hashable, Sendable {
     /// badges that just count (Collector) or aren't about particular vehicles.
     public let proof: [Proof]
     /// What's still to find, for badges that need one of each from a known list (every district,
-    /// every operator, every model at a depot). Empty once earned.
+    /// every operator, every model at a depot or of a rarity). Empty once earned.
     public let missing: [Missing]
 
     /// Something a badge still needs: a district, an operator, or a model (which opens its page).
@@ -258,8 +258,11 @@ public enum Achievements {
         }
         // One vehicle per model: the lowest number you have of it.
         let proof = models.compactMap { m in (c.owned[m.id]?.min()).map { Achievement.Proof(modelId: m.id, number: $0) } }
+        // What's left, like a depot's (#80). No two models in a tier share a name, so no years needed.
+        let missing = models.filter { !c.has($0) }.sorted { plOrder($0.name, $1.name) }
+            .map { Achievement.Missing($0.name, modelId: $0.id) }
         return Achievement(id: id, title: title, detail: detail,
-                           symbol: symbol, progress: models.filter(c.has).count, goal: n, proof: proof)
+                           symbol: symbol, progress: models.filter(c.has).count, goal: n, proof: proof, missing: missing)
     }
 
     /// Closest delivery batch to completion (at least two vehicles, so it's a real batch).
