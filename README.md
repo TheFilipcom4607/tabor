@@ -54,6 +54,7 @@ your stop on the Lock Screen. **ME** keeps the score.
 (iPhone, iOS 18 or later, free). Bug reports and ideas go in
 [issues](https://github.com/TheFilipcom4607/tabor/issues), and questions in
 [discussions](https://github.com/TheFilipcom4607/tabor/discussions).
+[CONTRIBUTING.md](CONTRIBUTING.md) says what makes a report or a pull request easy to act on.
 
 **Po polsku:** opis i instalacja na [thefilip.com/tabor](https://thefilip.com/tabor).
 
@@ -397,4 +398,5 @@ touches `Tabor/Core`, the tests or `fleet.json`.
 To everyone who tested the beta, and above all to
 [@Szpieg0](https://github.com/Szpieg0), [@Pepe-PL](https://github.com/Pepe-PL)
 and [@flyingkonstal](https://github.com/flyingkonstal), whose issues found the
-bugs, named the vehicles and shaped a lot of what's here.
+bugs, named the vehicles and shaped a lot of what's here. Want to help too? Start
+with [CONTRIBUTING.md](CONTRIBUTING.md).
