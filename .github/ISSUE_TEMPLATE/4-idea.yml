@@ -1,0 +1,39 @@
+name: 💡 Pomysł / Idea
+description: Coś, co chcesz mieć w apce. / Something you'd like in the app.
+labels: [pomysł]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        TABOR robi jedna osoba po godzinach, więc niektóre pomysły poczekają, a niektóre się nie wydarzą. Każdy zostanie przeczytany.
+        TABOR is built by one person in their free time, so some ideas wait a while, and some don't happen. Every one gets read.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Gdzie? / Where?
+      options:
+        - CATCH – aparat, odczyt, naklejka / camera, reading, sticker
+        - HUNT – mapa, filtry, szukanie, trasa / map, filters, search, route
+        - BOOK
+        - ME – odznaki, statystyki, mapa / badges, stats, map
+        - Ustawienia / Settings
+        - Udostępnianie / Sharing
+        - Widżety / Widgets
+        - Live Activity
+        - Coś nowego / Something new
+        - Inne / Other
+  - type: textarea
+    id: why
+    attributes:
+      label: Do czego by ci się przydało? / What would you use it for?
+      description: Opisz sytuację, nie tylko wygląd. Często prowadzi to do lepszego rozwiązania. / Describe the situation, not only the look. It often leads to a better solution.
+    validations:
+      required: true
+  - type: textarea
+    id: how
+    attributes:
+      label: Jak mogłoby działać? / How could it work?
+  - type: textarea
+    id: media
+    attributes:
+      label: Szkice, zrzuty / Sketches, screenshots

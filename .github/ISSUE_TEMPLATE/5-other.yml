@@ -1,0 +1,9 @@
+name: 📝 Coś innego / Something else
+description: Wszystko, co nie pasuje wyżej. / Anything that doesn't fit above.
+body:
+  - type: textarea
+    id: text
+    attributes:
+      label: Opis / Description
+    validations:
+      required: true

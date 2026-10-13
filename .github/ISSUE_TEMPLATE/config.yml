@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Pytanie / Question
+    url: https://github.com/TheFilipcom4607/tabor/discussions/categories/q-a
+    about: Jak coś działa albo dlaczego jest tak, a nie inaczej? Zapytaj w Discussions. / How does something work, or why is it that way? Ask in Discussions.
+  - name: ✉️ Coś prywatnego / Something private
+    url: mailto:tabor@thefilip.com
+    about: Problem z bezpieczeństwem albo coś, czego nie chcesz pisać publicznie. / A security problem, or something you'd rather not post in public.

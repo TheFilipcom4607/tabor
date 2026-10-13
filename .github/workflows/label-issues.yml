@@ -1,0 +1,39 @@
+# The bug and idea forms ask "Where?". Issue forms can only add fixed labels, so this turns the
+# answer into that part of the app's label, and swaps it if the answer is edited later.
+name: Label issues
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+
+jobs:
+  area:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            // The start of each dropdown option, and the label it gets.
+            const areas = [
+              ['CATCH', 'CATCH'], ['HUNT', 'HUNT'], ['BOOK', 'BOOK'], ['ME', 'ME'],
+              ['Ustawienia', 'Ustawienia'], ['Udostępnianie', 'Udostępnianie'],
+              ['Widżety', 'widżety'], ['Live Activity', 'Live Activity'],
+            ]
+            const issue = context.payload.issue
+            const m = (issue.body || '').match(/^### Gdzie\? \/ Where\?\s*\n+(.+)$/m)
+            // Not from a form with "Where?" (the misread form brings its own CATCH): leave it.
+            if (!m) return
+            const answer = m[1].trim()
+            const want = areas.find(([start]) => answer.startsWith(start))?.[1]
+            const all = areas.map(([, label]) => label)
+            const have = issue.labels.map(l => l.name)
+            const req = { owner: context.repo.owner, repo: context.repo.repo, issue_number: issue.number }
+            for (const name of have.filter(n => all.includes(n) && n !== want)) {
+              await github.rest.issues.removeLabel({ ...req, name })
+            }
+            if (want && !have.includes(want)) {
+              await github.rest.issues.addLabels({ ...req, labels: [want] })
+            }

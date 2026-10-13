@@ -1,0 +1,53 @@
+name: 🚌 Pojazd / Vehicle
+description: "Brakuje pojazdu albo coś się nie zgadza: model, zajezdnia, dane. / A vehicle is missing, or its model, depot or details are wrong."
+labels: [pojazd]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Nowe pojazdy z miejskiej listy zwykle pojawiają się same w ciągu doby. Do apki nic nie trafia bez źródła.
+        New vehicles from the city's list usually turn up by themselves within a day. Nothing goes into the app without a source.
+  - type: input
+    id: numbers
+    attributes:
+      label: Numer(y) taborowe / Fleet number(s)
+      placeholder: 6215, 6216
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Autobus czy tramwaj? / Bus or tram?
+      options:
+        - Autobus / Bus
+        - Tramwaj / Tram
+    validations:
+      required: true
+  - type: dropdown
+    id: problem
+    attributes:
+      label: Co jest nie tak? / What's wrong?
+      options:
+        - Brakuje go w apce / Missing from the app
+        - Zły model / Wrong model
+        - Zła nazwa albo podział modelu / Wrong model name or grouping
+        - Zła zajezdnia / Wrong depot
+        - Złe dane (napęd, długość, rok…) / Wrong details (drive, length, year…)
+        - Już nie jeździ / No longer runs
+        - Coś innego / Something else
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Szczegóły / Details
+      description: Co jest w apce, a jak jest naprawdę? / What does the app say, and what's right?
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Źródło / Source
+      description: Link (Warszawikia, TransInfo, KMKM, tramwar.pl, baza ZTM) albo zdjęcie z numerem. Widziany na mapie? Napisz kiedy i na jakiej linii. / A link, or a photo with the number on it. Seen on the live map? Say when and on which line.
+    validations:
+      required: true

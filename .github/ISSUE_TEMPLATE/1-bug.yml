@@ -1,0 +1,60 @@
+name: 🐞 Błąd / Bug
+description: Coś nie działa albo działa dziwnie. / Something doesn't work, or works oddly.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Sprawdź najpierw [zgłoszenia](https://github.com/TheFilipcom4607/tabor/issues?q=is%3Aissue), także zamknięte: może już jest poprawione w następnym buildzie. Jeden błąd na zgłoszenie.
+        Look through the [issues](https://github.com/TheFilipcom4607/tabor/issues?q=is%3Aissue) first, closed ones too: it may already be fixed in the next build. One problem per issue.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Gdzie? / Where?
+      options:
+        - CATCH – aparat, odczyt, naklejka / camera, reading, sticker
+        - HUNT – mapa, filtry, szukanie, trasa / map, filters, search, route
+        - BOOK
+        - ME – odznaki, statystyki, mapa / badges, stats, map
+        - Ustawienia / Settings
+        - Udostępnianie / Sharing
+        - Widżety / Widgets
+        - Live Activity
+        - Inne / Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: Co się stało? / What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Jak to powtórzyć? / How can it be reproduced?
+      placeholder: |
+        1. …
+        2. …
+  - type: textarea
+    id: expected
+    attributes:
+      label: Co powinno się stać? / What should have happened?
+  - type: textarea
+    id: media
+    attributes:
+      label: Zrzuty ekranu lub nagranie / Screenshots or a recording
+      description: Przeciągnij tutaj. Często mówią więcej niż tekst. / Drag them here. They often say more than words.
+  - type: input
+    id: version
+    attributes:
+      label: Wersja / Version
+      description: Na dole Ustawień. / At the bottom of Settings.
+      placeholder: 1.2 (37)
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: iPhone i iOS / iPhone and iOS
+      placeholder: iPhone 15, iOS 18.6

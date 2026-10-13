@@ -1,0 +1,39 @@
+name: 🔢 Źle odczytany numer / Misread number
+description: Apka przeczytała nie ten numer albo żaden. / The app read the wrong number, or none.
+labels: [odczyt numeru, CATCH]
+body:
+  - type: input
+    id: read
+    attributes:
+      label: Co odczytała apka? / What did the app read?
+      description: Jeśli nic, wpisz „nic”. / If nothing, write "nothing".
+    validations:
+      required: true
+  - type: input
+    id: real
+    attributes:
+      label: Jaki to numer? / What's the right number?
+    validations:
+      required: true
+  - type: textarea
+    id: photo
+    attributes:
+      label: Zdjęcie / Photo
+      description: Przeciągnij tutaj, najlepiej oryginał z Galerii. Bez zdjęcia trudno to poprawić. / Drag it here, ideally the original from Photos. Without it, it's hard to fix.
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Skąd zdjęcie? / Where's the photo from?
+      options:
+        - Aparat w TABOR / TABOR's camera
+        - Galeria albo inna apka / Photos or another app
+  - type: input
+    id: version
+    attributes:
+      label: Wersja / Version
+      description: Na dole Ustawień. / At the bottom of Settings.
+      placeholder: 1.2 (37)
+    validations:
+      required: true
