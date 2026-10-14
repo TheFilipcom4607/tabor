@@ -4617,6 +4617,17 @@
         }
       }
     },
+    "USUALLY RUNS WITH IT": {
+      "comment": "Second-car suggestion: the set tramwar.pl lists it in",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ZWYKLE JEŹDZI Z NIM"
+          }
+        }
+      }
+    },
     "OPEN": {
       "localizations": {
         "pl": {

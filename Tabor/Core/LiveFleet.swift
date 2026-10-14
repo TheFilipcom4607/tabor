@@ -283,7 +283,7 @@ public enum CoupledSet {
 
     public struct Suggestion: Sendable, Equatable {
         public enum Source: String, Sendable {
-            case fixed, photo, feed, trailer
+            case fixed, usual, photo, feed, trailer
             case neighbour = "±1"
         }
         public let number: Int
@@ -291,7 +291,7 @@ public enum CoupledSet {
     }
 
     /// Up to three numbers for the car coupled to `number`, likeliest first: its fixed partner,
-    /// another car it can run with read in the photo, the feed's lead car, a motor car's
+    /// the set tramwar.pl has it in, another car it can run with read in the photo, the feed's lead car, a motor car's
     /// trailers, then n−1 and n+1. Only cars it can really run with, never the caught number.
     public static func suggestions(for number: Int, model: VehicleModel, photoNumbers: [Int],
                                    nearby: [NearbyVehicle], catalog: FleetCatalog) -> [Suggestion] {
@@ -303,6 +303,7 @@ public enum CoupledSet {
             out.append(Suggestion(number: n, source: source))
         }
         add(model.fixedPartner(of: number), .fixed)
+        model.usualPartners(of: number).forEach { add($0, .usual) }
         photoNumbers.forEach { add($0, .photo) }
         add(partner(of: number, model: model, nearby: nearby, catalog: catalog)?.number, .feed)
         if model.pullsTrailers(number) { catalog.trailers.forEach { add($0, .trailer) } }

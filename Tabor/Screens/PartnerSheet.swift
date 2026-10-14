@@ -120,6 +120,7 @@ struct PartnerSheet: View {
     private func why(_ source: CoupledSet.Suggestion.Source) -> String {
         switch source {
         case .fixed: String(localized: "ALWAYS RUNS WITH IT")
+        case .usual: String(localized: "USUALLY RUNS WITH IT", comment: "Second-car suggestion: the set tramwar.pl lists it in")
         case .photo: String(localized: "ALSO READ IN YOUR PHOTO")
         case .feed: String(localized: "RUNNING RIGHT HERE NOW")
         case .trailer: String(localized: "VINTAGE TRAILER")

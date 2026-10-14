@@ -89,6 +89,9 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
     /// Cars that always run together, e.g. [[1000, 1001]]. In a model that isn't `coupled`,
     /// only these cars are.
     public let sets: [[Int]]
+    /// The sets its cars usually run in, per tramwar.pl, e.g. [[1282, 1281]]. Unlike `sets`
+    /// they can change (after a crash, a works visit), so they're only ever a suggestion.
+    public let pairs: [[Int]]
     /// Its cars with no motor of their own, e.g. the vintage ND #1620: they run hitched behind a
     /// car of a model that `tows`, any one of them, so they're paired across models.
     public let trailers: [Int]
@@ -103,7 +106,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
                 vintage: Bool = false, onTest: Bool = false, works: Bool = false, runs: String? = nil,
                 trial: String? = nil, runsPl: String? = nil, trialPl: String? = nil, specs: ModelSpecs? = nil,
                 variants: [SpecVariant] = [],
-                liveries: [String: String]? = nil, coupled: Bool = false, sets: [[Int]] = [],
+                liveries: [String: String]? = nil, coupled: Bool = false, sets: [[Int]] = [], pairs: [[Int]] = [],
                 trailers: [Int] = [], tows: Bool = false, formerly: [String] = []) {
         self.id = id
         self.name = name
@@ -128,6 +131,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
         self.liveries = liveries
         self.coupled = coupled
         self.sets = sets
+        self.pairs = pairs
         self.trailers = trailers
         self.tows = tows
         self.formerly = formerly
@@ -135,7 +139,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
 
     private enum CodingKeys: String, CodingKey {
         case id, name, namePl, make, code, kind, operators, fleet, firstYear, lastYear, batches, vintage, onTest, works, runs, trial,
-             runsPl, trialPl, specs, variants, liveries, coupled, sets, trailers, tows, formerly
+             runsPl, trialPl, specs, variants, liveries, coupled, sets, pairs, trailers, tows, formerly
     }
 
     public init(from decoder: Decoder) throws {
@@ -165,6 +169,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
         liveries = try? c.decodeIfPresent([String: String].self, forKey: .liveries)
         coupled = try c.decodeIfPresent(Bool.self, forKey: .coupled) ?? false
         sets = (try? c.decodeIfPresent([[Int]].self, forKey: .sets)) ?? []
+        pairs = (try? c.decodeIfPresent([[Int]].self, forKey: .pairs)) ?? []
         trailers = (try? c.decodeIfPresent([Int].self, forKey: .trailers)) ?? []
         tows = (try? c.decodeIfPresent(Bool.self, forKey: .tows)) ?? false
         formerly = (try? c.decodeIfPresent([String].self, forKey: .formerly)) ?? []
@@ -189,7 +194,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
                      lastYear: [lastYear, more.lastYear].compactMap { $0 }.max(),
                      batches: batches + more.batches, vintage: vintage, onTest: onTest, works: works,
                      runs: runs, trial: trial, runsPl: runsPl, trialPl: trialPl, specs: specs, variants: variants,
-                     liveries: liveries, coupled: coupled, sets: sets, trailers: trailers, tows: tows, formerly: formerly)
+                     liveries: liveries, coupled: coupled, sets: sets, pairs: pairs, trailers: trailers, tows: tows, formerly: formerly)
     }
 
     public var yearsDisplay: String? {
@@ -244,6 +249,11 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
     /// The car it always runs with, if it's in a fixed set.
     public func fixedPartner(of number: Int) -> Int? {
         sets.first { $0.contains(number) }?.first { $0 != number }
+    }
+
+    /// The cars it usually runs with (one, or two in a three-car set), if tramwar.pl knows.
+    public func usualPartners(of number: Int) -> [Int] {
+        pairs.first { $0.contains(number) }?.filter { $0 != number } ?? []
     }
 
     /// This vehicle's own specs.

@@ -13,6 +13,7 @@ Two sources, plus the hand-kept lists below:
 Usage:  python3 scripts/fetch_fleet.py            # fetch the city's list + build
         python3 scripts/fetch_fleet.py --offline  # rebuild from the saved files
         python3 scripts/fetch_fleet.py --scrape   # re-scrape ZTM's database too (slow)
+        python3 scripts/fetch_fleet.py --tramwar  # refresh the coupled sets from tramwar.pl too
         python3 scripts/fetch_fleet.py --allow-drop  # let model ids disappear (on purpose)
         python3 scripts/fetch_fleet.py --touch    # restamp `fetched` even if nothing changed
 
@@ -33,6 +34,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "ztm-vehicles.json"
 CITY = ROOT / "data" / "ztm-pojazdy.json"
+SETS = ROOT / "data" / "tramwar-sets.json"
 OUT = ROOT / "Tabor" / "Resources" / "fleet.json"
 DANE = "https://dane.um.warszawa.pl/api/action/get_ztm_pojazdy"
 BASE = "https://www.ztm.waw.pl/baza-danych-pojazdow/"
@@ -180,6 +182,32 @@ def fetch_city():
     CITY.write_text(json.dumps(city, ensure_ascii=False, indent=0))
     print(f"city: {len(vehicles)} vehicles, {sum(len(t) for t in types.values())} types")
     return city
+
+
+# ---------------------------------------------------------------- tramwar.pl's sets
+
+# Which car each coupled tram runs with, per tramwar.pl (a private site, so fetched by hand with
+# --tramwar, never nightly). Sets change rarely, after a crash or a works visit, so the app only
+# suggests them (issue #84).
+TRAMWAR_SETS = ["https://tramwar.pl/tram105n.html", "https://tramwar.pl/tram105n2k.html"]
+
+
+def fetch_sets():
+    sets = []
+    for url in TRAMWAR_SETS:
+        req = urllib.request.Request(url, headers=HEADERS)
+        with urllib.request.urlopen(req, timeout=30) as r:
+            # ISO 8859-2; only the digits matter here.
+            text = re.sub(r"<[^>]+>", " ", r.read().decode("latin-1"))
+        # "1252+1251", or "1392"+1391" with quotes marking the second car to carry a number.
+        found = [[int(n) for n in re.findall(r"\d{3,4}", m)]
+                 for m in re.findall(r"\b\d{3,4}[\"']*(?:\+\d{3,4}[\"']*)+", text)]
+        if len(found) < 15:
+            raise RuntimeError(f"only {len(found)} sets on {url}: has the page changed?")
+        sets += found
+    SETS.write_text(json.dumps({"fetched": date.today().isoformat(), "source": TRAMWAR_SETS,
+                                "sets": sorted(sets)}))
+    print(f"tramwar: {len(sets)} sets")
 
 
 def with_city(vehicles, city, report=True):
@@ -823,6 +851,15 @@ def build(vehicles, city=None):
             m["trailers"] = trailers
         if m["id"] in TOWING:
             m["tows"] = True
+    # tramwar.pl's sets, on the coupled model that has every car of one. A set across models
+    # (or with a car we don't have) is printed and left out. Emitted as "pairs", which older
+    # app versions ignore.
+    coupled = [m for m in models if m["id"] in COUPLED]
+    for cars in json.loads(SETS.read_text())["sets"] if SETS.exists() else []:
+        if m := next((m for m in coupled if set(cars) <= numbers[m["id"]]), None):
+            m.setdefault("pairs", []).append(cars)
+        elif any(set(cars) & numbers[m["id"]] for m in coupled):
+            print(f"  - tramwar set {'+'.join(map(str, cars))} isn't within one model, left out")
     assert sum(len(m.get("trailers", [])) for m in models) == len(TRAILERS), "a TRAILERS number isn't in the data"
     assert not TOWING - numbers.keys(), f"TOWING ids not in the data any more: {TOWING - numbers.keys()}"
     missing = COUPLED - numbers.keys()
@@ -901,6 +938,8 @@ def build(vehicles, city=None):
 if __name__ == "__main__":
     if "--scrape" in sys.argv:
         scrape()
+    if "--tramwar" in sys.argv:
+        fetch_sets()
     if "--offline" not in sys.argv:
         fetch_city()
     city = load_city()

@@ -1553,15 +1553,31 @@ private let n13 = catalog.model(id: "tram-konstal-13n")!
 }
 
 @Test func partnerSuggestionsInOrder() {
+    // tramwar.pl has 1283 in 1284+1283.
     let s = CoupledSet.suggestions(for: 1283, model: n105, photoNumbers: [1286], nearby: nearby([live(1282, .tram)]), catalog: catalog)
-    #expect(s.map(\.number) == [1286, 1282, 1284])
-    #expect(s.map(\.source) == [.photo, .feed, .neighbour])
+    #expect(s.map(\.number) == [1284, 1286, 1282])
+    #expect(s.map(\.source) == [.usual, .photo, .feed])
     let fixed = CoupledSet.suggestions(for: 1252, model: n105Vintage, photoNumbers: [1000], nearby: nearby([live(1001, .tram)]), catalog: catalog)
     #expect(fixed.map(\.number) == [1251, 1000, 1001])
     #expect(fixed.first?.source == .fixed)
     // The caught number and numbers not in the model are skipped, and three is the most.
     let capped = CoupledSet.suggestions(for: 1283, model: n105, photoNumbers: [1283, 99_999, 1286, 1289, 1290], nearby: [], catalog: catalog)
-    #expect(capped.map(\.number) == [1286, 1289, 1290])
+    #expect(capped.map(\.number) == [1284, 1286, 1289])
+}
+
+@Test func usualPartnerNeedNotBeANeighbour() {
+    // Sets ±1 can't find (tramwar.pl): 1381+1341, 2064+2037.
+    #expect(n105.usualPartners(of: 1341) == [1381])
+    #expect(CoupledSet.suggestions(for: 1381, model: n105, photoNumbers: [], nearby: [], catalog: catalog).map(\.number)
+            == [1341, 1380])
+    let n2k = catalog.model(id: "tram-alstom-konstal-105n2k")!
+    let s = CoupledSet.suggestions(for: 2037, model: n2k, photoNumbers: [], nearby: [], catalog: catalog)
+    #expect(s.first == CoupledSet.Suggestion(number: 2064, source: .usual))
+    // Every running car of a coupled model is in a set; #2046 is parked.
+    for m in catalog.models where m.coupled {
+        let paired = Set(m.pairs.joined())
+        #expect(Set(m.numbers).subtracting(paired).subtracting([2046]).isEmpty, "\(m.id)")
+    }
 }
 
 @Test func partnerSuggestionsStayInTheModel() {
