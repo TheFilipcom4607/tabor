@@ -30,7 +30,7 @@ struct TrackAttributes: ActivityAttributes {
     var tram: Bool
     /// Your stop; nil when the route passes you between stops.
     var stop: String?
-    /// Its sticker in the App Group, when it's in your book already; otherwise an outline.
+    /// Its sticker in the App Group, when it's in your book with one; otherwise the line shows.
     var image: String?
     var cutout: Bool
     /// Not in the book at all, as a model.

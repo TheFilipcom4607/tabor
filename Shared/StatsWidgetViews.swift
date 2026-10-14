@@ -70,8 +70,10 @@ struct WidgetPicture: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .overlay(alignment: .bottomTrailing) { if tag > 0 { WidgetNumberTag(number: number, tier: tier, size: tag) } }
             } else {
-                pic.scaledToFill()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // Filled inside a box of its own: a flexible frame grows to the filled
+                // picture, and a tall photo spilled out of its slot (#86).
+                Color.clear
+                    .overlay { pic.scaledToFill() }
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     .overlay(alignment: .bottomTrailing) { if tag > 0 { WidgetNumberTag(number: number, tier: tier, size: tag).padding(4) } }
             }

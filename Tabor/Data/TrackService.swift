@@ -41,11 +41,11 @@ final class TrackService {
 
         let number = pin.vehicle.number, modelId = pin.model.id
         let caught = sightings.contains { $0.number == number && $0.modelId == modelId }
-        let picture = caught ? Self.writePicture(sightings, number: number, modelId: modelId) : nil
+        let sticker = caught ? Self.writeSticker(sightings, number: number, modelId: modelId) : nil
         let attributes = TrackAttributes(
             number: number, modelId: modelId, model: pin.model.name, tier: pin.model.tier.rawValue,
             line: pin.vehicle.line, tram: pin.vehicle.kind == .tram, stop: plan.stop,
-            image: picture?.name, cutout: picture?.cutout ?? false, newModel: pin.kind == .newModel,
+            image: sticker, cutout: sticker != nil, newModel: pin.kind == .newModel,
             caught: caught, started: .now)
         let state = TrackAttributes.ContentState(phase: .coming, distance: Int(plan.distance.rounded()),
                                                  stops: plan.stops, at: plan.at, progress: 0)
@@ -169,16 +169,16 @@ final class TrackService {
 
     // MARK: - Picture
 
-    /// A small copy of the vehicle's sticker (or photo) in the App Group, where the Live
-    /// Activity can read it.
-    private static func writePicture(_ sightings: [Sighting], number: Int, modelId: String) -> (name: String, cutout: Bool)? {
-        let sticker = sightings.sticker(number: number, modelId: modelId)
-        guard let source = sticker ?? sightings.photo(number: number, modelId: modelId),
+    /// A small copy of the vehicle's sticker in the App Group, where the Live Activity can
+    /// read it. Only a sticker: a photo at that size is a street with a speck in it, so
+    /// without one the activity shows the line instead (#86).
+    private static func writeSticker(_ sightings: [Sighting], number: Int, modelId: String) -> String? {
+        guard let source = sightings.sticker(number: number, modelId: modelId),
               let data = try? Data(contentsOf: PhotoStore.url(source)),
               let cg = PhotoStore.downsample(data, maxPixel: 240),
               let png = UIImage(cgImage: cg).pngData() else { return nil }
         let name = "track-\(number).png"
         guard let url = WidgetSnapshot.imageURL(name), (try? png.write(to: url, options: .atomic)) != nil else { return nil }
-        return (name, sticker != nil)
+        return name
     }
 }
