@@ -1681,7 +1681,7 @@ private struct LegendSwatch: View {
     }
 }
 
-private struct Triangle: Shape {
+struct Triangle: Shape {
     func path(in r: CGRect) -> Path {
         var p = Path()
         p.move(to: CGPoint(x: r.minX, y: r.minY))

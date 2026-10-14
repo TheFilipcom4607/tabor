@@ -606,9 +606,10 @@ private struct Brackets: Shape {
     }
 }
 
-/// A little HUNT map on the real city: you at Centrum, uncaught vehicles on the streets
-/// around you in their rarity colours. It's a picture, not a map to use, so it doesn't
-/// take touches (and the page still swipes over it).
+/// A frozen HUNT around Rondo Dmowskiego: what the live feed really showed there at 11:27 on
+/// 14 Oct 2026, each vehicle put on its line's route shape (as HUNT does), so none sits in a
+/// building. It's a picture, not a map to use, so it doesn't take touches (and the page still
+/// swipes over it).
 private struct HuntPage: View {
     private struct MockPin: Identifiable {
         let id: Int
@@ -622,23 +623,31 @@ private struct HuntPage: View {
 
     /// Rondo Dmowskiego, where Marszałkowska crosses Aleje Jerozolimskie.
     private static let here = CLLocationCoordinate2D(latitude: 52.2302, longitude: 21.0117)
+    /// A little north-east of you, where the vehicles are.
     private static let camera = MapCameraPosition.region(
-        MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 52.2304, longitude: 21.0117),
+        MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 52.2312, longitude: 21.01258),
                            latitudinalMeters: 1100, longitudinalMeters: 1100))
 
+    // Commons outlined, as for a model already in the book.
     private let pins = [
-        MockPin(id: 0, tier: .legendary, line: "128", tram: false, arrow: "arrow.up", filled: true,
-                at: CLLocationCoordinate2D(latitude: 52.2326, longitude: 21.0105)),
-        MockPin(id: 1, tier: .gold, line: "25", tram: true, arrow: "arrow.left", filled: false,
-                at: CLLocationCoordinate2D(latitude: 52.2309, longitude: 21.0150)),
-        MockPin(id: 2, tier: .rare, line: "175", tram: false, arrow: "arrow.right", filled: true,
-                at: CLLocationCoordinate2D(latitude: 52.2295, longitude: 21.0080)),
-        MockPin(id: 3, tier: .common, line: "18", tram: true, arrow: "arrow.down", filled: false,
-                at: CLLocationCoordinate2D(latitude: 52.2280, longitude: 21.0128)),
-        MockPin(id: 4, tier: .common, line: "507", tram: false, arrow: "arrow.right", filled: true,
-                at: CLLocationCoordinate2D(latitude: 52.2320, longitude: 21.0195)),
-        MockPin(id: 5, tier: .gold, line: "160", tram: false, arrow: "arrow.left", filled: true,
-                at: CLLocationCoordinate2D(latitude: 52.2284, longitude: 21.0040)),
+        // #1058 Solaris Urbino 10
+        MockPin(id: 0, tier: .gold, line: "107", tram: false, arrow: "arrow.up", filled: true,
+                at: CLLocationCoordinate2D(latitude: 52.234471, longitude: 21.013760)),
+        // #2060 Konstal 105N2k
+        MockPin(id: 1, tier: .gold, line: "24", tram: true, arrow: "arrow.up.right", filled: true,
+                at: CLLocationCoordinate2D(latitude: 52.230855, longitude: 21.015986)),
+        // #7313 Solbus Solcity 18
+        MockPin(id: 2, tier: .rare, line: "525", tram: false, arrow: "arrow.up", filled: true,
+                at: CLLocationCoordinate2D(latitude: 52.228402, longitude: 21.012374)),
+        // #3623 Pesa 128N Jazz Duo
+        MockPin(id: 3, tier: .rare, line: "4", tram: true, arrow: "arrow.down.right", filled: true,
+                at: CLLocationCoordinate2D(latitude: 52.227113, longitude: 21.013090)),
+        // #1368 Konstal 105Na
+        MockPin(id: 4, tier: .common, line: "22", tram: true, arrow: "arrow.right", filled: false,
+                at: CLLocationCoordinate2D(latitude: 52.229252, longitude: 21.008547)),
+        // #5871 Solaris Urbino 18 electric
+        MockPin(id: 5, tier: .common, line: "503", tram: false, arrow: "arrow.down.right", filled: false,
+                at: CLLocationCoordinate2D(latitude: 52.232294, longitude: 21.019999)),
     ]
 
     var body: some View {
@@ -646,32 +655,18 @@ private struct HuntPage: View {
                    title: String(localized: "See what you haven't caught, live."),
                    text: String(localized: "HUNT maps every bus and tram running near you that isn't in your book yet, and which way it's going. Location is only used while TABOR is open.")) {
             Map(initialPosition: Self.camera, interactionModes: []) {
+                // HUNT's own dot for you.
                 Annotation("", coordinate: Self.here) {
                     ZStack {
-                        // Animated from inside the annotation: one started outside the map
-                        // doesn't carry into it.
-                        Circle()
-                            .fill(Palette.radar.opacity(0.3))
-                            .phaseAnimator([false, true]) { c, out in
-                                c.scaleEffect(out ? 1 : 0.25).opacity(out ? 0 : 1)
-                            } animation: { out in out ? .easeOut(duration: 1.8) : nil }
-                            .frame(width: 70, height: 70)
-                        Circle()
-                            .fill(Palette.radar)
-                            .frame(width: 14, height: 14)
-                            .overlay(Circle().stroke(.white, lineWidth: 2.5))
+                        Circle().fill(.white).frame(width: 20, height: 20)
+                            .shadow(color: .black.opacity(0.35), radius: 3)
+                        Circle().fill(Color(uiColor: .systemBlue)).frame(width: 14, height: 14)
                     }
-                    .frame(width: 70, height: 70)
                 }
                 .annotationTitles(.hidden)
                 ForEach(pins) { p in
-                    Annotation("", coordinate: p.at, anchor: .bottom) {
-                        tag(p)
-                            .phaseAnimator([false, true]) { t, up in
-                                t.offset(y: (up ? -3 : 3) * (p.id.isMultiple(of: 2) ? 1 : -1))
-                            } animation: { _ in .easeInOut(duration: 1.4) }
-                    }
-                    .annotationTitles(.hidden)
+                    Annotation("", coordinate: p.at, anchor: .bottom) { tag(p) }
+                        .annotationTitles(.hidden)
                 }
             }
             .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll, showsTraffic: false))
@@ -686,22 +681,27 @@ private struct HuntPage: View {
         }
     }
 
-    /// Like HUNT's own pins: filled for a model new to you, outlined for one you have.
+    /// HUNT's own pin: filled for a model new to you, outlined for one you have.
     private func tag(_ p: MockPin) -> some View {
         let color = p.tier.mapColor
-        return HStack(spacing: 4) {
-            Image(systemName: p.tram ? "tram.fill" : "bus.fill")
-                .font(.system(size: 11, weight: .bold))
-            Text(p.line)
-                .font(TaborFont.mono(13, 700))
-            Image(systemName: p.arrow)
-                .font(.system(size: 10, weight: .heavy))
+        return VStack(spacing: 0) {
+            HStack(spacing: 4) {
+                Image(systemName: p.tram ? "tram.fill" : "bus.fill")
+                    .font(.system(size: 9.5, weight: .bold))
+                Text(p.line)
+                    .font(TaborFont.mono(12.5, 700))
+                Image(systemName: p.arrow)
+                    .font(.system(size: 10, weight: .heavy))
+            }
+            .foregroundStyle(p.filled ? p.tier.onMapColor : color)
+            .padding(.vertical, 4)
+            .padding(.horizontal, 7)
+            .background(p.filled ? color : Palette.bg.opacity(0.88), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .strokeBorder(p.filled ? Palette.bg.opacity(0.6) : color, lineWidth: 1.5))
+            Triangle()
+                .fill(color)
+                .frame(width: 9, height: 5)
         }
-        .foregroundStyle(p.filled ? p.tier.onMapColor : color)
-        .padding(.vertical, 4)
-        .padding(.horizontal, 7)
-        .background(p.filled ? color : Palette.bg.opacity(0.88), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(color, lineWidth: p.filled ? 0 : 1.5))
-        .shadow(color: color.opacity(0.45), radius: 6)
     }
 }
