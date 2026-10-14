@@ -37,3 +37,12 @@ body:
       placeholder: 1.2 (37)
     validations:
       required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Skąd masz apkę? / Where's the app from?
+      options:
+        - App Store
+        - TestFlight
+    validations:
+      required: true
