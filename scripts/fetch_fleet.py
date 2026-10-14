@@ -344,7 +344,10 @@ DISPLAY_NAMES = {
     ("HRC", "142N"): "Hyundai Rotem 142N",
     ("HCP", "123N"): "Cegielski 123N",
     ("Konstal", "105N"): "Konstal 105Na",
-    ("Alstom Konstal", "105N"): "Konstal 105N2k",
+    # Split by SPLIT below into TW's three types (tramwar.pl/twstat.html).
+    ("Alstom Konstal", "105Ni"): "Konstal 105Ni",
+    ("Alstom Konstal", "105N2k"): "Konstal 105N2k",
+    ("Alstom Konstal", "105N2k/2000"): "Konstal 105N2k/2000",
     ("Alstom Konstal", "116N"): "Alstom 116Na",
     # Split by SPLIT below; names per Warszawikia.
     ("Pesa", "120N"): "Pesa 120N Tramicus",
@@ -393,7 +396,8 @@ VINTAGE_NUMBERS = {
 # their FIXED_SETS pair the KMKM's cars, and #1006 runs alone (its partner #1007 was scrapped
 # in 2011).
 COUPLED = {
-    "tram-konstal-105n", "tram-alstom-konstal-105n", "tram-hcp-123n",
+    "tram-konstal-105n", "tram-alstom-konstal-105ni", "tram-alstom-konstal-105n2k",
+    "tram-alstom-konstal-105n", "tram-hcp-123n",
 }
 
 # Sets that always run together: the KMKM's 105Na sets (kmkm.waw.pl/tramwaje-lista) and the
@@ -549,6 +553,9 @@ MERGE = {
 # twstat.html, tram105n2k.html). Their catches move with them (`formerly`).
 RETYPE = {("TRAM", str(n)): ("Alstom Konstal", "105N") for n in (1363, 1364, 1386, 1390, 2006, 2007, 2008, 2009)}
 
+# The 105Ni rebuilds of 2012-2017 (tramwar.pl/tram105n2k.html, the type of every set, 2026-10-11).
+NI_105 = {1363, 1364, 1386, 1390, 1391, 1392, *range(2006, 2024), 2028, 2029, 2038, 2039}
+
 
 # ZTM files some different types under one make/model string; these split them by number:
 # (kind, make, model) -> [(numbers, model, id)], plus a make when the part has another maker.
@@ -568,6 +575,14 @@ SPLIT = {
     ("TRAM", "Lilpop", "C"): [
         ({257}, "C", "tram-lilpop-c"),
         ({2204}, "W", "tram-warsztaty-glowne-w", "Warsztaty Główne"),
+    ],
+    # ZTM has one type; TW has three (tramwar.pl/twstat.html: 28 105Ni, 43 105N2k, 62
+    # 105N2k/2000; issue #83). The 105N2k/2000 are the 2001 deliveries; the 105Ni were
+    # rebuilt from 105N2ks and older 105Ns.
+    ("TRAM", "Alstom Konstal", "105N"): [
+        (NI_105, "105Ni", "tram-alstom-konstal-105ni"),
+        (set(range(2024, 2074)) - NI_105, "105N2k", "tram-alstom-konstal-105n2k"),
+        (range(2074, 2136), "105N2k/2000", "tram-alstom-konstal-105n"),
     ],
 }
 
@@ -653,12 +668,13 @@ def with_vintage_extras(vehicles):
         make, model = MERGE.get((v["kind"], v["make"], v["model"]), (v["make"], v["model"]))
         v = {**v, "make": make, "model": model}
         if retype := RETYPE.get((v["kind"], v["number"])):
-            v = {**v, "make": retype[0], "model": retype[1], "formerly": slug(f"{v['kind']}-{make}-{model}")}
+            v = {**v, "make": retype[0], "model": retype[1], "formerly": [slug(f"{v['kind']}-{make}-{model}")]}
             make, model = retype
         for numbers, part, part_id, *part_make in SPLIT.get((v["kind"], make, model), []):
             if v["number"].isdigit() and int(v["number"]) in numbers:
+                # After a RETYPE, both old ids: 1363 was a 105Na, then a 105N2k.
                 v = {**v, "make": part_make[0] if part_make else make, "model": part, "id": part_id,
-                     "formerly": slug(f"{v['kind']}-{make}-{model}")}
+                     "formerly": [*v.get("formerly", []), slug(f"{v['kind']}-{make}-{model}")]}
         split = VINTAGE_NUMBERS.get((v["kind"], v["make"], v["model"]), set())
         out.append({**v, "vintage": v["number"].isdigit() and int(v["number"]) in split})
     # Once ZTM catches up and lists one of these itself, its own row wins.
@@ -751,7 +767,7 @@ def build(vehicles, city=None):
                     vs[0].get("id") or slug(f"{kind}-{make}-{model}") + ("-vintage" if split else ""))
         if len({v.get("id") for v in vs}) != 1:
             raise ValueError(f"{make} {model}: some numbers aren't in any SPLIT part")
-        formerly = sorted({v["formerly"] for v in vs if v.get("formerly")} - {model_id})
+        formerly = sorted({f for v in vs for f in v.get("formerly", [])} - {model_id})
         # Specs from the type most of this model's vehicles are, in the city's list.
         in_city = [city_rows[(kind, v["number"])] for v in vs
                    if (kind, v["number"]) in city_rows and not v.get("unlisted")]
@@ -867,9 +883,9 @@ def build(vehicles, city=None):
         # ZTM is the base; the hand-kept lists above fill its gaps (new deliveries, trial
         # and club buses, names, build years).
         "source": f"Warsaw ZTM vehicle database (fetched {raw['fetched']}){city_en}, plus Warszawikia, "
-                  "the KMKM club, TransInfo, phototrans.eu and live GPS",
+                  "the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
         "sourcePl": f"Baza pojazdów ZTM Warszawa (stan z {raw['fetched']}){city_pl}, a także Warszawikia, "
-                    "klub KMKM, TransInfo, phototrans.eu i GPS na żywo",
+                    "klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
         "fetched": fetched,
         "models": models,
         "worksModels": works,

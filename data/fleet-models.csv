@@ -45,7 +45,7 @@ number range,model and make,year,count,rarity,ztm code,type,depot,operator,coupl
 1349-1356,Konstal 105Na,1991,8,COMMON,Konstal 105N,tram,R-4 Żoliborz,Tramwaje Warszawskie,yes
 1357-1358,Konstal 105Na,1991,2,COMMON,Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
 1359-1362,Konstal 105Na,1991,4,COMMON,Konstal 105N,tram,R-4 Żoliborz,Tramwaje Warszawskie,yes
-1363-1364,Konstal 105N2k,1991,2,COMMON,Alstom Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
+1363-1364,Konstal 105Ni,1991,2,GOLD,Alstom Konstal 105Ni,tram,R-1 Wola,Tramwaje Warszawskie,yes
 1365-1368,Konstal 105Na,1991,4,COMMON,Konstal 105N,tram,R-4 Żoliborz,Tramwaje Warszawskie,yes
 1369-1370,Konstal 105Na,1992,2,COMMON,Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
 1371-1373,Konstal 105Na,1992,3,COMMON,Konstal 105N,tram,R-4 Żoliborz,Tramwaje Warszawskie,yes
@@ -54,11 +54,11 @@ number range,model and make,year,count,rarity,ztm code,type,depot,operator,coupl
 1381,Konstal 105Na,1992,1,COMMON,Konstal 105N,tram,R-2 Praga,Tramwaje Warszawskie,yes
 1383,Konstal 105Na,1994,1,COMMON,Konstal 105N,tram,R-5 Annopol,Tramwaje Warszawskie,yes
 1384-1385,Konstal 105Na,1993,2,COMMON,Konstal 105N,tram,R-4 Żoliborz,Tramwaje Warszawskie,yes
-1386,Konstal 105N2k,1993,1,COMMON,Alstom Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
+1386,Konstal 105Ni,1993,1,GOLD,Alstom Konstal 105Ni,tram,R-1 Wola,Tramwaje Warszawskie,yes
 1387-1389,Konstal 105Na,1994,3,COMMON,Konstal 105N,tram,R-5 Annopol,Tramwaje Warszawskie,yes
-1390,Konstal 105N2k,1993,1,COMMON,Alstom Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
-1391,Konstal 105N2k,1997,1,COMMON,Alstom Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
-1392,Konstal 105N2k,1994,1,COMMON,Alstom Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
+1390,Konstal 105Ni,1993,1,GOLD,Alstom Konstal 105Ni,tram,R-1 Wola,Tramwaje Warszawskie,yes
+1391,Konstal 105Ni,1997,1,GOLD,Alstom Konstal 105Ni,tram,R-1 Wola,Tramwaje Warszawskie,yes
+1392,Konstal 105Ni,1994,1,GOLD,Alstom Konstal 105Ni,tram,R-1 Wola,Tramwaje Warszawskie,yes
 1393-1410,Konstal 105Na,1993,18,COMMON,Konstal 105N,tram,R-5 Annopol,Tramwaje Warszawskie,yes
 1411-1420,Konstal 105Na,1994,10,COMMON,Konstal 105N,tram,R-2 Praga,Tramwaje Warszawskie,yes
 1421-1422,Konstal 105Na,1994,2,COMMON,Konstal 105N,tram,R-5 Annopol,Tramwaje Warszawskie,yes
@@ -80,17 +80,21 @@ number range,model and make,year,count,rarity,ztm code,type,depot,operator,coupl
 1620,Konstal N,1951,1,VINTAGE,Konstal N,tram,R-3 Mokotów,Tramwaje Warszawskie,
 1811,Konstal N,1961,1,VINTAGE,Konstal N,tram,R-3 Mokotów,Tramwaje Warszawskie,
 2002,Gdańsk type K work car,1940,1,WORKS,Gdańsk type K,tram,R-1 Wola,Tramwaje Warszawskie,
-2006-2007,Konstal 105N2k,1989,2,COMMON,Alstom Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
-2008-2009,Konstal 105N2k,1992,2,COMMON,Alstom Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
-2010-2013,Konstal 105N2k,1995,4,COMMON,Alstom Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
-2014-2029,Konstal 105N2k,1997,16,COMMON,Alstom Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
-2030-2035,Konstal 105N2k,1998,6,COMMON,Alstom Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
-2037-2046,Konstal 105N2k,1998,10,COMMON,Alstom Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
-2048-2053,Konstal 105N2k,1998,6,COMMON,Alstom Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
-2054-2061,Konstal 105N2k,1999,8,COMMON,Alstom Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
-2062-2064,Konstal 105N2k,2000,3,COMMON,Alstom Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
-2066-2073,Konstal 105N2k,2000,8,COMMON,Alstom Konstal 105N,tram,R-1 Wola,Tramwaje Warszawskie,yes
-2074-2135,Konstal 105N2k,2001,62,COMMON,Alstom Konstal 105N,tram,R-3 Mokotów,Tramwaje Warszawskie,yes
+2006-2007,Konstal 105Ni,1989,2,GOLD,Alstom Konstal 105Ni,tram,R-1 Wola,Tramwaje Warszawskie,yes
+2008-2009,Konstal 105Ni,1992,2,GOLD,Alstom Konstal 105Ni,tram,R-1 Wola,Tramwaje Warszawskie,yes
+2010-2013,Konstal 105Ni,1995,4,GOLD,Alstom Konstal 105Ni,tram,R-1 Wola,Tramwaje Warszawskie,yes
+2014-2023,Konstal 105Ni,1997,10,GOLD,Alstom Konstal 105Ni,tram,R-1 Wola,Tramwaje Warszawskie,yes
+2024-2027,Konstal 105N2k,1997,4,GOLD,Alstom Konstal 105N2k,tram,R-1 Wola,Tramwaje Warszawskie,yes
+2028-2029,Konstal 105Ni,1997,2,GOLD,Alstom Konstal 105Ni,tram,R-1 Wola,Tramwaje Warszawskie,yes
+2030-2035,Konstal 105N2k,1998,6,GOLD,Alstom Konstal 105N2k,tram,R-1 Wola,Tramwaje Warszawskie,yes
+2037,Konstal 105N2k,1998,1,GOLD,Alstom Konstal 105N2k,tram,R-1 Wola,Tramwaje Warszawskie,yes
+2038-2039,Konstal 105Ni,1998,2,GOLD,Alstom Konstal 105Ni,tram,R-1 Wola,Tramwaje Warszawskie,yes
+2040-2046,Konstal 105N2k,1998,7,GOLD,Alstom Konstal 105N2k,tram,R-1 Wola,Tramwaje Warszawskie,yes
+2048-2053,Konstal 105N2k,1998,6,GOLD,Alstom Konstal 105N2k,tram,R-1 Wola,Tramwaje Warszawskie,yes
+2054-2061,Konstal 105N2k,1999,8,GOLD,Alstom Konstal 105N2k,tram,R-1 Wola,Tramwaje Warszawskie,yes
+2062-2064,Konstal 105N2k,2000,3,GOLD,Alstom Konstal 105N2k,tram,R-1 Wola,Tramwaje Warszawskie,yes
+2066-2073,Konstal 105N2k,2000,8,GOLD,Alstom Konstal 105N2k,tram,R-1 Wola,Tramwaje Warszawskie,yes
+2074-2135,Konstal 105N2k/2000,2001,62,RARE,Alstom Konstal 105N2k/2000,tram,R-3 Mokotów,Tramwaje Warszawskie,yes
 2112-2113,Gdańsk type K welding car,1940,2,WORKS,Gdańsk type K,tram,T-1 ZETiT,Tramwaje Warszawskie,
 2136-2138,Cegielski 123N,2006,3,GOLD,HCP 123N,tram,R-5 Annopol,Tramwaje Warszawskie,yes
 2139-2165,Cegielski 123N,2007,27,GOLD,HCP 123N,tram,R-5 Annopol,Tramwaje Warszawskie,yes

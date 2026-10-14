@@ -159,7 +159,7 @@ private func sampleModel() -> VehicleModel {
 }
 
 @Test func certainModelLeadsOverABusOrTram() {
-    // #2022 (a Solbus, and a 105N2k tram) a little bigger in the frame than #5941.
+    // #2022 (a Solbus, and a 105Ni tram) a little bigger in the frame than #5941.
     let obs = [TextObservation(text: "2022", confidence: 1, height: 0.0416),
                TextObservation(text: "5941", confidence: 1, height: 0.0357)]
     #expect(NumberExtractor.best(in: obs, mode: .auto, catalog: catalog) == 5941)
@@ -206,9 +206,26 @@ private func sampleModel() -> VehicleModel {
     // A number tied by hand to a model it isn't in, with no split behind it, stays put.
     #expect(catalog.moved(modelId: "bus-solaris-urbino-18", number: 3105) == nil)
     #expect(catalog.moved(modelId: "tram-pesa-120n", number: 99_999) == nil)
-    // The 105Ni cars ZTM filed as plain 105Na follow to the 105N2k; a real 105Na stays.
-    #expect(catalog.moved(modelId: "tram-konstal-105n", number: 1363) == "tram-alstom-konstal-105n")
+    // The 105Ni cars ZTM filed as plain 105Na follow to the 105Ni; a real 105Na stays.
+    #expect(catalog.moved(modelId: "tram-konstal-105n", number: 1363) == "tram-alstom-konstal-105ni")
     #expect(catalog.moved(modelId: "tram-konstal-105n", number: 1393) == nil)
+    // The 105N2k family split three ways (#83): the 105N2k/2000 keep the old id.
+    #expect(catalog.moved(modelId: "tram-alstom-konstal-105n", number: 2016) == "tram-alstom-konstal-105ni")
+    #expect(catalog.moved(modelId: "tram-alstom-konstal-105n", number: 2024) == "tram-alstom-konstal-105n2k")
+    #expect(catalog.moved(modelId: "tram-alstom-konstal-105n", number: 2080) == nil)
+}
+
+@Test func the105N2kFamilyIsTWsThreeTypes() {
+    // tramwar.pl/twstat.html: 28 105Ni, 43 105N2k, 62 105N2k/2000, all running in sets.
+    let parts = [("tram-alstom-konstal-105ni", "Konstal 105Ni", 28, Tier.gold),
+                 ("tram-alstom-konstal-105n2k", "Konstal 105N2k", 43, .gold),
+                 ("tram-alstom-konstal-105n", "Konstal 105N2k/2000", 62, .rare)]
+    for (id, name, fleet, tier) in parts {
+        let m = catalog.model(id: id)
+        #expect(m?.name == name && m?.numbers.count == fleet && m?.tier == tier && m?.coupled == true)
+    }
+    #expect(catalog.match(number: 1392, kind: .tram).suggested?.id == "tram-alstom-konstal-105ni")
+    #expect(catalog.match(number: 2064, kind: .tram).suggested?.id == "tram-alstom-konstal-105n2k")
 }
 
 @Test func trialBusIsOnTestAndOutsideTheFleet() {
@@ -230,7 +247,7 @@ private func sampleModel() -> VehicleModel {
     // fleet.json marks them vintage as well, for older apps; the tourist-line 13Ns stay vintage.
     #expect(catalog.model(id: "tram-konstal-13n")?.tier == .vintage)
     #expect(!catalog.models.filter(\.regular).contains { $0.works })
-    // Welding car 2112 shares its number with a 105N2k: the passenger car comes first.
+    // Welding car 2112 shares its number with a 105N2k/2000: the passenger car comes first.
     let both = catalog.match(number: 2112, kind: .tram).candidates.map(\.id)
     #expect(both == ["tram-alstom-konstal-105n", "tram-works-welding-gdansk-type-k"])
     // One model per job and type: the transport cars are 13Ns and Ks.
@@ -1476,7 +1493,7 @@ private func subject(_ label: Int, pixels: Int, x: Double, y: Double, w: Double,
 
 private let n105 = catalog.model(id: "tram-konstal-105n")!
 private let n105Vintage = catalog.model(id: "tram-konstal-105n-vintage")!
-private let n2k = catalog.model(id: "tram-alstom-konstal-105n")!
+private let ni105 = catalog.model(id: "tram-alstom-konstal-105ni")!
 private let n13 = catalog.model(id: "tram-konstal-13n")!
 
 @Test func coupledCarIsKeptNotRescuedIntoItsLead() {
@@ -1498,7 +1515,7 @@ private let n13 = catalog.model(id: "tram-konstal-13n")!
         // Still offered, below the read.
         #expect(out.map(\.number) == [read, near])
     }
-    // 1393 is a 105Na, 1392 a 105N2k: not the same set, and both real, so 1393 stands.
+    // 1393 is a 105Na, 1392 a 105Ni: not the same set, and both real, so 1393 stands.
     let other = LiveHints.adjust([(1393, 1.2)], nearby: nearby([live(1392, .tram, metres: 60)]), catalog: catalog)
     #expect(other.adjustment.rescued.isEmpty && other.adjustment.partners.isEmpty)
     #expect(other.candidates.max { $0.score < $1.score }?.number == 1393)
@@ -1548,8 +1565,8 @@ private let n13 = catalog.model(id: "tram-konstal-13n")!
 }
 
 @Test func partnerSuggestionsStayInTheModel() {
-    // 1393 is a 105Na: never offered for a 105N2k.
-    let s = CoupledSet.suggestions(for: 1392, model: n2k, photoNumbers: [1393], nearby: nearby([live(1393, .tram)]), catalog: catalog)
+    // 1393 is a 105Na: never offered for a 105Ni.
+    let s = CoupledSet.suggestions(for: 1392, model: ni105, photoNumbers: [1393], nearby: nearby([live(1393, .tram)]), catalog: catalog)
     #expect(!s.map(\.number).contains(1393))
     #expect(s.map(\.number) == [1391])
     #expect(CoupledSet.suggestions(for: 821, model: n13, photoNumbers: [], nearby: [], catalog: catalog).map(\.number) == [818])
@@ -1560,7 +1577,8 @@ private let n13 = catalog.model(id: "tram-konstal-13n")!
 
 @Test func coupledFleetData() throws {
     let coupled = Set(catalog.models.filter(\.coupled).map(\.id))
-    #expect(coupled == ["tram-konstal-105n", "tram-alstom-konstal-105n", "tram-hcp-123n"])
+    #expect(coupled == ["tram-konstal-105n", "tram-alstom-konstal-105ni", "tram-alstom-konstal-105n2k",
+                        "tram-alstom-konstal-105n", "tram-hcp-123n"])
     // The KMKM's vintage sets stay coupled through `sets`; #1006, the promotional car, runs alone.
     #expect(n105Vintage.isCoupled(1000) && n105Vintage.fixedPartner(of: 1000) == 1001)
     #expect(n105Vintage.has(1006) && !n105Vintage.isCoupled(1006) && !n105.has(1006))
@@ -1732,9 +1750,9 @@ private func read(_ n: Int, _ score: Double, x: Double, y: Double = 0.5) -> Also
                             partner: nil, catalog: catalog, nearby: nearby).first?.model.id
     }
     #expect(model(5941, urbino) == "bus-solbus-sm18")
-    #expect(model(3105, tramicus) == "tram-alstom-konstal-105n")
+    #expect(model(3105, tramicus) == "tram-alstom-konstal-105ni")
     // The feed knows better: the tram 2022 is the one right there.
-    #expect(model(5941, urbino, nearby: nearby([live(5941), live(2022, .tram, line: "17")])) == "tram-alstom-konstal-105n")
+    #expect(model(5941, urbino, nearby: nearby([live(5941), live(2022, .tram, line: "17")])) == "tram-alstom-konstal-105ni")
 }
 
 @Test func alsoInShotKeepsToTheLikeliestFew() {
