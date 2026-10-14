@@ -12,7 +12,7 @@ body:
     attributes:
       label: Gdzie? / Where?
       options:
-        - CATCH – aparat, odczyt, naklejka / camera, reading, sticker
+        - CATCH – aparat, odczyt, naklejka, ekran po zdjęciu / camera, reading, sticker, reveal
         - HUNT – mapa, filtry, szukanie, trasa / map, filters, search, route
         - BOOK
         - ME – odznaki, statystyki, mapa / badges, stats, map
@@ -20,6 +20,7 @@ body:
         - Udostępnianie / Sharing
         - Widżety / Widgets
         - Live Activity
+        - Dane o pojazdach – modele, składy, zajezdnie / Fleet data – models, sets, depots
         - Coś nowego / Something new
         - Inne / Other
   - type: textarea

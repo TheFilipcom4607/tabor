@@ -21,6 +21,7 @@ jobs:
               ['CATCH', 'CATCH'], ['HUNT', 'HUNT'], ['BOOK', 'BOOK'], ['ME', 'ME'],
               ['Ustawienia', 'Ustawienia'], ['Udostępnianie', 'Udostępnianie'],
               ['Widżety', 'widżety'], ['Live Activity', 'Live Activity'],
+              ['Dane o pojazdach', 'dane taboru'],
             ]
             const issue = context.payload.issue
             const m = (issue.body || '').match(/^### Gdzie\? \/ Where\?\s*\n+(.+)$/m)
