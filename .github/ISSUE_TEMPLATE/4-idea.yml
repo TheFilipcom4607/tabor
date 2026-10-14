@@ -5,6 +5,9 @@ body:
   - type: markdown
     attributes:
       value: |
+        Chodzi o pojazdy, modele, składy albo zajezdnie? Lepszy będzie formularz [Pojazdy i dane](https://github.com/TheFilipcom4607/tabor/issues/new?template=3-vehicle.yml).
+        About vehicles, models, sets or depots? The [Vehicles and data](https://github.com/TheFilipcom4607/tabor/issues/new?template=3-vehicle.yml) form fits better.
+
         TABOR robi jedna osoba po godzinach, więc niektóre pomysły poczekają, a niektóre się nie wydarzą. Każdy zostanie przeczytany.
         TABOR is built by one person in their free time, so some ideas wait a while, and some don't happen. Every one gets read.
   - type: dropdown

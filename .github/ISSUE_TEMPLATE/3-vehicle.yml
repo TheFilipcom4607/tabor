@@ -1,5 +1,5 @@
-name: 🚌 Pojazd / Vehicle
-description: "Brakuje pojazdu, coś się nie zgadza (model, zajezdnia, dane) albo masz pomysł, jak lepiej podzielić modele. / A vehicle is missing, something is wrong (model, depot, details), or you have an idea for splitting models better."
+name: 🚌 Pojazdy i dane / Vehicles and data
+description: "Brakuje pojazdu, coś się nie zgadza albo model warto podzielić. / A vehicle is missing, something is wrong, or a model should be split."
 labels: [pojazd]
 body:
   - type: markdown
