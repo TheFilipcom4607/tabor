@@ -97,15 +97,7 @@ struct HuntView: View {
     var body: some View {
         // Read once: the stored filter is decoded from a string on every read.
         let picked = targets
-        let shown = pins.filter { pin in
-            let wanted = switch filter {
-            case .uncaught: pin.kind != .caught
-            case .newModels: pin.kind == .newModel
-            case .everything: true
-            }
-            // A line from the search shows all of it, like the search counted (#37).
-            return ((wanted || picked.line != nil) && picked.matches(pin)) || pin.id == focusId
-        }
+        let shown = shown(pins, picked: picked)
         let selected = shown.first { $0.id == selectedId }
 
         ZStack(alignment: .top) {
@@ -223,6 +215,19 @@ struct HuntView: View {
             guard let id else { return }
             router.huntVehicle = nil
             focus(on: id)
+        }
+    }
+
+    /// The pins the header toggle and the filter let through.
+    private func shown(_ pins: [WantedPin], picked: HuntTargets) -> [WantedPin] {
+        pins.filter { pin in
+            let wanted = switch filter {
+            case .uncaught: pin.kind != .caught
+            case .newModels: pin.kind == .newModel
+            case .everything: true
+            }
+            // A line from the search shows all of it, like the search counted (#37).
+            return ((wanted || picked.line != nil) && picked.matches(pin)) || pin.id == focusId
         }
     }
 
@@ -450,6 +455,9 @@ struct HuntView: View {
         guard let here else { return nil }
         return match.yourStop(lat: here.latitude, lon: here.longitude)?.stop
     }
+
+    /// Tags on screen above which a refresh moves them without the glide.
+    private static let glideLimit = 40
 
     /// Stop names show on the map below this span (degrees of longitude, about 1 km across).
     private static let stopNameSpan = 0.015
@@ -1316,16 +1324,23 @@ struct HuntView: View {
         if let selectedId, !next.contains(where: { $0.id == selectedId }), let pin = searchedPin(selectedId, in: snapshot) {
             next.append(pin)
         }
-        // Only what the map can show, and the selected one, gets placed on its route: it's the costly part.
+        // Only tags standing alone around the view, and the selected one, get placed on their
+        // route: it's the costly part, and a bubble sits on its vehicles' fixes anyway. Zoomed
+        // out, matching all 600-odd vehicles in view stalled the map after every move (#85).
+        // The list works out the rest as its rows show.
+        let lone = groups(onMap(shown(next, picked: targets))).filter { $0.pins.count == 1 }.map(\.lead)
+        let region = mapRegion
+        func near(_ pin: WantedPin, screens: Double) -> Bool {
+            region.map { r in
+                abs(pin.vehicle.latitude - r.center.latitude) < r.span.latitudeDelta * screens / 2
+                    && abs(pin.vehicle.longitude - r.center.longitude) < r.span.longitudeDelta * screens / 2
+            } ?? true
+        }
         var placed: [String: RouteMatch] = [:]
         var coordinates: [String: CLLocationCoordinate2D] = [:]
         if let book = routes.book {
             let now = Date()
-            let region = mapRegion
-            for pin in next where pin.id == selectedId || region.map({ r in
-                abs(pin.vehicle.latitude - r.center.latitude) < r.span.latitudeDelta
-                    && abs(pin.vehicle.longitude - r.center.longitude) < r.span.longitudeDelta
-            }) ?? true {
+            for pin in lone where pin.id == selectedId || near(pin, screens: 2) {
                 guard let m = Self.match(pin, book: book, trails: live.trails) else { continue }
                 placed[pin.id] = m
                 let ahead = m.advanced(by: now.timeIntervalSince(pin.vehicle.time), stopped: live.trails.isStopped(pin.id))
@@ -1333,8 +1348,9 @@ struct HuntView: View {
             }
         }
         matches = placed
-        // Vehicles glide to where they are now rather than jumping.
-        if animated {
+        // Vehicles glide to where they are now rather than jumping. Not with a crowd of tags on
+        // screen: gliding them all every refresh kept the map redrawing and the phone warm (#85).
+        if animated, lone.count(where: { near($0, screens: 1) }) <= Self.glideLimit {
             withAnimation(.easeInOut(duration: 1.2)) {
                 pins = next
                 nowCoordinates = coordinates
@@ -1547,7 +1563,9 @@ private struct WantedPinView: View {
                 .fill(selected ? .white : pin.accent)
                 .frame(width: 9, height: 5)
         }
-        .shadow(color: pin.accent.opacity(filled ? 0.55 : 0.25), radius: selected ? 10 : 6)
+        // Only the selected tag glows. A shadow is drawn again for every tag on every frame of a
+        // pan, and with a couple of hundred on screen it stuttered and heated an iPhone 12 (#85).
+        .glow(selected ? pin.accent.opacity(filled ? 0.55 : 0.25) : nil, radius: 10)
         .scaleEffect(selected ? 1.18 : 1, anchor: .bottom)
         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: selected)
         .accessibilityLabel("\(pin.model.tier.name.lowercased()) \(pin.model.name), line \(pin.vehicle.line)")
@@ -1637,9 +1655,14 @@ private struct GroupBubble: View {
             .frame(width: size, height: size)
             .background(filled ? accent : Palette.bg.opacity(0.88), in: Circle())
             .overlay(Circle().strokeBorder(filled ? Palette.bg.opacity(0.6) : accent, lineWidth: 1.5))
-            .shadow(color: accent.opacity(filled ? 0.55 : 0.25), radius: 6)
             .accessibilityLabel("\(group.pins.count) vehicles here, zoom in")
             .accessibilityAddTraits(.isButton)
+    }
+}
+
+private extension View {
+    @ViewBuilder func glow(_ color: Color?, radius: CGFloat) -> some View {
+        if let color { shadow(color: color, radius: radius) } else { self }
     }
 }
 
