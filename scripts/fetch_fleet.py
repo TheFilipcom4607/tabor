@@ -683,6 +683,9 @@ STILL_RUNNING = {
     # now, not gone. Recheck if they stay off the city's list.
     ("BUS", "6212"), ("BUS", "7308"), ("BUS", "7322"), ("BUS", "7717"),
     ("BUS", "9802"), ("BUS", "9823"), ("BUS", "9854"),
+    # PKS Grodzisk's Urbino 12: on line 170 with its batch every day, though the city's list
+    # dropped it (live feed, 2026-10-15).
+    ("BUS", "9331"),
 }
 
 
