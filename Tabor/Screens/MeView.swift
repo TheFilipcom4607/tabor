@@ -704,7 +704,14 @@ struct SettingsSheet: View {
         .presentationDetents([.medium, .large])
         .onAppear { debugCount = DebugRecord.count }
         .task { await measureStorage() }
-        .sheet(item: $exportURL) { url in ShareSheet(items: [url]) }
+        .sheet(item: $exportURL) { url in
+            // The ZIP is only for handing over; wherever it went keeps its own copy.
+            ShareSheet(items: [url])
+                .onDisappear {
+                    try? FileManager.default.removeItem(at: url)
+                    Task { await measureStorage() }
+                }
+        }
         .fullScreenCover(isPresented: $showIntro) { OnboardingView { showIntro = false }.windowControlsClearance() }
         .sheet(isPresented: $showControlHowTo) { CatchControlHowTo() }
         .sheet(isPresented: $showWidgetHowTo) { WidgetHowTo() }

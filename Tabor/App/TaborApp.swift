@@ -209,6 +209,7 @@ struct RootView: View {
         }
         .task { await FleetUpdater.checkIfDue() }
         .task { TipJar.shared.start() }
+        .task { await Task.detached(priority: .background) { StorageUsage.sweep() }.value }
         // Stickers from before they were kept as HEIC, or from a restored backup: once the
         // first screen has settled.
         .task {
