@@ -12,6 +12,9 @@ enum PhotoStore {
         return url
     }()
 
+    /// For Settings' storage line.
+    static var folder: URL { dir }
+
     private static let cache = NSCache<NSString, UIImage>()
 
     static func save(_ data: Data, ext: String = "jpg") -> String? {

@@ -563,6 +563,7 @@ struct SettingsSheet: View {
     @State private var backingUp = false
     @State private var importing = false
     @State private var backupMessage: String?
+    @State private var storage: StorageUsage.Breakdown?
     @State private var showControlHowTo = false
     @State private var showWidgetHowTo = false
     @Query private var allSightings: [Sighting]
@@ -649,6 +650,25 @@ struct SettingsSheet: View {
                     Text("Your book lives on this phone — deleting TABOR deletes it. Export a ZIP now and then: it keeps every sighting, photo and sticker. Importing only adds what's missing.")
                 }
                 Section {
+                    if let storage {
+                        LabeledContent("All together") {
+                            Text(StorageUsage.text(storage.total)).fontWeight(.semibold)
+                        }
+                        storageRow("Photos", storage.photos)
+                        storageRow("Stickers", storage.stickers)
+                        storageRow("Book", storage.book)
+                        storageRow("Fleet and route data", storage.data)
+                        storageRow("Debug shots", storage.debug)
+                        storageRow("Other", storage.other)
+                    } else {
+                        LabeledContent("All together") { ProgressView().controlSize(.small) }
+                    }
+                } header: {
+                    Text("Storage")
+                } footer: {
+                    Text("Shots saved to Photos aren't counted here.")
+                }
+                Section {
                     if Fleet.catalog.models.isEmpty {
                         Text("Fleet data couldn't be loaded. Check for an update, or reinstall TABOR.")
                             .foregroundStyle(Palette.red)
@@ -683,6 +703,7 @@ struct SettingsSheet: View {
         .tint(Palette.yellow)
         .presentationDetents([.medium, .large])
         .onAppear { debugCount = DebugRecord.count }
+        .task { await measureStorage() }
         .sheet(item: $exportURL) { url in ShareSheet(items: [url]) }
         .fullScreenCover(isPresented: $showIntro) { OnboardingView { showIntro = false }.windowControlsClearance() }
         .sheet(isPresented: $showControlHowTo) { CatchControlHowTo() }
@@ -704,6 +725,7 @@ struct SettingsSheet: View {
             Button("Delete \(debugCount) shots", role: .destructive) {
                 DebugRecord.deleteAll()
                 debugCount = 0
+                Task { await measureStorage() }
             }
         }
     }
@@ -739,6 +761,7 @@ extension SettingsSheet {
         try? context.save()
         PhotoStore.deleteAll()
         Haptics.shared.nope()
+        Task { await measureStorage() }
     }
 }
 
@@ -815,9 +838,22 @@ extension SettingsSheet {
                 Haptics.shared.completed()
                 backupMessage = added == 0 ? String(localized: "Everything in that backup is already in your book.")
                     : String(localized: "Added \(added) sightings to your book.")
+                await measureStorage()
             } catch {
                 backupMessage = String(localized: "Couldn't import: \(error.localizedDescription)")
             }
+        }
+    }
+
+    func measureStorage() async {
+        let stickers = Set(allSightings.compactMap(\.stickerFile))
+        storage = await Task.detached { StorageUsage.measure(stickers: stickers) }.value
+    }
+
+    /// Empty parts are left out.
+    @ViewBuilder func storageRow(_ title: LocalizedStringKey, _ bytes: Int64) -> some View {
+        if bytes > 0 {
+            LabeledContent(title, value: StorageUsage.text(bytes))
         }
     }
 

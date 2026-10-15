@@ -1258,6 +1258,16 @@
         }
       }
     },
+    "All together": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Razem"
+          }
+        }
+      }
+    },
     "ALLOW CAMERA": {
       "localizations": {
         "pl": {
@@ -1503,6 +1513,16 @@
         }
       }
     },
+    "Book": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Album"
+          }
+        }
+      }
+    },
     "CATCH LOG": {
       "localizations": {
         "pl": {
@@ -1543,6 +1563,16 @@
         }
       }
     },
+    "Debug shots": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ujęcia debugowania"
+          }
+        }
+      }
+    },
     "District outlines for the badges: © OpenStreetMap contributors.": {
       "localizations": {
         "pl": {
@@ -1569,6 +1599,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Każdy model ma w albumie swoją stronę, a każdy pojazd swoje miejsce. O rzadkości decyduje liczba egzemplarzy: model legendarny ma ich najwyżej dwanaście. Po drodze zdobywasz odznaki."
+          }
+        }
+      }
+    },
+    "Fleet and route data": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dane o taborze i trasach"
           }
         }
       }
@@ -1703,6 +1743,26 @@
         }
       }
     },
+    "Photos": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zdjęcia"
+          }
+        }
+      }
+    },
+    "Other": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inne"
+          }
+        }
+      }
+    },
     "Restore purchases": {
       "localizations": {
         "pl": {
@@ -1719,6 +1779,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Przywracanie…"
+          }
+        }
+      }
+    },
+    "Storage": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Miejsce na telefonie"
+          }
+        }
+      }
+    },
+    "Stickers": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Naklejki"
+          }
+        }
+      }
+    },
+    "Shots saved to Photos aren't counted here.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ujęcia zapisane w Zdjęciach nie są tu liczone."
           }
         }
       }
