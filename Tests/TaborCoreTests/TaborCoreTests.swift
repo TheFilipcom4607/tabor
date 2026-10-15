@@ -1065,6 +1065,43 @@ private func nearby(_ vehicles: [LiveVehicle]) -> [NearbyVehicle] {
     #expect(gold.adding(swing) == gold)
 }
 
+@Test func savedHuntsKeepNamedFilters() {
+    let goldTrams = HuntTargets(tiers: [.gold], kind: .tram)
+    let line = HuntTargets(line: "N83", drives: [.cng])
+    var saved = SavedHunts()
+    let first = saved.save(goldTrams, name: "  Złote  "), second = saved.save(line, name: "Nocny")
+    #expect(first && second)
+    // Names are trimmed; saving the same filter again renames it rather than adding a copy.
+    #expect(saved.saved(goldTrams)?.name == "Złote")
+    let renamed = saved.save(goldTrams, name: "Gold trams")
+    #expect(renamed && saved.list.count == 2)
+    #expect(saved.list.map(\.name) == ["Gold trams", "Nocny"])
+    // Nothing to save, or no name.
+    let empty = saved.save(HuntTargets(), name: "Everything"), unnamed = saved.save(HuntTargets(tiers: [.rare]), name: " ")
+    #expect(!empty && !unnamed)
+    // Round-trips through its stored form, order and all.
+    #expect(SavedHunts(rawValue: saved.rawValue) == saved)
+    #expect(SavedHunts(rawValue: "") == SavedHunts() && SavedHunts(rawValue: "junk") == SavedHunts())
+    // A filter from a newer version keeps what this one knows; one with nothing left goes.
+    let newer = #"[{"name":"A","targets":"tier:GOLD,colour:red"},{"name":"B","targets":"colour:red"}]"#
+    #expect(SavedHunts(rawValue: newer).list == [SavedHunt(name: "A", targets: HuntTargets(tiers: [.gold]))])
+    // Ten at most.
+    for n in 0..<20 { saved.save(HuntTargets(line: "\(n)"), name: "\(n)") }
+    #expect(saved.list.count == SavedHunts.limit && saved.isFull)
+    let overflow = saved.save(HuntTargets(line: "999"), name: "One more")
+    #expect(!overflow)
+    saved.remove(goldTrams)
+    #expect(saved.saved(goldTrams) == nil && !saved.isFull)
+}
+
+@Test func huntTargetsSummaryNamesThePicks() {
+    let swing = catalog.model(id: "tram-pesa-120n")!
+    #expect(HuntTargets(tiers: [.gold], kind: .tram).summary(catalog: catalog) == "TRAMS · GOLD")
+    #expect(HuntTargets(models: [swing.id]).summary(catalog: catalog) == swing.name)
+    #expect(HuntTargets(models: [swing.id, "bus-man-a23"]).summary(catalog: catalog).hasSuffix(" + 1"))
+    #expect(HuntTargets(line: "523").summary(catalog: catalog) == "LINE 523")
+}
+
 @Test func huntSearchFindsLinesAndNumbers() {
     let snap = LiveSnapshot(vehicles: [live(4235, .tram, line: "33"), live(4236, .tram, line: "33"),
                                        live(8592, .bus, line: "523"), live(1000, .bus, line: "L-4"),

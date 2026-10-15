@@ -16,6 +16,10 @@ struct HuntFilterSheet: View {
     @State private var search = ""
     /// Fixed when the sheet opens, so rows don't jump about as the feed refreshes or as you tick them.
     @State private var order: [String]
+    @AppStorage("savedHunts") private var saved = SavedHunts()
+    /// The filter being named, for saving or renaming.
+    @State private var naming: HuntTargets?
+    @State private var name = ""
     private let catalog = Fleet.catalog
 
     init(targets: Binding<HuntTargets>, running: [WantedPin], withCaught: Bool, hasFix: Bool) {
@@ -39,6 +43,8 @@ struct HuntFilterSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    savedRow(picked: picked)
+
                     HStack(alignment: .firstTextBaseline) {
                         SectionLabel(text: String(localized: "TYPE"))
                         Spacer()
@@ -106,9 +112,94 @@ struct HuntFilterSheet: View {
         .tint(Palette.radar)
         .presentationDetents([.medium, .large])
         .presentationBackground(Palette.bg)
+        .alert(String(localized: "Name this filter"), isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
+            TextField(String(localized: "Name"), text: $name)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") {
+                guard let naming else { return }
+                if saved.save(naming, name: String(name.prefix(40))) { Haptics.shared.completed() }
+            }
+        }
     }
 
     // MARK: - Pieces
+
+    /// Filters you've kept (#89), one tap to put back, and a chip to keep the one you have now.
+    @ViewBuilder
+    private func savedRow(picked: HuntTargets) -> some View {
+        let unsaved = !picked.isEmpty && saved.saved(picked) == nil
+        if !saved.list.isEmpty || unsaved {
+            HStack(alignment: .firstTextBaseline) {
+                SectionLabel(text: String(localized: "SAVED"))
+                Spacer()
+                if unsaved, saved.isFull {
+                    Mono(String(localized: "DELETE ONE TO SAVE ANOTHER"), size: 9.5, color: Palette.faint)
+                } else if !saved.list.isEmpty {
+                    Mono(String(localized: "HOLD TO RENAME"), size: 9.5, color: Palette.faint)
+                }
+            }
+            .padding(.bottom, 9)
+            FlowRow(spacing: 7) {
+                ForEach(saved.list) { s in savedChip(s, on: s.targets == picked) }
+                if unsaved, !saved.isFull {
+                    Button {
+                        Haptics.shared.tick()
+                        name = picked.summary(catalog: catalog)
+                        naming = picked
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "plus").font(.system(size: 10, weight: .heavy))
+                            Mono(String(localized: "SAVE THIS FILTER"), size: 11, weight: 700, spacing: 0.1)
+                        }
+                        .foregroundStyle(Palette.radar)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .overlay(Capsule().stroke(Palette.radar.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.bottom, 24)
+        }
+    }
+
+    /// Tapping the lit one clears the filter, like the type chips go back to both.
+    private func savedChip(_ s: SavedHunt, on: Bool) -> some View {
+        let count = running.filter(s.targets.matches).count
+        return Button {
+            Haptics.shared.tick()
+            withAnimation(.snappy) { targets = on ? HuntTargets() : s.targets }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "bookmark.fill").font(.system(size: 9.5, weight: .bold))
+                // FlowRow sizes chips to fit their text, so a long name is capped here, short of
+                // a 390 pt phone's row.
+                Text(s.name)
+                    .font(TaborFont.grotesk(13, 600))
+                    .lineLimit(1)
+                    .frame(maxWidth: 200, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                Mono("\(count)", size: 11, weight: 500, spacing: 0, color: on ? Palette.bg.opacity(0.65) : Palette.faint)
+            }
+            .foregroundStyle(on ? Palette.bg : Palette.ink)
+            .padding(.vertical, 7)
+            .padding(.horizontal, 12)
+            .background(on ? Palette.ink : Palette.chip, in: Capsule())
+            .overlay(Capsule().stroke(Palette.ink.opacity(on ? 0 : 0.2)))
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button(String(localized: "Rename"), systemImage: "pencil") {
+                name = s.name
+                naming = s.targets
+            }
+            Button(String(localized: "Delete"), systemImage: "trash", role: .destructive) {
+                withAnimation(.snappy) { saved.remove(s.targets) }
+            }
+        }
+        .accessibilityLabel("\(s.name), \(count) out now")
+        .accessibilityAddTraits(on ? .isSelected : [])
+    }
 
     /// Length, drive and floor from the city's data. Only what this type has: trams have no
     /// drive in it, and no bus is 30 m long.

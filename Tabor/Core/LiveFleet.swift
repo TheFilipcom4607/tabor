@@ -526,6 +526,90 @@ public struct HuntTargets: Equatable, Sendable, RawRepresentable {
     }
 }
 
+extension HuntTargets {
+    /// A name for a saved filter until you give it one: "TRAMS · GOLD", "Solaris Urbino 18 + 2".
+    public func summary(catalog: FleetCatalog) -> String {
+        let models = models.compactMap { catalog.model(id: $0)?.name }.sorted()
+        var parts: [String] = []
+        if let kind { parts.append(kind == .bus ? String(localized: "BUSES") : String(localized: "TRAMS")) }
+        parts += Tier.allCases.filter(tiers.contains).map(\.name)
+        if let first = models.first {
+            parts.append(models.count == 1 ? first : "\(first) + \(models.count - 1)")
+        }
+        if let line { parts.append(String(localized: "LINE \(line)")) }
+        parts += lengths.sorted().map(\.name)
+        parts += ModelSpecs.Drive.allCases.filter(drives.contains).map(\.name)
+        parts += ModelSpecs.Floor.allCases.filter(floors.contains).map { $0.name.uppercased() }
+        return parts.joined(separator: " · ")
+    }
+}
+
+/// HUNT filters kept under a name, one tap away at the top of the filter sheet (#89).
+public struct SavedHunt: Equatable, Sendable, Identifiable {
+    public var name: String
+    public var targets: HuntTargets
+    public var id: String { targets.rawValue }
+
+    public init(name: String, targets: HuntTargets) {
+        self.name = name
+        self.targets = targets
+    }
+}
+
+public struct SavedHunts: Equatable, Sendable, RawRepresentable {
+    /// Enough for a row of chips; past this they'd be a second list to scroll.
+    public static let limit = 10
+    public private(set) var list: [SavedHunt]
+
+    public init(_ list: [SavedHunt] = []) {
+        self.list = Array(list.prefix(Self.limit))
+    }
+
+    public var isFull: Bool { list.count >= Self.limit }
+
+    public func saved(_ targets: HuntTargets) -> SavedHunt? {
+        list.first { $0.targets == targets }
+    }
+
+    /// Saving the same filter again only renames it. Nothing is saved when it's empty or the
+    /// list is full.
+    @discardableResult
+    public mutating func save(_ targets: HuntTargets, name: String) -> Bool {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !targets.isEmpty, !name.isEmpty else { return false }
+        if let i = list.firstIndex(where: { $0.targets == targets }) {
+            list[i].name = name
+            return true
+        }
+        guard !isFull else { return false }
+        list.append(SavedHunt(name: name, targets: targets))
+        return true
+    }
+
+    public mutating func remove(_ targets: HuntTargets) {
+        list.removeAll { $0.targets == targets }
+    }
+
+    private struct Stored: Codable {
+        let name: String
+        let targets: String
+    }
+
+    /// JSON of names and `HuntTargets` raw values, so a saved filter skips tokens it doesn't
+    /// know the same way the current one does.
+    public var rawValue: String {
+        let data = try? JSONEncoder().encode(list.map { Stored(name: $0.name, targets: $0.targets.rawValue) })
+        return data.flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+    }
+
+    /// One that comes back empty (every token unknown) is dropped.
+    public init(rawValue: String) {
+        let stored = (try? JSONDecoder().decode([Stored].self, from: Data(rawValue.utf8))) ?? []
+        self.init(stored.map { SavedHunt(name: $0.name, targets: HuntTargets(rawValue: $0.targets)) }
+            .filter { !$0.targets.isEmpty })
+    }
+}
+
 /// Vehicles that would sit on top of each other on the map, shown as one count bubble.
 public struct PinGroup: Identifiable, Sendable {
     /// The rarest vehicle in the group; it colours the bubble.

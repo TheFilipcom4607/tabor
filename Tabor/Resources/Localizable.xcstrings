@@ -1573,6 +1573,16 @@
         }
       }
     },
+    "DELETE ONE TO SAVE ANOTHER": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USUŃ JEDEN, BY ZAPISAĆ NOWY"
+          }
+        }
+      }
+    },
     "District outlines for the badges: © OpenStreetMap contributors.": {
       "localizations": {
         "pl": {
@@ -1633,6 +1643,16 @@
         }
       }
     },
+    "HOLD TO RENAME": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PRZYTRZYMAJ, BY ZMIENIĆ"
+          }
+        }
+      }
+    },
     "IN THE BOOK": {
       "localizations": {
         "pl": {
@@ -1649,6 +1669,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wczytywanie…"
+          }
+        }
+      }
+    },
+    "Name this filter": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nazwij filtr"
+          }
+        }
+      }
+    },
+    "Name": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nazwa"
           }
         }
       }
@@ -1763,6 +1803,16 @@
         }
       }
     },
+    "Rename": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zmień nazwę"
+          }
+        }
+      }
+    },
     "Restore purchases": {
       "localizations": {
         "pl": {
@@ -1779,6 +1829,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Przywracanie…"
+          }
+        }
+      }
+    },
+    "Save": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zapisz"
+          }
+        }
+      }
+    },
+    "SAVED": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ZAPISANE"
+          }
+        }
+      }
+    },
+    "SAVE THIS FILTER": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ZAPISZ TEN FILTR"
           }
         }
       }
