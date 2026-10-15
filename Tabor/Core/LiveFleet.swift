@@ -544,6 +544,28 @@ extension HuntTargets {
     }
 }
 
+/// Models you've starred (#88): their tags carry a ★, and HUNT gets a ★ view of all of them,
+/// caught or not, anywhere in the city.
+public struct StarredModels: Equatable, Sendable, RawRepresentable {
+    public private(set) var ids: Set<String>
+
+    public init(_ ids: Set<String> = []) { self.ids = ids }
+
+    public var isEmpty: Bool { ids.isEmpty }
+    public func contains(_ id: String) -> Bool { ids.contains(id) }
+    public mutating func toggle(_ id: String) { ids.formSymmetricDifference([id]) }
+    /// A model split in a fleet update (#29) stays starred under its new ids.
+    public mutating func follow(_ parts: [VehicleModel]) {
+        for m in parts where !ids.isDisjoint(with: m.formerly) { ids.insert(m.id) }
+    }
+
+    /// "bus-solaris-urbino-18,tram-hyundai-rotem-140n", for UserDefaults.
+    public var rawValue: String { ids.sorted().joined(separator: ",") }
+    public init(rawValue: String) {
+        ids = Set(rawValue.split(separator: ",").map(String.init).filter { !$0.isEmpty })
+    }
+}
+
 /// HUNT filters kept under a name, one tap away at the top of the filter sheet (#89).
 public struct SavedHunt: Equatable, Sendable, Identifiable {
     public var name: String

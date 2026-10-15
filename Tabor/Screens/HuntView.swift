@@ -9,6 +9,9 @@ enum HuntFilter: String, CaseIterable {
     case newModels = "NEW MODELS"
     /// Vehicles already in your book too, for when you just want to see what's running.
     case everything = "EVERYTHING"
+    /// Every vehicle of a model you've starred, caught or not, across the city (#88). Only
+    /// offered once something is starred; the chip is just a ★.
+    case starred = "STARRED"
 
     var name: String {
         switch self {
@@ -18,6 +21,7 @@ enum HuntFilter: String, CaseIterable {
         case .uncaught: String(localized: "hunt.filter.uncaught", defaultValue: "UNCAUGHT")
         case .newModels: String(localized: "hunt.filter.missing", defaultValue: "MISSING")
         case .everything: String(localized: "hunt.filter.all", defaultValue: "ALL")
+        case .starred: String(localized: "hunt.filter.starred", defaultValue: "STARRED")
         }
     }
 }
@@ -35,6 +39,7 @@ struct HuntView: View {
     @AppStorage("huntFilter") private var filter: HuntFilter = .uncaught
     /// Rarities and models picked in the filter sheet; empty shows everything.
     @AppStorage("huntTargets") private var targets = HuntTargets()
+    @AppStorage("starredModels") private var starred = StarredModels()
     @State private var showFilters = false
     /// The search field in the header is open (#31): a fleet number or a line.
     @State private var searching = false
@@ -149,7 +154,7 @@ struct HuntView: View {
         .background(Palette.bg.ignoresSafeArea())
         .foregroundStyle(Palette.ink)
         .sheet(isPresented: $showFilters) {
-            HuntFilterSheet(targets: $targets, running: cityWide(), withCaught: filter == .everything, hasFix: hasFix)
+            HuntFilterSheet(targets: $targets, running: cityWide(), withCaught: withCaught, hasFix: hasFix)
         }
         // The tab stays alive behind the others once opened, so it comes back at once: the
         // fast polling and the refreshes only run while it's the one on screen.
@@ -200,8 +205,9 @@ struct HuntView: View {
             if selectedId != focusId, pendingFocus == nil { focusId = nil }
             routeOpen = false
         }
-        // Caught vehicles are only fetched for the ALL view.
-        .onChange(of: filter) { recompute(animated: false) }
+        // Caught vehicles are only fetched for the ALL and ★ views.
+        .onChange(of: filter) { filterChanged() }
+        .onChange(of: starred, initial: true) { starsChanged() }
         // SHOW ON MAP in the book: go to where that model is running, not the 3 km around you.
         .onChange(of: router.huntModel, initial: true) { _, id in
             guard let id else { return }
@@ -225,6 +231,7 @@ struct HuntView: View {
             case .uncaught: pin.kind != .caught
             case .newModels: pin.kind == .newModel
             case .everything: true
+            case .starred: starred.contains(pin.model.id)
             }
             // A line from the search shows all of it, like the search counted (#37).
             return ((wanted || picked.line != nil) && picked.matches(pin)) || pin.id == focusId
@@ -234,7 +241,7 @@ struct HuntView: View {
     /// A city-wide (filtered) hunt only gets pins around where you're looking, with a screen's
     /// margin all round, so a broad filter doesn't hand the map a thousand annotations.
     private func onMap(_ shown: [WantedPin]) -> [WantedPin] {
-        guard targets.isCityWide, let r = mapRegion else { return shown }
+        guard cityWideHunt, let r = mapRegion else { return shown }
         return shown.filter { p in
             p.id == selectedId || (abs(p.vehicle.latitude - r.center.latitude) < r.span.latitudeDelta
                                    && abs(p.vehicle.longitude - r.center.longitude) < r.span.longitudeDelta)
@@ -314,7 +321,7 @@ struct HuntView: View {
             ForEach(groups(shown).reversed()) { g in
                 if g.pins.count == 1 {
                     Annotation(g.lead.model.name, coordinate: mapCoordinate(g.lead, selected: now), anchor: .bottom) {
-                        WantedPinView(pin: g.lead, selected: g.id == selectedId,
+                        WantedPinView(pin: g.lead, selected: g.id == selectedId, starred: starred.contains(g.lead.model.id),
                                       travel: live.trails.heading(g.lead.id), turn: turn)
                     }
                     .tag(g.id)
@@ -574,8 +581,12 @@ struct HuntView: View {
     }
 
     private var filterBar: some View {
-        HStack(spacing: 7) {
-            ForEach(HuntFilter.allCases, id: \.self) { f in
+        // With the ★ view the row is one chip longer than a 390 pt phone has room for in
+        // Polish (NIEZŁAPANE got cut): chips sit a little tighter, and FILTER is just its icon
+        // until a filter is on.
+        let tight = !starred.isEmpty
+        return HStack(spacing: tight ? 5 : 7) {
+            ForEach(HuntFilter.allCases.filter { $0 != .starred || !starred.isEmpty }, id: \.self) { f in
                 let on = f == filter
                 Button {
                     guard !on else { return }
@@ -586,26 +597,37 @@ struct HuntView: View {
                         openGroup = nil
                     }
                 } label: {
-                    // A chip never wraps: a long translation shrinks a touch instead.
-                    Mono(f.name, size: 11, weight: 600, spacing: 0.1, color: on ? Palette.bg : .white.opacity(0.75))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .padding(.vertical, 7)
-                        .padding(.horizontal, 12)
-                        .background(on ? Palette.ink : .clear, in: Capsule())
-                        .glass(Capsule())
+                    // A chip never wraps: a long translation shrinks a touch instead. The ★
+                    // view is just the star: the row is full on a 390 pt phone in Polish.
+                    Group {
+                        if f == .starred {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(on ? Palette.bg : Palette.yellow)
+                                .padding(.horizontal, -2)
+                        } else {
+                            Mono(f.name, size: 11, weight: 600, spacing: 0.1, color: on ? Palette.bg : .white.opacity(0.75))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                    }
+                    .padding(.vertical, 7)
+                    .padding(.horizontal, tight ? 10 : 12)
+                    .background(on ? Palette.ink : .clear, in: Capsule())
+                    .glass(Capsule())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(f.name.capitalized)
                 .accessibilityAddTraits(on ? .isSelected : [])
             }
             Spacer(minLength: 0)
-            filterButton
+            filterButton(compact: tight)
         }
         .padding(.horizontal, 20)
     }
 
     /// Opens the filter sheet; lit, with the number of picks, while a filter is on.
-    private var filterButton: some View {
+    private func filterButton(compact: Bool) -> some View {
         let on = !targets.isEmpty
         return Button {
             Haptics.shared.tick()
@@ -614,13 +636,15 @@ struct HuntView: View {
             HStack(spacing: 5) {
                 Image(systemName: "line.3.horizontal.decrease")
                     .font(.system(size: 11, weight: .bold))
-                Mono(on ? "\(targets.count)" : "FILTER", size: 11, weight: 600, spacing: 0.1,
-                     color: on ? Palette.bg : .white.opacity(0.75))
-                    .contentTransition(.numericText())
+                if on || !compact {
+                    Mono(on ? "\(targets.count)" : "FILTER", size: 11, weight: 600, spacing: 0.1,
+                         color: on ? Palette.bg : .white.opacity(0.75))
+                        .contentTransition(.numericText())
+                }
             }
             .foregroundStyle(on ? Palette.bg : .white.opacity(0.75))
             .padding(.vertical, 7)
-            .padding(.horizontal, 11)
+            .padding(.horizontal, compact ? 10 : 11)
             .background(on ? Palette.radar : .clear, in: Capsule())
             .glass(Capsule())
         }
@@ -1102,6 +1126,29 @@ struct HuntView: View {
         .buttonStyle(.plain)
     }
 
+    /// The ★ view is the whole city's worth of them: the map goes to where they all are, as
+    /// SHOW ON MAP does for one model.
+    private func filterChanged() {
+        recompute(animated: false)
+        guard filter == .starred else { return }
+        // Picked just after launch: don't let the first fix pull the map back to you.
+        centered = true
+        selectedId = nil
+        fit(cityWide().filter { starred.contains($0.model.id) && targets.matches($0) })
+    }
+
+    /// The last star taken off: the ★ view has nothing left to show, and its chip goes.
+    private func starsChanged() {
+        if starred.isEmpty, filter == .starred { filter = .uncaught }
+        recompute(animated: false)
+    }
+
+    /// The ALL and ★ views fetch vehicles already in your book too.
+    private var withCaught: Bool { filter == .everything || filter == .starred }
+
+    /// Hunting across the whole city: a filter that picks something, or the ★ view.
+    private var cityWideHunt: Bool { targets.isCityWide || filter == .starred }
+
     /// The list sticks to what's actually near you, even with all of Warsaw on the map.
     private func nearYou(_ shown: [WantedPin]) -> [WantedPin] {
         hasFix ? shown.filter { $0.distance <= Wanted.radius } : shown
@@ -1111,7 +1158,7 @@ struct HuntView: View {
     /// nearest first (to you, or to the map's centre without a fix) — you're after something
     /// specific, so how far it is matters most.
     private func listed(_ shown: [WantedPin]) -> [WantedPin] {
-        guard targets.isCityWide else { return nearYou(shown) }
+        guard cityWideHunt else { return nearYou(shown) }
         return shown.sorted { $0.distance < $1.distance }
     }
 
@@ -1127,6 +1174,7 @@ struct HuntView: View {
         case (.everything, nil): String(localized: "ALL NEARBY")
         case (.everything, .bus): String(localized: "BUSES NEARBY")
         case (.everything, .tram): String(localized: "TRAMS NEARBY")
+        case (.starred, _): String(localized: "YOUR STARRED MODELS")
         }
     }
 
@@ -1134,11 +1182,13 @@ struct HuntView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 // One line even with the count beside it on a 390 pt phone ("BRAKUJĄCE MODELE TRAMWAJÓW").
-                SectionLabel(text: targets.isCityWide ? String(localized: "MATCHING YOUR FILTER") : nearbyTitle)
+                SectionLabel(text: !cityWideHunt ? nearbyTitle
+                             : filter == .starred && !targets.isCityWide ? String(localized: "YOUR STARRED MODELS")
+                             : String(localized: "MATCHING YOUR FILTER"))
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
                 Spacer()
-                Mono(targets.isCityWide ? "\(near.count) OUT NOW" : hasFix ? "\(near.count) WITHIN 3 KM" : "AROUND THE MAP CENTRE",
+                Mono(cityWideHunt ? "\(near.count) OUT NOW" : hasFix ? "\(near.count) WITHIN 3 KM" : "AROUND THE MAP CENTRE",
                      size: 9.5, color: Palette.faint)
             }
             if filter != .newModels {
@@ -1182,12 +1232,16 @@ struct HuntView: View {
                                    if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
                                }))
         }
-        if targets.isCityWide {
+        if cityWideHunt {
             guard shown.isEmpty else { return nil }
+            if filter == .starred, !targets.isCityWide {
+                return MessageCard(icon: "star", title: String(localized: "None of your starred models is out"),
+                                   text: String(localized: "They show up here the moment one is. Star a model on its page in the book, or on its card here."))
+            }
             return MessageCard(icon: "line.3.horizontal.decrease.circle", title: String(localized: "Nothing out that matches"),
                                text: targets.line == nil && filter == .newModels
                                    ? String(localized: "None of it is a model you're missing. Switch to UNCAUGHT, or widen the filter.")
-                                   : targets.line != nil || filter == .everything
+                                   : targets.line != nil || withCaught
                                    ? String(localized: "Nothing on your filter is running right now. It shows up here the moment one is.")
                                    : String(localized: "Nothing on your filter that you haven't caught is running right now. It shows up here the moment one is."),
                                action: (String(localized: "Clear the filter"), { withAnimation(.snappy) { targets = HuntTargets() } }))
@@ -1229,10 +1283,11 @@ struct HuntView: View {
             case (.everything, nil): String(localized: "Nothing within 3 km")
             case (.everything, .bus): String(localized: "No buses within 3 km")
             case (.everything, .tram): String(localized: "No trams within 3 km")
+            case (.starred, _): String(localized: "None of your starred models is out")
             }
             let text = switch (filter, targets.kind) {
             case (.newModels, _): String(localized: "Everything running around here is a model you have. Switch to UNCAUGHT for more of them.")
-            case (.everything, _): String(localized: "Nothing running within 3 km right now.")
+            case (.everything, _), (.starred, _): String(localized: "Nothing running within 3 km right now.")
             case (.uncaught, nil): String(localized: "Every vehicle running around here is already in your book.")
             case (.uncaught, .bus): String(localized: "Every bus running around here is already in your book.")
             case (.uncaught, .tram): String(localized: "Every tram running around here is already in your book.")
@@ -1285,7 +1340,7 @@ struct HuntView: View {
         }
         return Wanted.anywhere(snapshot: snapshot, catalog: catalog, caught: sightings.stats,
                                lat: from.latitude, lon: from.longitude,
-                               from: user.map { ($0.latitude, $0.longitude) }, includeCaught: filter == .everything)
+                               from: user.map { ($0.latitude, $0.longitude) }, includeCaught: withCaught)
     }
 
     private var onScreen: Bool { router.tab == .hunt }
@@ -1301,18 +1356,18 @@ struct HuntView: View {
         } ?? 0
         // Filtered down to what you're after: look across the whole city, not just the view.
         let picked = targets
-        let filtered = picked.isCityWide
+        let filtered = picked.isCityWide || filter == .starred
         var next = filtered
             ? cityWide().filter { picked.matches($0) }
             : Wanted.pins(snapshot: snapshot, catalog: catalog, caught: sightings.stats,
                           lat: center.latitude, lon: center.longitude, within: max(Wanted.radius, visible),
-                          from: user.map { ($0.latitude, $0.longitude) }, includeCaught: filter == .everything)
+                          from: user.map { ($0.latitude, $0.longitude) }, includeCaught: withCaught)
         // Panned away from you: make sure what's around you still feeds the list.
         if !filtered, let user, Geo.km((user.latitude, user.longitude), (center.latitude, center.longitude)) * 1000 > visible {
             let ids = Set(next.map(\.id))
             next += Wanted.pins(snapshot: snapshot, catalog: catalog, caught: sightings.stats,
                                 lat: user.latitude, lon: user.longitude, from: (user.latitude, user.longitude),
-                                includeCaught: filter == .everything)
+                                includeCaught: withCaught)
                 .filter { !ids.contains($0.id) }
         }
         // The vehicle picked from the search, wherever it is and whether or not you have it.
@@ -1520,6 +1575,8 @@ enum HuntDistance {
 private struct WantedPinView: View {
     let pin: WantedPin
     let selected: Bool
+    /// A model you've starred (#88).
+    var starred = false
     /// Direction of travel (degrees from north), once the vehicle has been seen moving.
     var travel: Double? = nil
     /// The map's rotation, read here so a turning map redraws only the pins.
@@ -1539,6 +1596,11 @@ private struct WantedPinView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 4) {
+                if starred {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 8.5, weight: .heavy))
+                        .accessibilityHidden(true)
+                }
                 Image(systemName: pin.vehicle.kind == .tram ? "tram.fill" : "bus.fill")
                     .font(.system(size: 9.5, weight: .bold))
                 Text(pin.vehicle.line.isEmpty ? String(pin.vehicle.number) : pin.vehicle.line)
@@ -1887,6 +1949,7 @@ private struct PinCard: View {
                 KindTag(kind: pin.vehicle.kind)
                 TierPill(tier: pin.model.tier, fleet: pin.model.fleet)
                 Spacer()
+                StarButton(modelId: pin.model.id)
                 CloseButton(action: onClose)
             }
             Text(pin.model.name)

@@ -65,13 +65,16 @@ struct ModelPageView: View {
                 Button { dismiss() } label: { Mono("← ALL MODELS", size: 12, spacing: 0.16) }
                     .buttonStyle(.plain)
             } trailing: {
-                Button {
-                    Haptics.shared.tick()
-                    withAnimation(.snappy) { sort = sort == .number ? .date : .number }
-                } label: {
-                    Mono("SORT: \(sort.name)", size: 12)
+                HStack(spacing: 14) {
+                    StarButton(modelId: model.id, chip: false)
+                    Button {
+                        Haptics.shared.tick()
+                        withAnimation(.snappy) { sort = sort == .number ? .date : .number }
+                    } label: {
+                        Mono("SORT: \(sort.name)", size: 12)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
 
             // Tags above the name (as on the share card), so the name and the subtitle get

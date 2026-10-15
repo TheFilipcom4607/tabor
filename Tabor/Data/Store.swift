@@ -132,6 +132,11 @@ enum TaborStore {
             }
             defaults.set(targets.rawValue, forKey: "huntTargets")
         }
+        if let raw = defaults.string(forKey: "starredModels") {
+            var starred = StarredModels(rawValue: raw)
+            starred.follow(parts.filter { !seen.contains($0.id) })
+            defaults.set(starred.rawValue, forKey: "starredModels")
+        }
         seen.formUnion(parts.map(\.id))
         defaults.set(Array(seen).sorted(), forKey: splitsSeenKey)
     }

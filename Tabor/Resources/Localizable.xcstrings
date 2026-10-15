@@ -1653,6 +1653,24 @@
         }
       }
     },
+    "hunt.filter.starred": {
+      "comment": "HUNT header chip: keep it short",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "STARRED"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ULUBIONE"
+          }
+        }
+      }
+    },
     "IN THE BOOK": {
       "localizations": {
         "pl": {
@@ -1773,6 +1791,16 @@
         }
       }
     },
+    "None of your starred models is out": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Żaden ulubiony model nie jeździ"
+          }
+        }
+      }
+    },
     "Nothing runs near you": {
       "localizations": {
         "pl": {
@@ -1859,6 +1887,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "ZAPISZ TEN FILTR"
+          }
+        }
+      }
+    },
+    "Starred": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ulubiony"
+          }
+        }
+      }
+    },
+    "Star this model": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodaj do ulubionych"
+          }
+        }
+      }
+    },
+    "Starred models get a star in HUNT, and a view of their own.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ulubione modele mają gwiazdkę w HUNT i własny widok."
           }
         }
       }
@@ -4787,6 +4845,16 @@
         }
       }
     },
+    "They show up here the moment one is. Star a model on its page in the book, or on its card here.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pojawi się tu, gdy tylko któryś wyjedzie. Gwiazdkę dodasz na stronie modelu w albumie albo na jego karcie tutaj."
+          }
+        }
+      }
+    },
     "USUALLY RUNS WITH IT": {
       "comment": "Second-car suggestion: the set tramwar.pl lists it in",
       "localizations": {
@@ -6945,6 +7013,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "TWOJE OBSERWACJE"
+          }
+        }
+      }
+    },
+    "YOUR STARRED MODELS": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TWOJE ULUBIONE MODELE"
           }
         }
       }

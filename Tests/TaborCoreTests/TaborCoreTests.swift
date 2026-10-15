@@ -1094,6 +1094,23 @@ private func nearby(_ vehicles: [LiveVehicle]) -> [NearbyVehicle] {
     #expect(saved.saved(goldTrams) == nil && !saved.isFull)
 }
 
+@Test func starredModelsToggleAndRoundTrip() {
+    var starred = StarredModels()
+    starred.toggle("tram-pesa-120n")
+    starred.toggle("bus-man-a23")
+    #expect(starred.contains("tram-pesa-120n") && starred.rawValue == "bus-man-a23,tram-pesa-120n")
+    #expect(StarredModels(rawValue: starred.rawValue) == starred)
+    starred.toggle("bus-man-a23")
+    #expect(!starred.contains("bus-man-a23") && starred.ids.count == 1)
+    #expect(StarredModels(rawValue: "") == StarredModels() && StarredModels(rawValue: ",,").isEmpty)
+    // The 105N split (#83): a starred 105N2k/2000 keeps its id, and the new parts that came
+    // out of it get the star too.
+    var old = StarredModels(["tram-alstom-konstal-105n"])
+    let parts = catalog.models.filter { !$0.formerly.isEmpty }
+    old.follow(parts)
+    #expect(old.ids.count > 1 && old.contains("tram-alstom-konstal-105n"))
+}
+
 @Test func huntTargetsSummaryNamesThePicks() {
     let swing = catalog.model(id: "tram-pesa-120n")!
     #expect(HuntTargets(tiers: [.gold], kind: .tram).summary(catalog: catalog) == "TRAMS · GOLD")
