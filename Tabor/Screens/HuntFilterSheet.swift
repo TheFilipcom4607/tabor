@@ -125,10 +125,11 @@ struct HuntFilterSheet: View {
     // MARK: - Pieces
 
     /// Filters you've kept (#89), one tap to put back, and a chip to keep the one you have now.
-    @ViewBuilder
+    /// The row and its SAVE chip are always there, the chip only dimmed when there's nothing new
+    /// to save, so ticking a model doesn't shove the list down under your finger (#93).
     private func savedRow(picked: HuntTargets) -> some View {
         let unsaved = !picked.isEmpty && saved.saved(picked) == nil
-        if !saved.list.isEmpty || unsaved {
+        return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
                 SectionLabel(text: String(localized: "SAVED"))
                 Spacer()
@@ -141,7 +142,7 @@ struct HuntFilterSheet: View {
             .padding(.bottom, 9)
             FlowRow(spacing: 7) {
                 ForEach(saved.list) { s in savedChip(s, on: s.targets == picked) }
-                if unsaved, !saved.isFull {
+                if !saved.isFull {
                     Button {
                         Haptics.shared.tick()
                         name = picked.summary(catalog: catalog)
@@ -155,8 +156,10 @@ struct HuntFilterSheet: View {
                         .padding(.vertical, 8)
                         .padding(.horizontal, 12)
                         .overlay(Capsule().stroke(Palette.radar.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+                        .opacity(unsaved ? 1 : 0.35)
                     }
                     .buttonStyle(.plain)
+                    .disabled(!unsaved)
                 }
             }
             .padding(.bottom, 24)
