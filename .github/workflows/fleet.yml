@@ -14,6 +14,9 @@ name: Refresh fleet data
 #   closes it.
 # - Vehicles of a type no model has yet are left out of the book, and listed in one issue
 #   ("Fleet: vehicles waiting for a model") that closes itself once they're placed.
+# - Buses on trial never reach the city's list at all. Warsaw numbers them 9xx, so any 9xx
+#   the live feed has seen in the last week that fleet.json lacks goes in a second issue
+#   ("Fleet: buses on trial"), for a human to add to TEST_BUSES once a source names them.
 # The tests run here because a push or PR made with the workflow's own token starts no
 # other workflow.
 #
@@ -49,6 +52,7 @@ env:
   FILES: Tabor/Resources/fleet.json data/ztm-pojazdy.json data/fleet-models.csv
   REVIEW_ABOVE: 20
   ISSUE_TITLE: "Fleet: vehicles waiting for a model"
+  TRIALS_TITLE: "Fleet: buses on trial"
 
 jobs:
   build:
@@ -83,6 +87,14 @@ jobs:
           python3 scripts/fetch_fleet.py --offline > "$RUNNER_TEMP/main.log"
           python3 scripts/fetch_fleet.py | tee "$RUNNER_TEMP/build.log"
           python3 scripts/export_models_csv.py
+
+      # A feed that can't be read leaves no marker, so the trials issue is left as it is, and
+      # the fleet update goes ahead either way.
+      - name: Look for buses on trial in the live feed
+        continue-on-error: true
+        run: |
+          python3 scripts/trial_buses.py trials.md
+          touch trials-checked
 
       # apply: commit to main. review: open or update the PR. close: the fleet is main's again,
       # so an open PR is out of date. none: nothing to do.
@@ -173,6 +185,8 @@ jobs:
             changes.md
             pr-body.md
             waiting.md
+            trials.md
+            trials-checked
           if-no-files-found: ignore
 
   test:
@@ -302,4 +316,30 @@ jobs:
             fi
           elif [ -n "$number" ]; then
             gh issue close "$number" --reason completed --comment "All placed now."
+          fi
+      # A trial can be over in a few weeks, so a bus that joins an open issue gets a comment
+      # (which notifies) as well as the silent edit.
+      - name: Open, update or close the trials issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ ! -f trials-checked ]; then
+            echo "The live feed couldn't be read; leaving the issue as it is."
+            exit 0
+          fi
+          number=$(gh issue list --state open --search "in:title \"$TRIALS_TITLE\"" --json number,title \
+            --jq "map(select(.title == \"$TRIALS_TITLE\")) | .[0].number // empty")
+          if [ -f trials.md ]; then
+            if [ -n "$number" ]; then
+              buses() { grep -o '^| #9[0-9][0-9]' | sed 's/^| //' | sort || true; }
+              added=$(comm -13 <(gh issue view "$number" --json body --jq .body | buses) <(buses < trials.md) | paste -sd ' ' -)
+              gh issue edit "$number" --body-file trials.md
+              [ -z "$added" ] || gh issue comment "$number" --body "New on the feed: $added"
+            else
+              gh issue create --title "$TRIALS_TITLE" --body-file trials.md
+            fi
+          elif [ -n "$number" ]; then
+            gh issue close "$number" --reason completed \
+              --comment "None left: they're all in fleet.json, or none has run for a week."
           fi
