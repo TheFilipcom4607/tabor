@@ -17,6 +17,9 @@ name: Refresh fleet data
 # - Buses on trial never reach the city's list at all. Warsaw numbers them 9xx, so any 9xx
 #   the live feed has seen in the last week that fleet.json lacks goes in a second issue
 #   ("Fleet: buses on trial"), for a human to add to TEST_BUSES once a source names them.
+# - Event wraps (a Christmas bus, a Valentine's bus) aren't in any list either. Vehicles on an
+#   event line in the live feed and fresh MZA posts about them go in a third issue ("Fleet:
+#   possible event wraps"), for a human to add to WRAPS once a source names the bus.
 # The tests run here because a push or PR made with the workflow's own token starts no
 # other workflow.
 #
@@ -53,6 +56,7 @@ env:
   REVIEW_ABOVE: 20
   ISSUE_TITLE: "Fleet: vehicles waiting for a model"
   TRIALS_TITLE: "Fleet: buses on trial"
+  WRAPS_TITLE: "Fleet: possible event wraps"
 
 jobs:
   build:
@@ -95,6 +99,13 @@ jobs:
         run: |
           python3 scripts/trial_buses.py trials.md
           touch trials-checked
+
+      # The same for event wraps: nothing read leaves the issue as it is.
+      - name: Look for signs of event wraps
+        continue-on-error: true
+        run: |
+          python3 scripts/possible_wraps.py wraps.md
+          touch wraps-checked
 
       # apply: commit to main. review: open or update the PR. close: the fleet is main's again,
       # so an open PR is out of date. none: nothing to do.
@@ -187,6 +198,8 @@ jobs:
             waiting.md
             trials.md
             trials-checked
+            wraps.md
+            wraps-checked
           if-no-files-found: ignore
 
   test:
@@ -342,4 +355,32 @@ jobs:
           elif [ -n "$number" ]; then
             gh issue close "$number" --reason completed \
               --comment "None left: they're all in fleet.json, or none has run for a week."
+          fi
+
+      # A wrap is out for a few weeks at most, so something new in an open issue gets a comment
+      # (which notifies) as well as the silent edit.
+      - name: Open, update or close the event wraps issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ ! -f wraps-checked ]; then
+            echo "Neither the live feed nor MZA could be read; leaving the issue as it is."
+            exit 0
+          fi
+          number=$(gh issue list --state open --search "in:title \"$WRAPS_TITLE\"" --json number,title \
+            --jq "map(select(.title == \"$WRAPS_TITLE\")) | .[0].number // empty")
+          if [ -f wraps.md ]; then
+            if [ -n "$number" ]; then
+              # A vehicle by its line, not its last-seen time, which changes every night.
+              hints() { grep -E '^(\| (BUS|TRAM) #|- [0-9])' | sed -E 's/^(\| [^|]+\| [^|]+\|).*/\1/' | sort || true; }
+              added=$(comm -13 <(gh issue view "$number" --json body --jq .body | hints) <(hints < wraps.md))
+              gh issue edit "$number" --body-file wraps.md
+              [ -z "$added" ] || gh issue comment "$number" --body "New since last night:
+          $added"
+            else
+              gh issue create --title "$WRAPS_TITLE" --body-file wraps.md
+            fi
+          elif [ -n "$number" ]; then
+            gh issue close "$number" --reason completed --comment "Nothing left to look at."
           fi
