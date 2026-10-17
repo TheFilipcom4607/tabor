@@ -1,6 +1,46 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "CROP": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PRZYTNIJ"
+          }
+        }
+      }
+    },
+    "Zoom in on the vehicle": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przybliż pojazd"
+          }
+        }
+      }
+    },
+    "Pinch until it fills the frame, or double-tap it. The number is read again from what's inside.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rozsuń palce, aż pojazd wypełni ramkę, albo stuknij go dwa razy. Numer zostanie odczytany jeszcze raz z tego, co w środku."
+          }
+        }
+      }
+    },
+    "Read this": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odczytaj"
+          }
+        }
+      }
+    },
     "": {
       "localizations": {
         "pl": {

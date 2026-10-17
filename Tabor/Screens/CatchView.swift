@@ -229,7 +229,7 @@ struct CatchView: View {
             // Shared while this reveal was up.
             takeShared()
         }) { d in
-            RevealView(draft: d)
+            RevealView(draft: d, reread: { old, cropped in await reread(old, cropped: cropped) })
                 .windowControlsClearance()
         }
     }
@@ -622,10 +622,44 @@ struct CatchView: View {
         }.value
         withAnimation(.easeOut(duration: 0.2)) { frozen = preview }
         let record = record ?? DebugRecord.begin(source: fromCamera ? "camera" : "import", mode: mode)
-        record?.attach(photo: data)
         // An imported photo could be from anywhere, any day: only fresh shots use the feed.
         let nearby = fromCamera && self.live.fresh() != nil ? self.live.nearby : []
-        let mode = mode
+        var d = await reading(data, fromCamera: fromCamera, record: record, nearby: nearby, mode: mode)
+        d.preview = preview
+        if fromCamera {
+            if geotag { d.geotag = Task { await LocationService.shared.geotag() } }
+        } else {
+            let meta = PhotoStore.metadata(data)
+            if let date = meta.date { d.date = date }
+            if geotag, let lat = meta.latitude, let lon = meta.longitude {
+                d.geotag = Task { await LocationService.shared.geotag(CLLocation(latitude: lat, longitude: lon)) }
+            }
+        }
+        d.book = BookBefore(stats: sightings.stats, streak: Streak.days(sightings.map(\.date) + [d.date]))
+        camera.stop()
+        if let presentAfter { try? await Task.sleep(until: presentAfter) }
+        draft = d
+    }
+
+    /// The same catch, read again from a crop of its photo (#94): where and when it was caught,
+    /// and the book it counts from, stay as they were.
+    private func reread(_ old: CatchDraft, cropped data: Data) async -> CatchDraft {
+        var d = await reading(data, fromCamera: old.fromCamera, record: old.debug, nearby: old.nearby, mode: old.mode)
+        d.preview = await Task.detached(priority: .userInitiated) {
+            PhotoStore.downsample(data, maxPixel: 900).map(UIImage.init(cgImage:))
+        }.value
+        d.date = old.date
+        d.geotag = old.geotag
+        d.book = old.book
+        d.line = d.line ?? old.line
+        return d
+    }
+
+    /// Reads the number, matches it and starts the sticker: everything in a draft that comes
+    /// from the photo itself.
+    private func reading(_ data: Data, fromCamera: Bool, record: DebugRecord?, nearby: [NearbyVehicle],
+                         mode: CatchMode) async -> CatchDraft {
+        record?.attach(photo: data)
         // The read also says where the number is, so the sticker keeps the object it's on.
         let ocr = Task.detached(priority: .userInitiated) {
             await TextReader.read(data, mode: mode, nearby: nearby)
@@ -669,8 +703,7 @@ struct CatchView: View {
         liveInfo.rescued = report.live.rescued
         liveInfo.partners = report.live.partners
         record?.update { $0.ocr = DebugRecord.ocr(report) }
-        var d = CatchDraft(photo: data, number: number, fromCamera: fromCamera, sticker: sticker, preview: preview,
-                           debug: record)
+        var d = CatchDraft(photo: data, number: number, fromCamera: fromCamera, sticker: sticker, debug: record)
         d.nearby = nearby
         d.mode = mode
         d.photoNumbers = Task { photoNumbers }
@@ -705,18 +738,8 @@ struct CatchView: View {
         if fromCamera {
             let info = liveInfo
             record?.update { $0.live = info }
-            if geotag { d.geotag = Task { await LocationService.shared.geotag() } }
-        } else {
-            let meta = PhotoStore.metadata(data)
-            if let date = meta.date { d.date = date }
-            if geotag, let lat = meta.latitude, let lon = meta.longitude {
-                d.geotag = Task { await LocationService.shared.geotag(CLLocation(latitude: lat, longitude: lon)) }
-            }
         }
-        d.book = BookBefore(stats: sightings.stats, streak: Streak.days(sightings.map(\.date) + [d.date]))
-        camera.stop()
-        if let presentAfter { try? await Task.sleep(until: presentAfter) }
-        draft = d
+        return d
     }
 }
 

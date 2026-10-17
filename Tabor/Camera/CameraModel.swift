@@ -478,7 +478,8 @@ enum TextReader {
     static func read(_ data: Data, mode: CatchMode, nearby: [NearbyVehicle]) async -> Report {
         await Task.detached(priority: .userInitiated) {
             let start = Date()
-            guard let image = UIImage(data: data), let cg = image.cgImage else { return Report(pass: "decode-failed") }
+            guard let image = UIImage(data: data), let decoded = image.cgImage else { return Report(pass: "decode-failed") }
+            let cg = upscaled(decoded)
             let orientation = CGImagePropertyOrientation(image.imageOrientation)
             var report = Report(pass: "full")
             report.full = read(cg, orientation: orientation, roi: nil)
@@ -498,6 +499,23 @@ enum TextReader {
             report.duration = Date().timeIntervalSince(start)
             return report
         }.value
+    }
+
+    /// A small image (a tight crop of a far vehicle) blown up to about 1900 px on its long side.
+    /// Vision doesn't do this itself: #1427 in a 472×629 crop read as nothing at its own size,
+    /// "J427" at 2× and cleanly at 3× (#94).
+    private static func upscaled(_ cg: CGImage) -> CGImage {
+        let long = max(cg.width, cg.height)
+        guard long > 0, long < 1600 else { return cg }
+        let scale = min(4, 1900 / Double(long))
+        let w = Int(Double(cg.width) * scale), h = Int(Double(cg.height) * scale)
+        guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return cg }
+        ctx.interpolationQuality = .high
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+        return ctx.makeImage() ?? cg
     }
 
     private static func read(_ cg: CGImage, orientation: CGImagePropertyOrientation, roi: CGRect?) -> [TextObservation] {

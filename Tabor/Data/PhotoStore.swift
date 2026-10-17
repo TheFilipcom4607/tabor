@@ -109,8 +109,17 @@ enum PhotoStore {
     /// of `viewSize` (aspect-fill, like the capture preview). Re-encodes as an upright JPEG,
     /// keeping the EXIF/GPS metadata.
     static func crop(_ data: Data, viewSize: CGSize, frame: CGRect) -> Data? {
-        guard viewSize.width > 0, viewSize.height > 0,
-              let src = CGImageSourceCreateWithData(data as CFData, nil),
+        guard viewSize.width > 0, viewSize.height > 0 else { return nil }
+        return crop(data) { size in Viewfinder.region(of: frame, in: viewSize, imageSize: size) }
+    }
+
+    /// Crops to `region`, in 0–1 of the upright image (top-left origin). Same encoding as above.
+    static func crop(_ data: Data, region: CGRect) -> Data? {
+        crop(data) { _ in region }
+    }
+
+    private static func crop(_ data: Data, region: (CGSize) -> CGRect?) -> Data? {
+        guard let src = CGImageSourceCreateWithData(data as CFData, nil),
               let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any],
               let w = props[kCGImagePropertyPixelWidth] as? Int, let h = props[kCGImagePropertyPixelHeight] as? Int
         else { return nil }
@@ -122,7 +131,7 @@ enum PhotoStore {
         ]
         guard let upright = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) else { return nil }
         let iw = CGFloat(upright.width), ih = CGFloat(upright.height)
-        guard let r = Viewfinder.region(of: frame, in: viewSize, imageSize: CGSize(width: iw, height: ih)) else { return nil }
+        guard let r = region(CGSize(width: iw, height: ih)) else { return nil }
         let rect = CGRect(x: r.minX * iw, y: r.minY * ih, width: r.width * iw, height: r.height * ih).integral
         guard rect.width > 100, rect.height > 100, let cut = upright.cropping(to: rect) else { return nil }
 

@@ -5,6 +5,8 @@ import SwiftUI
 /// sticker slams down in sync with a haptic build-up that scales with rarity.
 struct RevealView: View {
     @State var draft: CatchDraft
+    /// Reads the catch again from a crop of its photo (#94).
+    var reread: (CatchDraft, Data) async -> CatchDraft
     @Query private var manual: [ManualAssignment]
     @AppStorage("saveToGallery") private var saveToGallery = true
     @Environment(\.modelContext) private var context
@@ -40,6 +42,10 @@ struct RevealView: View {
     @State private var alsoStickers: [Int: Data] = [:]
     @State private var misreads: Set<Int> = []
     @State private var missingInsets = EdgeInsets()
+    @State private var cropping = false
+    /// A crop is being read; the next number/model change is the crop's, not an edit.
+    @State private var rereading = false
+    @State private var skipEdit = false
 
     private let catalog = Fleet.catalog
     private let holdDuration = 0.55
@@ -95,6 +101,23 @@ struct RevealView: View {
             VStack(alignment: .leading, spacing: 0) {
                 // Just the way out: a CONFIRM title here was taken for a button that did nothing.
                 HStack {
+                    // A far vehicle the read and the cut both missed: zoom in on it and read that.
+                    Button {
+                        Haptics.shared.tick()
+                        cropping = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "crop").font(.system(size: 12, weight: .semibold))
+                            Mono("CROP", size: 12)
+                        }
+                        .foregroundStyle(Palette.dim)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 22)
+                        .contentShape(Rectangle())
+                        .opacity(rereading ? 0.4 : 1)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(rereading || sticking)
                     Spacer()
                     Button {
                         draft.geotag?.cancel()
@@ -234,6 +257,18 @@ struct RevealView: View {
                             secondaryLabel(ready ? String(localized: "WRONG NUMBER?") : String(localized: "EDIT DETAILS"))
                         }
                         .buttonStyle(.plain)
+                        if number == nil, landed {
+                            Button {
+                                Haptics.shared.tick()
+                                cropping = true
+                            } label: {
+                                secondaryLabel(String(localized: "CROP"))
+                                    .opacity(rereading ? 0.5 : 1)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(rereading)
+                            .transition(.opacity)
+                        }
                         // Only when the photo had something else worth cutting.
                         if ready, landed, stickerImage != nil, cut?.canRecut == true {
                             Button(action: recut) {
@@ -278,8 +313,16 @@ struct RevealView: View {
                              partner: $draft.partner)
             }
         }
+        .fullScreenCover(isPresented: $cropping) {
+            CropSheet(photo: draft.photo, preview: draft.preview) { region in
+                cropping = false
+                Task { await readCrop(region) }
+            }
+        }
         // One key, so fixing number and model together replays the reveal once.
-        .onChange(of: "\(draft.number ?? -1)|\(draft.modelId ?? "")") { _, _ in edited() }
+        .onChange(of: editKey) { _, _ in
+            if skipEdit { skipEdit = false } else { edited() }
+        }
         .onChange(of: draft.partner) { _, _ in refreshAlso() }
         // Only now may the book scroll to the catch: CATCH (and this cover with it) goes as the
         // tab switches, so the cover's own onDismiss never runs.
@@ -287,16 +330,59 @@ struct RevealView: View {
         .task {
             Haptics.shared.warmUp()
             await playReveal(run: 0)
-            // Every number in the photo sharpens the suggestions.
-            if let read = draft.photoNumbers {
-                photoNumbers = await read.value
-                refreshPartner()
-            }
-            if let read = draft.photoRead {
-                photoReport = await read.value
-                refreshAlso()
-            }
+            await loadReads()
         }
+    }
+
+    private var editKey: String { "\(draft.number ?? -1)|\(draft.modelId ?? "")" }
+
+    /// Every number in the photo sharpens the suggestions.
+    private func loadReads() async {
+        if let read = draft.photoNumbers {
+            photoNumbers = await read.value
+            refreshPartner()
+        }
+        if let read = draft.photoRead {
+            photoReport = await read.value
+            refreshAlso()
+        }
+    }
+
+    /// Crops the photo to `region` (0–1 of the upright photo), reads and cuts it again, and
+    /// replays the reveal with what that found.
+    private func readCrop(_ region: CGRect) async {
+        guard !rereading else { return }
+        rereading = true
+        defer { rereading = false }
+        let photo = draft.photo
+        guard let cropped = await Task.detached(priority: .userInitiated, operation: {
+            PhotoStore.crop(photo, region: region)
+        }).value else { return Haptics.shared.nope() }
+        draft.debug?.log("crop", note: "\(DebugRecord.describe(region))")
+        let fresh = await reread(draft, cropped)
+        let before = editKey
+        cut = nil
+        stickerImage = nil
+        stickerPNG = nil
+        recuts = 0
+        misreads = []
+        alsoStickers = [:]
+        photoNumbers = []
+        photoReport = nil
+        // What you'd already fixed by hand stays: the crop only fills in what's still missing.
+        var next = fresh
+        next.partner = nil
+        next.line = draft.line ?? fresh.line
+        if draft.modelPickedByHand || (draft.number != nil && fresh.number == nil) {
+            next.number = draft.number
+            next.modelId = draft.modelId
+            next.choices = draft.choices
+            next.modelPickedByHand = draft.modelPickedByHand
+        }
+        draft = next
+        skipEdit = editKey != before
+        replayReveal()
+        await loadReads()
     }
 
     /// The other car and the model it goes under (a trailer's motor car is another model's),
@@ -718,6 +804,8 @@ struct RevealView: View {
             // A shared number asks right here, with the choices on screen; no buzz, nothing's wrong.
             guard choices.isEmpty else { return Haptics.shared.tick() }
             Haptics.shared.nope()
+            // Nothing read: the screen offers typing it or cropping to it, side by side (#94).
+            guard draft.number != nil else { return }
             try? await Task.sleep(for: .milliseconds(350))
             editing = true
             return
