@@ -27,6 +27,9 @@ final class Sighting {
     /// Picked on the vehicle page as the picture the book shows for this vehicle, instead of
     /// the newest. Only one per vehicle is set; if two ever are, the newest wins.
     var cover: Bool?
+    /// The event wrap it wore in the photo (`Wrap.id`): awarded on the photo's evidence or
+    /// confirmed by hand on the reveal, and kept after the wrap comes off.
+    var wrap: String?
 
     init(id: UUID = UUID(), number: Int, modelId: String, date: Date = .now, line: String? = nil,
          photoFile: String? = nil, stickerFile: String? = nil) {
@@ -44,7 +47,7 @@ final class Sighting {
     var record: SightingRecord {
         SightingRecord(number: number, modelId: modelId, date: date, line: line, district: district, street: street,
                        latitude: latitude, longitude: longitude, weatherCode: weatherCode, temperature: temperature,
-                       hasSticker: stickerFile != nil, pairedWith: pairedWith)
+                       hasSticker: stickerFile != nil, pairedWith: pairedWith, wrap: wrap)
     }
 }
 
@@ -191,6 +194,13 @@ extension Array where Element == Sighting {
         let list = of(number: number, modelId: modelId)
         if let c = list.first(where: { $0.cover == true && $0.hasPicture }), let p = c.photoFile { return p }
         return list.lazy.compactMap(\.photoFile).first
+    }
+
+    /// The sighting whose picture the book shows: the picked one, else the newest with a sticker,
+    /// else the newest with a photo.
+    func pictured(number: Int, modelId: String) -> Sighting? {
+        let list = of(number: number, modelId: modelId)
+        return list.first { $0.cover == true && $0.hasPicture } ?? list.first { $0.stickerFile != nil } ?? list.first(where: \.hasPicture)
     }
 
     /// The vehicle's die-cut sticker: the picked sighting's (none if it has only a photo, so

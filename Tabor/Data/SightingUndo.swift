@@ -23,6 +23,7 @@ final class SightingUndo {
         let temperature: Double?
         let pairedWith: Int?
         let cover: Bool?
+        let wrap: String?
 
         init(_ s: Sighting) {
             id = s.id
@@ -40,6 +41,7 @@ final class SightingUndo {
             temperature = s.temperature
             pairedWith = s.pairedWith
             cover = s.cover
+            wrap = s.wrap
         }
 
         func sighting() -> Sighting {
@@ -53,6 +55,7 @@ final class SightingUndo {
             s.temperature = temperature
             s.pairedWith = pairedWith
             s.cover = cover
+            s.wrap = wrap
             return s
         }
     }

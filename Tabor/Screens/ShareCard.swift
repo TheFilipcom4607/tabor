@@ -30,7 +30,8 @@ struct CatchShare {
         case (nil, true): String(localized: "I caught \(name) #\(n) today!")
         case (nil, false): String(localized: "I caught \(name) #\(n) on \(day)!")
         }
-        return CatchShare(image: image, title: "\(name) #\(n)", message: "\(caught) \(emoji) — TABOR")
+        let wrap = sighting.wrap.flatMap(Fleet.catalog.wrap(id:)).map { " " + String(localized: "In its \($0.nameDisplay) wrap ✨") } ?? ""
+        return CatchShare(image: image, title: "\(name) #\(n)", message: "\(caught)\(wrap) \(emoji) — TABOR")
     }
 }
 
@@ -49,9 +50,13 @@ struct ShareCard: View {
         case sticker, photo
     }
 
+    /// The event wrap it was caught in: foil all over the card.
+    private var wrap: Wrap? { sighting.wrap.flatMap(Fleet.catalog.wrap(id:)) }
+
     var body: some View {
         let tier = model?.tier ?? .common
-        let accent = tier == .common ? Palette.yellow : tier.color
+        let wrap = wrap
+        let accent = wrap != nil ? Palette.foilInk : tier == .common ? Palette.yellow : tier.color
 
         VStack(alignment: .leading, spacing: 0) {
             HStack {
@@ -79,7 +84,11 @@ struct ShareCard: View {
                             .padding(.vertical, 3)
                             .padding(.horizontal, 6)
                             .background(Palette.track, in: RoundedRectangle(cornerRadius: 4))
-                        TierPill(tier: model.tier, fleet: model.fleet)
+                        if let wrap {
+                            WrapTag(wrap: wrap)
+                        } else {
+                            TierPill(tier: model.tier, fleet: model.fleet)
+                        }
                     }
                 }
                 Text(model?.name ?? String(localized: "Unknown model"))
@@ -112,7 +121,7 @@ struct ShareCard: View {
         .padding(24)
         .frame(width: 360, height: 450)
         .background {
-            let glow = Self.glow(tier)
+            let glow = wrap != nil ? (color: Palette.foilInk, peak: 0.32) : Self.glow(tier)
             ZStack {
                 Palette.bg
                 // Bright right behind the sticker, falling off fast, so it reads as light rather
@@ -149,6 +158,7 @@ struct ShareCard: View {
                     .resizable()
                     .scaledToFit()
                     .frame(maxWidth: 312, maxHeight: 200)
+                    .modifier(FoilIf(on: wrap != nil, image: Image(uiImage: img), width: 5))
                     .shadow(color: .black.opacity(0.6), radius: 14, y: 12)
                     .padding(.bottom, 16)
             } else if let photo, let img = PhotoStore.thumbnail(photo, maxPixel: 1400) {
@@ -162,7 +172,9 @@ struct ShareCard: View {
                     .frame(width: size.width, height: size.height)
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     .padding(7)
-                    .background(Palette.paper, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(wrap != nil ? AnyShapeStyle(LinearGradient(colors: Palette.foil, startPoint: .topLeading, endPoint: .bottomTrailing))
+                                            : AnyShapeStyle(Palette.paper),
+                                in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .shadow(color: .black.opacity(0.6), radius: 14, y: 12)
                     .padding(.bottom, 16)
             }

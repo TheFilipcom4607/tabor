@@ -499,16 +499,20 @@ public struct FleetData: Codable, Sendable {
     /// Works cars with a code for a number (`FleetNumber`), apart again for builds that can't
     /// show one. A model here with a `worksModels` id adds to that model.
     public var codedWorksModels: [VehicleModel]? = nil
+    /// Event wraps (`Wrap`). Older builds ignore the key.
+    public var wraps: [Wrap]? = nil
     public let depots: [Depot]
 
     public init(source: String, sourcePl: String? = nil, fetched: String?, models: [VehicleModel],
-                worksModels: [VehicleModel]? = nil, codedWorksModels: [VehicleModel]? = nil, depots: [Depot]) {
+                worksModels: [VehicleModel]? = nil, codedWorksModels: [VehicleModel]? = nil, wraps: [Wrap]? = nil,
+                depots: [Depot]) {
         self.source = source
         self.sourcePl = sourcePl
         self.fetched = fetched
         self.models = models
         self.worksModels = worksModels
         self.codedWorksModels = codedWorksModels
+        self.wraps = wraps
         self.depots = depots
     }
 }

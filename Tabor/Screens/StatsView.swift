@@ -336,9 +336,24 @@ private struct HeroCard: View {
                     .padding(.bottom, 4)
                 }
                 tiles
+                if s.wraps > 0 { wrapsLine(s.wraps) }
                 if s.buses + s.trams > 0 { split }
             }
         }
+    }
+
+    /// Forms caught in an event wrap: rare enough to say on their own, in foil.
+    private func wrapsLine(_ n: Int) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "sparkles").font(.system(size: 12, weight: .bold))
+            Mono(n == 1 ? String(localized: "1 VEHICLE IN AN EVENT WRAP") : String(localized: "\(n) VEHICLES IN EVENT WRAPS"),
+                 size: 10.5, weight: 700, spacing: 0.1, color: Palette.foilDeep)
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(Palette.foilDeep)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .background { Foil().clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous)) }
     }
 
     private var tiles: some View {

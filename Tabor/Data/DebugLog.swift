@@ -76,6 +76,15 @@ final class DebugRecord: @unchecked Sendable {
         var lineSource: String?
     }
 
+    /// The check for an event wrap this vehicle may wear on the catch's date (`WrapCheck`).
+    struct WrapInfo: Codable {
+        var wrap: String
+        var verdict: String
+        /// "sticker" (the cut-out's colours) or "photo" (the photo's middle).
+        var from: String?
+        var shares: [String: Double]?
+    }
+
     struct Info: Codable {
         var id: String
         var date: Date
@@ -99,6 +108,7 @@ final class DebugRecord: @unchecked Sendable {
         var sticker: Sticker?
         var geotag: String?
         var live: Live?
+        var wrap: WrapInfo?
         var events: [Event] = []
     }
 

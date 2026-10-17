@@ -32,6 +32,8 @@ public struct FleetCatalog: Sendable {
     public let sourcePl: String?
     /// When the fleet data last changed: "2026-10-03 13:12 UTC" (older files: "2026-09-22").
     public let fetched: String?
+    /// Every event wrap, oldest first.
+    public let wraps: [Wrap]
     private let byId: [String: VehicleModel]
     private let byNumber: [Int: [VehicleModel]]
     /// Coded works cars by their normalised code ("S9").
@@ -47,6 +49,7 @@ public struct FleetCatalog: Sendable {
         source = data.source
         sourcePl = data.sourcePl
         fetched = data.fetched
+        wraps = (data.wraps ?? []).sorted { $0.from < $1.from }
         byId = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
         var index: [Int: [VehicleModel]] = [:]
         for m in all {
@@ -91,6 +94,18 @@ public struct FleetCatalog: Sendable {
     }
 
     public func model(id: String) -> VehicleModel? { byId[id] }
+
+    public func wrap(id: String) -> Wrap? { wraps.first { $0.id == id } }
+
+    /// The wraps `number` may wear on `date`: usually none, at most one.
+    public func wraps(kind: VehicleKind, number: Int, on date: Date) -> [Wrap] {
+        wraps.filter { $0.kind == kind && $0.number == number && $0.covers(date) }
+    }
+
+    /// Every wrap the vehicle has worn, oldest first.
+    public func wraps(kind: VehicleKind, number: Int) -> [Wrap] {
+        wraps.filter { $0.kind == kind && $0.number == number }
+    }
 
     /// The works car with this code painted on, typed however ("s9", "S 9", "S-9").
     public func vehicle(code: String) -> (number: Int, model: VehicleModel)? {

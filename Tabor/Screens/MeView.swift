@@ -250,13 +250,15 @@ private struct TrophyShelf: View {
         let tier = model?.tier ?? .common
         let ink = tier == .gold ? Palette.goldInk : (tier == .common ? Palette.stickerSub : tier.color)
         return VStack(spacing: big ? 8 : 6) {
+            // A vehicle caught in a wrap shows off that catch.
+            let dressed = v.wraps.isEmpty ? nil : sightings.of(number: v.number, modelId: v.modelId).first { $0.wrap != nil && $0.hasPicture }
             Button {
                 router.openVehicle(modelId: v.modelId, number: v.number)
             } label: {
                 DieCut(number: v.number,
-                       sticker: sightings.sticker(number: v.number, modelId: v.modelId),
-                       photo: sightings.photo(number: v.number, modelId: v.modelId),
-                       height: big ? 150 : 70, tagSize: big ? 15 : 11, maxPixel: big ? 900 : 420) {
+                       sticker: dressed.map(\.stickerFile) ?? sightings.sticker(number: v.number, modelId: v.modelId),
+                       photo: dressed?.photoFile ?? sightings.photo(number: v.number, modelId: v.modelId),
+                       height: big ? 150 : 70, tagSize: big ? 15 : 11, maxPixel: big ? 900 : 420, foil: dressed != nil) {
                     Mono("/\(model?.fleet ?? 0)", size: big ? 10 : 8.5, weight: 700, spacing: 0, color: ink)
                 }
             }
@@ -339,7 +341,9 @@ struct SpotMap: View {
                 interactionModes: interactive ? .all : [],
                 selection: interactive ? $selectedId : .constant(nil), scope: mapScope) {
                 ForEach(pins) { s in
-                    let color = (Fleet.catalog.model(id: s.modelId)?.tier ?? .common).mapColor
+                    // A catch in an event wrap: foil pink, and a little bigger.
+                    let wrapped = s.wrap != nil
+                    let color = wrapped ? Palette.foilInk : (Fleet.catalog.model(id: s.modelId)?.tier ?? .common).mapColor
                     let picked = s.id == selectedId
                     Annotation("", coordinate: CLLocationCoordinate2D(latitude: s.latitude!, longitude: s.longitude!)) {
                         ZStack {
@@ -349,7 +353,8 @@ struct SpotMap: View {
                                 .fill(RadialGradient(colors: [color.opacity(picked ? 0.5 : 0.35), color.opacity(0)],
                                                      center: .center, startRadius: 0, endRadius: picked ? 20 : 13))
                                 .frame(width: picked ? 40 : 26, height: picked ? 40 : 26)
-                            Circle().fill(color).frame(width: picked ? 13 : 7, height: picked ? 13 : 7)
+                            Circle().fill(wrapped ? AnyShapeStyle(AngularGradient(colors: Palette.foil, center: .center)) : AnyShapeStyle(color))
+                                .frame(width: picked ? 13 : wrapped ? 10 : 7, height: picked ? 13 : wrapped ? 10 : 7)
                                 .overlay(Circle().stroke(picked ? Palette.ink : Palette.bg.opacity(0.8), lineWidth: 2))
                         }
                         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: picked)
@@ -398,6 +403,8 @@ private struct SpotSnapshot: View {
         let latitude: Double
         let longitude: Double
         let tier: Tier
+        /// Caught in an event wrap.
+        var wrapped = false
     }
 
     /// What the picture shows: redrawn when a catch or the size changes.
@@ -411,7 +418,8 @@ private struct SpotSnapshot: View {
         // The full map's pins: one for a coupled pair.
         let pins = sightings.compactMap { s -> Pin? in
             guard s.pairedWith == nil, let lat = s.latitude, let lon = s.longitude else { return nil }
-            return Pin(latitude: lat, longitude: lon, tier: Fleet.catalog.model(id: s.modelId)?.tier ?? .common)
+            return Pin(latitude: lat, longitude: lon, tier: Fleet.catalog.model(id: s.modelId)?.tier ?? .common,
+                       wrapped: s.wrap != nil)
         }
         GeometryReader { geo in
             ZStack {
@@ -452,12 +460,13 @@ private struct SpotSnapshot: View {
             // As the full map draws them: a glow, then a dot with a dark edge.
             for pin in pins {
                 let p = snapshot.point(for: CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude))
-                let color = UIColor(pin.tier.mapColor)
+                let color = UIColor(pin.wrapped ? Palette.foilInk : pin.tier.mapColor)
                 let glow = [color.withAlphaComponent(0.35).cgColor, color.withAlphaComponent(0).cgColor] as CFArray
                 if let gradient = CGGradient(colorsSpace: nil, colors: glow, locations: [0, 1]) {
                     cg.drawRadialGradient(gradient, startCenter: p, startRadius: 0, endCenter: p, endRadius: 13, options: [])
                 }
-                let dot = CGRect(x: p.x - 3.5, y: p.y - 3.5, width: 7, height: 7)
+                let r: CGFloat = pin.wrapped ? 5 : 3.5
+                let dot = CGRect(x: p.x - r, y: p.y - r, width: r * 2, height: r * 2)
                 cg.setFillColor(color.cgColor)
                 cg.fillEllipse(in: dot)
                 cg.setStrokeColor(edge)
@@ -498,7 +507,7 @@ private struct SpotCard: View {
                 DieCut(number: s.number,
                        sticker: s.stickerFile ?? sightings.sticker(number: s.number, modelId: s.modelId),
                        photo: s.photoFile ?? sightings.photo(number: s.number, modelId: s.modelId),
-                       height: 92, tagSize: 11, maxPixel: 420) { EmptyView() }
+                       height: 92, tagSize: 11, maxPixel: 420, foil: s.wrap != nil) { EmptyView() }
                     .frame(width: 128)
                 VStack(alignment: .leading, spacing: 5) {
                     Text(model?.name ?? s.modelId)
@@ -511,6 +520,9 @@ private struct SpotCard: View {
                         .foregroundStyle(Palette.sub)
                     if let line = s.line {
                         Mono("LINE \(line)", size: 10.5, weight: 600, color: Palette.routeInk)
+                    }
+                    if let wrap = s.wrap.flatMap(Fleet.catalog.wrap(id:)) {
+                        WrapTag(wrap: wrap, size: 9.5)
                     }
                     if let place = [s.street, s.district].compactMap({ $0 }).joined(separator: " · ").nonEmpty {
                         Mono(place.uppercased(), size: 10.5, color: Palette.dim)

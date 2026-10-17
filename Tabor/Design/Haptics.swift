@@ -169,6 +169,38 @@ final class Haptics {
         play(events, curves: curves, fallback: tier == .common ? .medium : .success)
     }
 
+    /// Reveal of a vehicle in an event wrap, the rarest thing in the book: paper crinkling off
+    /// a present (fast, bright, uneven clicks over a swell that climbs), the landing, then a
+    /// long shower of glitter. Lasts `wrapBuild` before the landing, like the legendary drumroll.
+    static let wrapBuild: TimeInterval = 1.1
+
+    func wrapReveal() {
+        var events: [CHHapticEvent] = []
+        let build = Self.wrapBuild
+        var t = 0.0, k = 0
+        while t < build - 0.08 {
+            let p = Float(t / build)
+            events.append(tap(t, 0.3 + 0.4 * p + (k % 3 == 0 ? 0.15 : 0), 0.85 + 0.15 * p))
+            t += [0.07, 0.04, 0.09, 0.05][k % 4] * Double(1 - 0.4 * p)
+            k += 1
+        }
+        events.append(hum(0.3, build - 0.36, intensity: 1, sharpness: 0.5))
+        let curves = [curve(.hapticIntensityControl, [(0.3, 0.15), (build - 0.08, 0.7)]),
+                      curve(.hapticSharpnessControl, [(0.3, -0.2), (build - 0.08, 0.5)])]
+        let land = build + 0.1
+        events.append(tap(land, 1, 0.4))
+        events.append(tap(land + 0.075, 0.5, 0.3))
+        for i in 0..<12 {
+            events.append(tap(land + 0.16 + Double(i) * 0.06 + (i % 2 == 0 ? 0.012 : 0), max(0.25, 0.75 - Float(i) * 0.045), 1))
+        }
+        play(events, curves: curves, fallback: .success)
+    }
+
+    /// A wrap confirmed by hand on the reveal: a short shimmer.
+    func wrapAdded() {
+        play((0..<6).map { tap(Double($0) * 0.045, 0.75 - Float($0) * 0.08, 1) }, fallback: .success)
+    }
+
     /// Sticking it into the book: a crackle as it peels off the backing (while the
     /// sticker lifts and straightens), then the slap when it lands in the book.
     func stick() {

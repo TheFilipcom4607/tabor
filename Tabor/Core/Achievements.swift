@@ -113,7 +113,7 @@ public enum Achievements {
         let c = Context(sightings: sightings, catalog: catalog, calendar: calendar)
         let all: [Achievement?] = [
             // Collecting
-            collector(c), fleetShare(c), lines(c), photographer(c), specialLivery(c),
+            collector(c), fleetShare(c), lines(c), photographer(c), specialLivery(c), wrapChristmas(c), everyOccasion(c),
             // Rarity
             unicorn(c), tierSet(c, .legendary, id: "legendary-all", symbol: "crown.fill"),
             tierSet(c, .gold, id: "gold-set", symbol: "star.circle.fill"),
@@ -222,18 +222,53 @@ public enum Achievements {
     }
 
     /// Vehicles caught in a paint of their own, unlike the rest of their model (so not the
-    /// suburban blue). Hidden until the fleet file lists some.
+    /// suburban blue), and each vehicle in each event wrap it was caught in. Hidden until the
+    /// fleet file lists some.
     static func specialLivery(_ c: Context) -> Achievement? {
         let special = { (m: VehicleModel, n: Int) in m.livery(of: n).flatMap { $0.special ? $0 : nil } }
         guard c.catalog.models.contains(where: { m in (m.liveries ?? [:]).keys.contains { Int($0).flatMap { special(m, $0) } != nil } })
+            || !c.catalog.wraps.isEmpty
         else { return nil }
         let painted = c.stats.vehicles.compactMap { v in
             c.catalog.model(id: v.modelId).flatMap { special($0, v.number) }.map { Achievement.Proof(modelId: v.modelId, number: v.number, note: $0.name) }
-        }.sorted { $0.number < $1.number }
+        } + c.stats.vehicles.flatMap { v in
+            v.wraps.sorted().compactMap(c.catalog.wrap(id:)).map { Achievement.Proof(modelId: v.modelId, number: v.number, note: $0.nameDisplay) }
+        }
+        .sorted { $0.number < $1.number }
         return tiered(id: "special-livery", title: String(localized: "Dressed up"), symbol: "paintbrush.fill",
                       value: painted.count, thresholds: [1, 3], proof: painted) {
             $0 == 1 ? String(localized: "A vehicle in a special livery") : String(localized: "\($0) vehicles in a special livery")
         }
+    }
+
+    /// Catches in an event wrap, as (sighting, wrap), oldest first.
+    static func wrapped(_ c: Context) -> [(SightingRecord, Wrap)] {
+        c.sightings.compactMap { s in s.wrap.flatMap(c.catalog.wrap(id:)).map { (s, $0) } }.sorted { $0.0.date < $1.0.date }
+    }
+
+    /// Any vehicle in a Christmas wrap. Hidden until the fleet file has one.
+    static func wrapChristmas(_ c: Context) -> Achievement? {
+        guard c.catalog.wraps.contains(where: { $0.event == "christmas" }) else { return nil }
+        let hits = wrapped(c).filter { $0.1.event == "christmas" }
+        return Achievement(id: "wrap-christmas", title: String(localized: "Deck the bus"),
+                           detail: String(localized: "A vehicle in its Christmas wrap"), symbol: "tree.fill",
+                           progress: hits.isEmpty ? 0 : 1, goal: 1,
+                           proof: hits.map { Achievement.Proof(modelId: $0.0.modelId, number: $0.0.number, note: $0.1.nameDisplay) })
+    }
+
+    /// Wraps for four different events. What's left lists the events the fleet file knows.
+    static func everyOccasion(_ c: Context) -> Achievement? {
+        let events = Set(c.catalog.wraps.map(\.event))
+        guard events.count >= 4 else { return nil }
+        var firsts: [String: (SightingRecord, Wrap)] = [:]
+        for hit in wrapped(c) where firsts[hit.1.event] == nil { firsts[hit.1.event] = hit }
+        let done = firsts.count >= 4
+        return Achievement(id: "every-occasion", title: String(localized: "Every occasion"),
+                           detail: String(localized: "Vehicles in wraps for four different events"), symbol: "party.popper.fill",
+                           progress: min(firsts.count, 4), goal: 4,
+                           proof: firsts.values.sorted { $0.0.date < $1.0.date }
+                               .map { Achievement.Proof(modelId: $0.0.modelId, number: $0.0.number, note: $0.1.nameDisplay) },
+                           missing: done ? [] : events.subtracting(firsts.keys).sorted().map { .init(Wrap.eventName($0)) })
     }
 
     // MARK: Rarity

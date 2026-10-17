@@ -5,12 +5,13 @@ import Foundation
 /// The book is sorted by model; this is the diary (asked for in TestFlight feedback).
 public enum CatchLog {
     public enum Mark: Equatable, Sendable {
-        case newModel, newVehicle, again
+        /// `newForm`: a vehicle you had, caught in an event wrap for the first time.
+        case newModel, newVehicle, newForm, again
     }
 
     /// One mark per record, in the order given, judged by what was caught before it.
     public static func marks(_ records: [SightingRecord]) -> [Mark] {
-        var vehicles = Set<String>(), models = Set<String>()
+        var vehicles = Set<String>(), models = Set<String>(), forms = Set<String>()
         var out = Array(repeating: Mark.again, count: records.count)
         for i in records.indices.sorted(by: { (records[$0].date, $0) < (records[$1].date, $1) }) {
             let r = records[i]
@@ -18,8 +19,11 @@ public enum CatchLog {
                 out[i] = .newModel
             } else if vehicles.insert("\(r.modelId)#\(r.number)").inserted {
                 out[i] = .newVehicle
+            } else if let wrap = r.wrap, !forms.contains("\(r.modelId)#\(r.number)#\(wrap)") {
+                out[i] = .newForm
             }
             vehicles.insert("\(r.modelId)#\(r.number)")
+            if let wrap = r.wrap { forms.insert("\(r.modelId)#\(r.number)#\(wrap)") }
         }
         return out
     }

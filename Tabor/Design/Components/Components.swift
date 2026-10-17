@@ -255,6 +255,8 @@ struct DieCut<Badge: View>: View {
     var height: CGFloat = 78
     var tagSize: CGFloat = 12
     var maxPixel: Int = 500
+    /// Caught in an event wrap: a foil rim.
+    var foil = false
     @ViewBuilder var badge: () -> Badge
 
     var body: some View {
@@ -264,6 +266,7 @@ struct DieCut<Badge: View>: View {
                     .resizable()
                     .scaledToFit()
                     .frame(maxWidth: .infinity, maxHeight: height)
+                    .modifier(FoilIf(on: foil, image: Image(uiImage: img), width: max(2, height * 0.035)))
                     .shadow(color: .black.opacity(0.55), radius: height * 0.06, y: height * 0.06)
                     .padding(.bottom, tagSize * 0.7)
             } else {
@@ -271,7 +274,9 @@ struct DieCut<Badge: View>: View {
                     .frame(height: height * 0.78)
                     .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
                     .padding(max(3, height * 0.05))
-                    .background(Palette.paper, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(foil ? AnyShapeStyle(LinearGradient(colors: Palette.foil, startPoint: .topLeading, endPoint: .bottomTrailing))
+                                     : AnyShapeStyle(Palette.paper),
+                                in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     .shadow(color: .black.opacity(0.5), radius: 8, y: 6)
                     .padding(.bottom, tagSize * 0.7)
             }
@@ -282,8 +287,22 @@ struct DieCut<Badge: View>: View {
 }
 
 extension DieCut where Badge == EmptyView {
-    init(number: Int, sticker: String?, photo: String?, height: CGFloat = 78, tagSize: CGFloat = 12, maxPixel: Int = 500) {
-        self.init(number: number, sticker: sticker, photo: photo, height: height, tagSize: tagSize, maxPixel: maxPixel) { EmptyView() }
+    init(number: Int, sticker: String?, photo: String?, height: CGFloat = 78, tagSize: CGFloat = 12, maxPixel: Int = 500,
+         foil: Bool = false) {
+        self.init(number: number, sticker: sticker, photo: photo, height: height, tagSize: tagSize, maxPixel: maxPixel,
+                  foil: foil) { EmptyView() }
+    }
+}
+
+/// `foilEdge` only when on, without changing the view's identity when it isn't.
+struct FoilIf: ViewModifier {
+    let on: Bool
+    let image: Image
+    var width: CGFloat = 3
+    var animated = false
+
+    func body(content: Content) -> some View {
+        if on { content.foilEdge(image, width: width, animated: animated) } else { content }
     }
 }
 

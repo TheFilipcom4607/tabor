@@ -55,6 +55,8 @@ struct WidgetSnapshot: Codable, Equatable {
         var lastSeen: Date? = nil
         var line: String? = nil
         var place: String? = nil
+        /// The event wrap its picture was caught in ("CHRISTMAS 2025"): drawn with a foil rim.
+        var wrap: String? = nil
 
         var url: URL { WidgetLink.vehicle(modelId: modelId, number: number) }
     }

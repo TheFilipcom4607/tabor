@@ -20,6 +20,10 @@ enum WidgetPalette {
     static let card = Color(red: 0.078, green: 0.086, blue: 0.102)
     static let thumb = Color(red: 0.106, green: 0.118, blue: 0.137)
     static let routeInk = Color(red: 0.788, green: 0.804, blue: 0.827)
+    /// An event wrap's holographic foil, as in the app (`Palette.foil`).
+    static let foil: [Color] = [0xFF7AD9, 0xB98CFF, 0x7FD4FF, 0x8CF5CF, 0xFFE58A, 0xFF7AD9].map {
+        Color(red: Double($0 >> 16 & 0xFF) / 255, green: Double($0 >> 8 & 0xFF) / 255, blue: Double($0 & 0xFF) / 255)
+    }
 
     /// The number tag's colour for a tier; white for COMMON, like the stickers in the app.
     static func tag(_ name: String?) -> Color {
@@ -69,12 +73,21 @@ struct CardPicture: View {
     let card: WidgetSnapshot.Card
     /// The number tag's size; 0 leaves it off.
     var tag: CGFloat = 10
+    @Environment(\.widgetRenderingMode) private var mode
 
     var body: some View {
         if let url = WidgetSnapshot.imageURL(card.image), let image = UIImage(contentsOfFile: url.path) {
             let pic = Image(uiImage: image).resizable().widgetAccentedRenderingMode(.desaturated)
+            // Caught in an event wrap: a foil rim, in full colour only.
+            let foil = card.wrap != nil && mode == .fullColor
             if card.cutout {
                 pic.scaledToFit()
+                    .background {
+                        if foil {
+                            AngularGradient(colors: WidgetPalette.foil, center: .center, angle: .degrees(30))
+                                .mask { Image(uiImage: image).resizable().scaledToFit().padding(-2.5) }
+                        }
+                    }
                     .shadow(color: .black.opacity(0.5), radius: 3, y: 2)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .overlay(alignment: .bottomTrailing) { if tag > 0 { WidgetNumberTag(number: card.number, tier: card.tier, size: tag) } }
@@ -82,6 +95,13 @@ struct CardPicture: View {
                 pic.scaledToFill()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .padding(foil ? 2.5 : 0)
+                    .background {
+                        if foil {
+                            AngularGradient(colors: WidgetPalette.foil, center: .center, angle: .degrees(30))
+                                .clipShape(RoundedRectangle(cornerRadius: 12.5, style: .continuous))
+                        }
+                    }
                     .overlay(alignment: .bottomTrailing) { if tag > 0 { WidgetNumberTag(number: card.number, tier: card.tier, size: tag).padding(4) } }
             }
         } else {

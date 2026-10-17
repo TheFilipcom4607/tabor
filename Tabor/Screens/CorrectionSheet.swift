@@ -20,6 +20,8 @@ struct CorrectionSheet: View {
     @State private var lineFromChip: String?
     /// The kind the typed line set, so a different line may change it (a kind you tap stays).
     @State private var kindFromLine: VehicleKind?
+    /// In the event wrap the reveal found or offered: the way to take a wrong one off.
+    @State private var wrapOn = false
     @FocusState private var numberFocused: Bool
     @FocusState private var lineFocused: Bool
 
@@ -144,6 +146,23 @@ struct CorrectionSheet: View {
                             .padding(.top, 10)
                     }
 
+                    // Only for the vehicle the reveal checked: another number gets checked afresh.
+                    if let finding = draft.wrapFinding, number == draft.number {
+                        SectionLabel(text: String(localized: "EVENT WRAP"))
+                            .padding(.top, 22)
+                            .padding(.bottom, 8)
+                        Toggle(isOn: $wrapOn) {
+                            HStack(spacing: 10) {
+                                WrapTag(wrap: finding.wrap, size: 11)
+                                Text(wrapOn ? "Caught in it" : "Not in it")
+                                    .font(TaborFont.grotesk(14))
+                                    .foregroundStyle(Palette.sub)
+                            }
+                        }
+                        .tint(Palette.foilInk)
+                        .onChange(of: wrapOn) { Haptics.shared.detent() }
+                    }
+
                     if !candidates.isEmpty {
                         SectionLabel(text: candidates.count > 1 ? String(localized: "THIS NUMBER EXISTS ON") : String(localized: "IN THE ZTM DATABASE"))
                             .padding(.top, 22)
@@ -184,6 +203,7 @@ struct CorrectionSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
+                        let sameVehicle = number == draft.number
                         draft.number = number
                         draft.modelId = modelId
                         draft.line = line.nonEmpty
@@ -192,6 +212,10 @@ struct CorrectionSheet: View {
                         // doesn't list under this one.
                         let listed = number.flatMap { n in modelId.flatMap(catalog.model(id:)).map { $0.numbers.contains(n) } }
                         draft.modelPickedByHand = pickedByHand || listed == false
+                        if let finding = draft.wrapFinding, sameVehicle, wrapOn != (draft.wrap != nil) {
+                            draft.wrap = wrapOn ? finding.wrap : nil
+                            draft.debug?.log(wrapOn ? "wrap-confirmed" : "wrap-off", number: number, modelId: modelId, note: finding.wrap.id)
+                        }
                         dismiss()
                     }
                     .fontWeight(.bold)
@@ -208,6 +232,7 @@ struct CorrectionSheet: View {
             line = draft.line ?? ""
             modelId = draft.modelId
             pickedByHand = draft.modelPickedByHand
+            wrapOn = draft.wrap != nil
             if draft.number == nil { numberFocused = true }
             routes.prepare()
         }

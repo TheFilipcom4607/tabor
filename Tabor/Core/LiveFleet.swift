@@ -322,6 +322,9 @@ public struct WantedPin: Hashable, Sendable, Identifiable {
     public let model: VehicleModel
     public let kind: Kind
     public let distance: Double
+    /// The event wrap it's due to wear today, while you haven't caught it in it. Only the
+    /// sources' dates say so, not a photo: HUNT words it as a plan.
+    public var wrap: Wrap? = nil
 
     public var id: String { "\(vehicle.kind.rawValue)#\(vehicle.number)" }
 }
@@ -343,18 +346,27 @@ public enum Wanted {
             guard let model = catalog.match(number: n.vehicle.number, kind: n.vehicle.kind).suggested
             else { return nil }
             let kind: WantedPin.Kind
-            if caught.vehicle(number: n.vehicle.number, modelId: model.id) != nil {
-                guard includeCaught else { return nil }
-                kind = .caught
+            let mine = caught.vehicle(number: n.vehicle.number, modelId: model.id)
+            // A wrap you don't have it in yet makes even a vehicle you have wanted again.
+            let wrap = catalog.wraps(kind: n.vehicle.kind, number: n.vehicle.number, on: snapshot.fetched)
+                .first { !(mine?.wraps.contains($0.id) ?? false) }
+            if mine != nil {
+                if wrap != nil {
+                    kind = .newVehicle
+                } else {
+                    guard includeCaught else { return nil }
+                    kind = .caught
+                }
             } else {
                 kind = caught.ownedCount(modelId: model.id) == 0 ? .newModel : .newVehicle
             }
             let distance = user.map { Geo.km(($0.lat, $0.lon), (n.vehicle.latitude, n.vehicle.longitude)) * 1000 } ?? n.distance
-            return WantedPin(vehicle: n.vehicle, model: model, kind: kind, distance: distance)
+            return WantedPin(vehicle: n.vehicle, model: model, kind: kind, distance: distance, wrap: wrap)
         }
+        // A wrap is out for a few weeks at most: above even the legendaries.
         return Array(pins.sorted { a, b in
-            (a.kind == .newModel ? 0 : 1, huntRank(a.model.tier), a.distance)
-                < (b.kind == .newModel ? 0 : 1, huntRank(b.model.tier), b.distance)
+            (a.wrap == nil ? 1 : 0, a.kind == .newModel ? 0 : 1, huntRank(a.model.tier), a.distance)
+                < (b.wrap == nil ? 1 : 0, b.kind == .newModel ? 0 : 1, huntRank(b.model.tier), b.distance)
         }.prefix(limit))
     }
 
@@ -366,6 +378,18 @@ public enum Wanted {
                                 includeCaught: Bool = false) -> [WantedPin] {
         pins(snapshot: snapshot, catalog: catalog, caught: caught, lat: lat, lon: lon, within: .infinity,
              from: user, includeCaught: includeCaught)
+    }
+
+    /// Vehicles out in a wrap you haven't caught them in, anywhere in the city, nearest first:
+    /// HUNT's banner, whatever the filters.
+    public static func wrapsOut(snapshot: LiveSnapshot, catalog: FleetCatalog, caught: CollectionStats,
+                                lat: Double, lon: Double, from user: (lat: Double, lon: Double)? = nil) -> [WantedPin] {
+        let numbers = Set(catalog.wraps.map { "\($0.kind.rawValue)#\($0.number)" })
+        let dressed = LiveSnapshot(vehicles: snapshot.vehicles.filter { numbers.contains("\($0.kind.rawValue)#\($0.number)") },
+                                   fetched: snapshot.fetched)
+        guard !dressed.vehicles.isEmpty else { return [] }
+        return anywhere(snapshot: dressed, catalog: catalog, caught: caught, lat: lat, lon: lon, from: user)
+            .filter { $0.wrap != nil }.sorted { $0.distance < $1.distance }
     }
 
     /// Everything on one line, picked from HUNT's search: whether or not you have it, nearest

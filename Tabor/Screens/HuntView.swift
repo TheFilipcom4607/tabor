@@ -62,6 +62,8 @@ struct HuntView: View {
     /// Opened on the default 3 km view around you, once there was a fix to open it on.
     @State private var centered = false
     @State private var pins: [WantedPin] = []
+    /// Vehicles out in an event wrap you haven't caught them in, anywhere, nearest first.
+    @State private var wrapsOut: [WantedPin] = []
     /// Each vehicle placed on its route, when it could be, as of the last refresh.
     @State private var matches: [String: RouteMatch] = [:]
     /// Where pins sit on the map: slid along their route to where they probably are now, since
@@ -123,6 +125,10 @@ struct HuntView: View {
                         .padding(.top, -4)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
+                if let out = wrapsOut.first, selectedId != out.id {
+                    wrapBanner(out, more: wrapsOut.count - 1)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
                 Spacer()
                 HStack(spacing: 8) {
                     if let tracked = track.trackedId, tracked != selectedId {
@@ -150,6 +156,7 @@ struct HuntView: View {
             .animation(.snappy, value: facing)
             .animation(.snappy, value: following)
             .animation(.snappy, value: picked)
+            .animation(.snappy, value: wrapsOut.first?.id)
         }
         .background(Palette.bg.ignoresSafeArea())
         .foregroundStyle(Palette.ink)
@@ -234,7 +241,8 @@ struct HuntView: View {
             case .starred: starred.contains(pin.model.id)
             }
             // A line from the search shows all of it, like the search counted (#37).
-            return ((wanted || picked.line != nil) && picked.matches(pin)) || pin.id == focusId
+            // Out in a wrap you haven't caught it in: wanted in every view.
+            return ((wanted || pin.wrap != nil || picked.line != nil) && picked.matches(pin)) || pin.id == focusId
         }
     }
 
@@ -487,6 +495,39 @@ struct HuntView: View {
             longitudeDelta: min(current.longitudeDelta / 3, max((lons.max()! - lons.min()!) * 2.5, 0.002)))
         let center = CLLocationCoordinate2D(latitude: (lats.max()! + lats.min()!) / 2, longitude: (lons.max()! + lons.min()!) / 2)
         withAnimation(.easeInOut(duration: 0.6)) { position = .region(MKCoordinateRegion(center: center, span: span)) }
+    }
+
+    /// "❄ CHRISTMAS 2025 IS OUT · #5887 · 2.3 KM": a wrap only runs for a few weeks, so
+    /// HUNT says so whatever the filters. Tapping flies to it.
+    private func wrapBanner(_ pin: WantedPin, more: Int) -> some View {
+        Button {
+            Haptics.shared.wrapAdded()
+            focus(on: pin.id)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: pin.wrap?.symbol ?? "sparkles").font(.system(size: 12, weight: .bold))
+                Mono(String(localized: "\(pin.wrap?.nameDisplay ?? "") IS OUT", comment: "HUNT banner: a vehicle in an event wrap is running"),
+                     size: 11, weight: 700, spacing: 0.1, color: Palette.foilDeep)
+                    .lineLimit(1)
+                    .layoutPriority(1)
+                Spacer(minLength: 4)
+                // What gives way on a narrow phone: the name of the wrap stays whole.
+                Mono([String(localized: "LINE \(pin.vehicle.line)"), hasFix ? HuntDistance.text(pin.distance) : nil,
+                      more > 0 ? "+\(more)" : nil].compactMap { $0 }.joined(separator: " · "),
+                     size: 10.5, weight: 600, color: Palette.foilDeep.opacity(0.75))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                Image(systemName: "chevron.right").font(.system(size: 10, weight: .bold))
+            }
+            .foregroundStyle(Palette.foilDeep)
+            .padding(.vertical, 9)
+            .padding(.horizontal, 13)
+            .background { Foil(animated: true).clipShape(Capsule()) }
+            .shadow(color: Palette.foilInk.opacity(0.35), radius: 10, y: 4)
+        }
+        .buttonStyle(StickerPressStyle())
+        .padding(.horizontal, 20)
+        .accessibilityLabel(Text("\(pin.model.name) \(String(pin.vehicle.number)) is out in its \(pin.wrap?.nameDisplay.lowercased() ?? "") wrap. Show it"))
     }
 
     // MARK: - Chrome
@@ -1403,6 +1444,9 @@ struct HuntView: View {
             }
         }
         matches = placed
+        wrapsOut = Wanted.wrapsOut(snapshot: snapshot, catalog: catalog, caught: sightings.stats,
+                                   lat: (user ?? center).latitude, lon: (user ?? center).longitude,
+                                   from: user.map { ($0.latitude, $0.longitude) })
         // Vehicles glide to where they are now rather than jumping. Not with a crowd of tags on
         // screen: gliding them all every refresh kept the map redrawing and the phone warm (#85).
         if animated, lone.count(where: { near($0, screens: 1) }) <= Self.glideLimit {
@@ -1553,7 +1597,7 @@ private extension CLLocationCoordinate2D {
 private extension WantedPin {
     var coordinate: CLLocationCoordinate2D { CLLocationCoordinate2D(latitude: vehicle.latitude, longitude: vehicle.longitude) }
 
-    var accent: Color { model.tier.mapColor }
+    var accent: Color { wrap != nil ? Palette.foilInk : model.tier.mapColor }
 
     func subtitle(showDistance: Bool, showKind: Bool = true) -> String {
         [showKind ? vehicle.kind.name : nil, "#\(vehicle.number)", vehicle.line.isEmpty ? nil : String(localized: "LINE \(vehicle.line)"),
@@ -1581,7 +1625,8 @@ private struct WantedPinView: View {
     var travel: Double? = nil
     /// The map's rotation, read here so a turning map redraws only the pins.
     let turn: MapTurn
-    private var filled: Bool { pin.kind == .newModel }
+    private var filled: Bool { pin.kind == .newModel || pin.wrap != nil }
+    private var ink: Color { pin.wrap != nil ? Palette.foilDeep : filled ? pin.model.tier.onMapColor : pin.accent }
     /// On screen, 0 = up.
     private var heading: Double? { travel.map { $0 - turn.coarse } }
 
@@ -1601,7 +1646,7 @@ private struct WantedPinView: View {
                         .font(.system(size: 8.5, weight: .heavy))
                         .accessibilityHidden(true)
                 }
-                Image(systemName: pin.vehicle.kind == .tram ? "tram.fill" : "bus.fill")
+                Image(systemName: pin.wrap?.symbol ?? (pin.vehicle.kind == .tram ? "tram.fill" : "bus.fill"))
                     .font(.system(size: 9.5, weight: .bold))
                 Text(pin.vehicle.line.isEmpty ? String(pin.vehicle.number) : pin.vehicle.line)
                     .font(TaborFont.mono(12.5, 700))
@@ -1615,10 +1660,12 @@ private struct WantedPinView: View {
                         .accessibilityHidden(true)
                 }
             }
-            .foregroundStyle(filled ? pin.model.tier.onMapColor : pin.accent)
+            .foregroundStyle(ink)
             .padding(.vertical, 4)
             .padding(.horizontal, 7)
             .background(filled ? pin.accent : Palette.bg.opacity(0.88), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            // Foil, still: a turning one on every tag would redraw the map all the time (#85).
+            .background { if pin.wrap != nil { Foil().clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous)) } }
             .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous)
                 .strokeBorder(selected ? .white : (filled ? Palette.bg.opacity(0.6) : pin.accent), lineWidth: selected ? 2 : 1.5))
             Triangle()
@@ -1947,7 +1994,11 @@ private struct PinCard: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 7) {
                 KindTag(kind: pin.vehicle.kind)
-                TierPill(tier: pin.model.tier, fleet: pin.model.fleet)
+                if let wrap = pin.wrap {
+                    WrapTag(wrap: wrap, animated: true)
+                } else {
+                    TierPill(tier: pin.model.tier, fleet: pin.model.fleet)
+                }
                 Spacer()
                 StarButton(modelId: pin.model.id)
                 CloseButton(action: onClose)
@@ -2020,7 +2071,10 @@ private struct PinCard: View {
             // With the route open the map needs the room more than this line does.
             if !routeOpen {
                 Group {
-                    if let mine {
+                    if let wrap = pin.wrap, let until = wrap.until {
+                        // The sources' plan, not what the photo will show: said as the plan.
+                        Text("Due out in its \(wrap.nameDisplay) wrap until \(until.formatted(.dateTime.day().month().locale(.app))). Catch it in it for a form of its own.")
+                    } else if let mine {
                         Text("In your book since \(mine.firstSeen.formatted(.dateTime.day().month())) · seen \(mine.timesSeen)×")
                     } else if pin.kind == .newModel {
                         Text("Not in your book yet — catching it opens a new page.")
@@ -2029,7 +2083,7 @@ private struct PinCard: View {
                     }
                 }
                 .font(TaborFont.grotesk(13))
-                .foregroundStyle(pin.kind == .newModel ? Palette.greenInk : Palette.sub)
+                .foregroundStyle(pin.wrap != nil ? Palette.foilInk : pin.kind == .newModel ? Palette.greenInk : Palette.sub)
             }
             HStack(spacing: 8) {
                 Button(action: onOpen) {

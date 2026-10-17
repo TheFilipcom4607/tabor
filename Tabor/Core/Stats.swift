@@ -112,6 +112,8 @@ public struct PeriodStats: Sendable {
     public let depots: Int
     public let buses: Int
     public let trams: Int
+    /// Vehicles caught in an event wrap, each wrap counted once per vehicle (forms).
+    public let wraps: Int
     /// All time: the share of the fleet caught. A year or a month: the share it added.
     public let fleetShare: Double
     /// Catches per day, keyed by the day's start.
@@ -169,6 +171,7 @@ public struct PeriodStats: Sendable {
         perDay = days.mapValues(\.count)
         daysOut = days.count
         lines = Set(events.compactMap(\.line)).count
+        wraps = Set(inPeriod.compactMap { r in r.wrap.map { "\(r.modelId)#\(r.number)#\($0)" } }).count
 
         let models = vehicleList.map { (v: $0, model: catalog.model(id: $0.modelId)) }
         buses = models.filter { $0.model?.kind == .bus }.count

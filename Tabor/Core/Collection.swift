@@ -19,11 +19,13 @@ public struct SightingRecord: Hashable, Sendable {
     public let hasSticker: Bool
     /// The second car of a coupled tram: the number of the car it was added alongside.
     public let pairedWith: Int?
+    /// The event wrap it wore (`Wrap.id`).
+    public let wrap: String?
 
     public init(number: Int, modelId: String, date: Date, line: String? = nil, district: String? = nil,
                 street: String? = nil, latitude: Double? = nil, longitude: Double? = nil,
                 weatherCode: Int? = nil, temperature: Double? = nil, hasSticker: Bool = false,
-                pairedWith: Int? = nil) {
+                pairedWith: Int? = nil, wrap: String? = nil) {
         self.number = number
         self.modelId = modelId
         self.date = date
@@ -36,6 +38,7 @@ public struct SightingRecord: Hashable, Sendable {
         self.temperature = temperature
         self.hasSticker = hasSticker
         self.pairedWith = pairedWith
+        self.wrap = wrap
     }
 }
 
@@ -45,6 +48,8 @@ public struct OwnedVehicle: Hashable, Sendable {
     public let timesSeen: Int
     public let firstSeen: Date
     public let lastSeen: Date
+    /// The event wraps it was caught in (`Wrap.id`): each one a form of its own.
+    public var wraps: Set<String> = []
 }
 
 public struct CollectionStats: Sendable {
@@ -56,12 +61,15 @@ public struct CollectionStats: Sendable {
         vehicles = groups.values.map { g in
             let dates = g.map(\.date)
             return OwnedVehicle(number: g[0].number, modelId: g[0].modelId, timesSeen: g.count,
-                                firstSeen: dates.min()!, lastSeen: dates.max()!)
+                                firstSeen: dates.min()!, lastSeen: dates.max()!, wraps: Set(g.compactMap(\.wrap)))
         }.sorted { $0.number < $1.number }
         byModel = Dictionary(grouping: vehicles, by: \.modelId)
     }
 
     public var caught: Int { vehicles.count }
+
+    /// Every (vehicle, wrap) caught: a vehicle in two wraps is two forms.
+    public var wrapForms: Int { vehicles.reduce(0) { $0 + $1.wraps.count } }
 
     public func owned(modelId: String) -> [OwnedVehicle] { byModel[modelId] ?? [] }
     public func ownedCount(modelId: String) -> Int { byModel[modelId]?.count ?? 0 }
@@ -71,9 +79,11 @@ public struct CollectionStats: Sendable {
         byModel[modelId]?.first { $0.number == number }
     }
 
-    /// Owned vehicles ordered rarest model first, then by earliest catch.
+    /// Owned vehicles ordered rarest model first, then by earliest catch. One caught in an event
+    /// wrap beats them all: it was out like that for a few weeks.
     public func rarest(catalog: FleetCatalog, limit: Int) -> [OwnedVehicle] {
         vehicles.sorted { a, b in
+            if a.wraps.isEmpty != b.wraps.isEmpty { return !a.wraps.isEmpty }
             let fa = catalog.model(id: a.modelId)?.fleet ?? .max
             let fb = catalog.model(id: b.modelId)?.fleet ?? .max
             if fa != fb { return fa < fb }
@@ -127,6 +137,16 @@ public enum Ordinal {
 }
 
 public enum RevealHint {
+    /// The hint for a catch in an event wrap. `newForm`: the vehicle was in the book already,
+    /// but never in this wrap.
+    public static func wrapped(_ wrap: Wrap, isNewVehicle: Bool, newForm: Bool) -> String {
+        let name = wrap.nameDisplay
+        if isNewVehicle || newForm {
+            return String(localized: "Caught in its \(name) wrap! It only wears it for a few weeks, so it goes in your book as a form of its own.")
+        }
+        return String(localized: "In its \(name) wrap again. You already have this form; it still counts toward your streak.")
+    }
+
     /// The green hint line on the reveal screen. `owned` includes the new catch.
     /// `firstWorks`: no works car was in the book before this one.
     /// Model names are kept after the word "model" in the sentences, so languages that

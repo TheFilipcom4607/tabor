@@ -67,6 +67,18 @@ struct BookIndexView: View {
 
             ScrollView {
                 LazyVStack(spacing: 9) {
+                    // Event wraps first: a set of their own, each only out for a few weeks.
+                    let wraps = catalog.wraps.filter { w in
+                        switch filter {
+                        case .all, .missing: true
+                        case .bus: w.kind == .bus
+                        case .tram: w.kind == .tram
+                        }
+                    }
+                    if !wraps.isEmpty {
+                        WrapShelf(wraps: wraps, sightings: sightings, catalog: catalog)
+                            .padding(.bottom, 8)
+                    }
                     ForEach(rows.filter(\.regular)) { m in row(m, stats: stats) }
                     // Test, tourist-line and works stock live in sections of their own: they're
                     // passing through, seasonal or not for passengers, not rare.
@@ -234,5 +246,72 @@ extension Int {
         // No-break, so "2 673" never splits across a line end.
         f.groupingSeparator = "\u{00A0}"
         return f.string(from: NSNumber(value: self)) ?? String(self)
+    }
+}
+
+/// Every event wrap, newest first: the catch in it on foil, or a slot to find it in. Each
+/// opens its vehicle's page, where the wraps are forms side by side.
+private struct WrapShelf: View {
+    let wraps: [Wrap]
+    let sightings: [Sighting]
+    let catalog: FleetCatalog
+
+    var body: some View {
+        let caught = Dictionary(sightings.compactMap { s in s.wrap.map { ($0, s) } }) { a, b in a.date > b.date ? a : b }
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Mono("EVENT WRAPS", size: 10.5, weight: 700, spacing: 0.14, color: Palette.foilInk)
+                    Mono("EACH ONE OUT FOR A FEW WEEKS", size: 9.5, color: Palette.faint)
+                }
+                Spacer()
+                Mono("\(wraps.filter { caught[$0.id] != nil }.count)/\(wraps.count)", size: 12, weight: 700, color: Palette.foilInk)
+            }
+            ScrollView(.horizontal) {
+                HStack(alignment: .top, spacing: 12) {
+                    ForEach(wraps.reversed()) { w in card(w, caught: caught[w.id]) }
+                }
+                .padding(.vertical, 4)
+            }
+            .scrollIndicators(.hidden)
+            .scrollClipDisabled()
+        }
+        .padding(.top, 8)
+    }
+
+    @ViewBuilder
+    private func card(_ w: Wrap, caught: Sighting?) -> some View {
+        let modelId = caught?.modelId ?? catalog.match(number: w.number, kind: w.kind).suggested?.id
+        let label = VStack(alignment: .leading, spacing: 6) {
+            ZStack {
+                if let caught {
+                    DieCut(number: w.number, sticker: caught.stickerFile, photo: caught.photoFile, height: 62, tagSize: 10,
+                           maxPixel: 300, foil: true)
+                } else {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(Palette.foilInk.opacity(0.45), style: StrokeStyle(lineWidth: 1.2, dash: [4, 4]))
+                        .background(Palette.slot.opacity(0.6), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay {
+                            VStack(spacing: 4) {
+                                Image(systemName: w.symbol).font(.system(size: 17, weight: .bold))
+                                Mono(FleetNumber.label(w.number), size: 11, color: Palette.ghost)
+                            }
+                            .foregroundStyle(Palette.foilInk.opacity(0.55))
+                        }
+                }
+            }
+            .frame(width: 118, height: 72)
+            Mono(w.nameDisplay, size: 9.5, weight: 700, spacing: 0.1, color: caught == nil ? Palette.sub : Palette.foilInk)
+                .lineLimit(1)
+        }
+        .frame(width: 118, alignment: .leading)
+        if let modelId {
+            NavigationLink(value: BookRoute.vehicle(modelId: modelId, number: w.number)) { label }
+                .buttonStyle(StickerPressStyle(tilt: stickerTilt(w.number)))
+                .accessibilityLabel(caught == nil ? Text("\(w.nameDisplay), \(String(w.number)): not caught yet")
+                                                  : Text("\(w.nameDisplay), \(String(w.number)): caught"))
+        } else {
+            label
+        }
     }
 }

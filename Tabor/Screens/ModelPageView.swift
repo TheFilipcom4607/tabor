@@ -250,7 +250,14 @@ struct ModelPageView: View {
         // A button, not a NavigationLink: a link steals the long press the debug delete menu needs.
         Button { router.bookPath.append(.vehicle(modelId: model.id, number: n)) } label: {
             DieCut(number: n, sticker: sightings.sticker(number: n, modelId: model.id),
-                   photo: sightings.photo(number: n, modelId: model.id)) {
+                   photo: sightings.photo(number: n, modelId: model.id),
+                   foil: sightings.pictured(number: n, modelId: model.id)?.wrap != nil) {
+                // Caught in an event wrap: a form of its own, marked on the tag.
+                if sightings.contains(where: { $0.number == n && $0.modelId == model.id && $0.wrap != nil }) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Palette.foilInk)
+                }
                 if timesSeen > 1 {
                     Mono("×\(timesSeen)", size: 9.5, spacing: 0, color: Palette.stickerCount)
                 }

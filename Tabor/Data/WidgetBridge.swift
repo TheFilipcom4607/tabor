@@ -66,6 +66,8 @@ enum WidgetBridge {
         struct Vehicle {
             var last: Date; var first: Date; var times: Int; var sticker: String?; var photo: String?
             var line: String?; var place: String?
+            /// The event wrap of the sighting the picture is from.
+            var wrap: String?
             /// The picture picked for the book is in, and nothing older replaces it.
             var picked = false
         }
@@ -82,8 +84,10 @@ enum WidgetBridge {
             if s.cover == true, s.hasPicture, !e.v.picked {
                 e.v.sticker = s.stickerFile
                 e.v.photo = s.photoFile ?? e.v.photo
+                e.v.wrap = s.wrap
                 e.v.picked = true
             } else if !e.v.picked {
+                if e.v.sticker == nil, e.v.photo == nil, s.hasPicture { e.v.wrap = s.wrap }
                 e.v.sticker = e.v.sticker ?? s.stickerFile
                 e.v.photo = e.v.photo ?? s.photoFile
             }
@@ -102,14 +106,15 @@ enum WidgetBridge {
                                             tier: model.tier.rawValue, image: name, cutout: e.v.sticker != nil,
                                             firstSeen: e.v.first, times: e.v.times, fleet: model.fleet,
                                             owned: stats.ownedCount(modelId: model.id), lastSeen: e.v.last,
-                                            line: e.v.line, place: e.v.place),
+                                            line: e.v.line, place: e.v.place,
+                                            wrap: e.v.wrap.flatMap(catalog.wrap(id:))?.nameDisplay),
                         e.v.last, model.fleet))
         }
 
         let recent = all.sorted { $0.last > $1.last }.prefix(recentCount).map(\.card)
-        // Rarest first, then dealt in an order that doesn't follow the book, so the hours
-        // don't run one model after another.
-        let pile = all.sorted { $0.fleet != $1.fleet ? $0.fleet < $1.fleet : $0.card.number < $1.card.number }
+        // Wraps, then rarest first, then dealt in an order that doesn't follow the book, so the
+        // hours don't run one model after another.
+        let pile = all.sorted { ($0.card.wrap == nil ? 1 : 0, $0.fleet, $0.card.number) < ($1.card.wrap == nil ? 1 : 0, $1.fleet, $1.card.number) }
             .prefix(pileCount).map(\.card)
             .sorted { ($0.number &* 2_654_435_761) % 1_009 < ($1.number &* 2_654_435_761) % 1_009 }
         let byCard = Dictionary(all.map { ("\($0.card.modelId)#\($0.card.number)", $0.card) }, uniquingKeysWith: { a, _ in a })

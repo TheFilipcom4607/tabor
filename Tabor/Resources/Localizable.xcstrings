@@ -9783,6 +9783,410 @@
           }
         }
       }
+    },
+    "%@ %@ is out in its %@ wrap. Show it": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@ jeździ w oklejeniu %3$@. Pokaż"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ %2$@ is out in its %3$@ wrap. Show it"
+          }
+        }
+      }
+    },
+    "%@ IS OUT": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ NA TRASIE"
+          }
+        }
+      },
+      "comment": "HUNT banner: a vehicle in an event wrap is running"
+    },
+    "%@, %@: caught": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@: złapane"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@, %2$@: caught"
+          }
+        }
+      }
+    },
+    "%@, %@: not caught yet": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@: jeszcze niezłapane"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@, %2$@: not caught yet"
+          }
+        }
+      }
+    },
+    "%@: caught. Show it in the book": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: złapane. Pokaż w albumie"
+          }
+        }
+      }
+    },
+    "%@: not caught yet": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: jeszcze niezłapane"
+          }
+        }
+      }
+    },
+    "%lld VEHICLES IN EVENT WRAPS": {
+      "localizations": {
+        "pl": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld POJAZD W OKLEJENIU OKOLICZNOŚCIOWYM"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld POJAZDY W OKLEJENIACH OKOLICZNOŚCIOWYCH"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld POJAZDÓW W OKLEJENIACH OKOLICZNOŚCIOWYCH"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld POJAZDÓW W OKLEJENIACH OKOLICZNOŚCIOWYCH"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "1 VEHICLE IN AN EVENT WRAP": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 POJAZD W OKLEJENIU OKOLICZNOŚCIOWYM"
+          }
+        }
+      }
+    },
+    "A vehicle in its Christmas wrap": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pojazd w świątecznym oklejeniu"
+          }
+        }
+      }
+    },
+    "CHOPIN COMPETITION": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KONKURS CHOPINOWSKI"
+          }
+        }
+      },
+      "comment": "An event wraps are made for"
+    },
+    "CHRISTMAS": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BOŻE NARODZENIE"
+          }
+        }
+      },
+      "comment": "An event wraps are made for"
+    },
+    "Caught in it": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Złapany w nim"
+          }
+        }
+      }
+    },
+    "Caught in its %@ wrap! It only wears it for a few weeks, so it goes in your book as a form of its own.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Złapany w oklejeniu %@! Nosi je tylko przez kilka tygodni, więc trafia do albumu jako osobna wersja."
+          }
+        }
+      }
+    },
+    "Deck the bus": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Świąteczny kurs"
+          }
+        }
+      }
+    },
+    "Due out in its %@ wrap until %@. Catch it in it for a form of its own.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ma jeździć w oklejeniu %1$@ do %2$@. Złap go w nim, a trafi do albumu jako osobna wersja."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Due out in its %1$@ wrap until %2$@. Catch it in it for a form of its own."
+          }
+        }
+      }
+    },
+    "EVENT WRAP": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OKLEJENIE OKOLICZNOŚCIOWE"
+          }
+        }
+      }
+    },
+    "EVENT WRAPS": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OKLEJENIA OKOLICZNOŚCIOWE"
+          }
+        }
+      }
+    },
+    "EVERYDAY": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NA CO DZIEŃ"
+          }
+        }
+      }
+    },
+    "Event wrap: %@": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oklejenie: %@"
+          }
+        }
+      }
+    },
+    "Every occasion": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na każdą okazję"
+          }
+        }
+      }
+    },
+    "FORMS": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WERSJE"
+          }
+        }
+      }
+    },
+    "HALLOWEEN": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HALLOWEEN"
+          }
+        }
+      },
+      "comment": "An event wraps are made for"
+    },
+    "In its %@ wrap again. You already have this form; it still counts toward your streak.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Znowu w oklejeniu %@. Tę wersję już masz; do serii i tak się liczy."
+          }
+        }
+      }
+    },
+    "In its %@ wrap ✨": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W oklejeniu %@ ✨"
+          }
+        }
+      }
+    },
+    "In its %@ wrap. Take it off": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W oklejeniu %@. Usuń"
+          }
+        }
+      }
+    },
+    "Is it in its %@ wrap? Say it is": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Czy jest w oklejeniu %@? Potwierdź"
+          }
+        }
+      }
+    },
+    "NEW FORM": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOWA WERSJA"
+          }
+        }
+      }
+    },
+    "NEW FORM · SIGHTING #%lld": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOWA WERSJA · OBSERWACJA NR %lld"
+          }
+        }
+      }
+    },
+    "NOT CAUGHT YET": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JESZCZE NIEZŁAPANE"
+          }
+        }
+      }
+    },
+    "Not in it": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bez oklejenia"
+          }
+        }
+      }
+    },
+    "Not in its %@ wrap": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie w oklejeniu %@"
+          }
+        }
+      }
+    },
+    "SUMMER HOLIDAYS": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WAKACJE"
+          }
+        }
+      },
+      "comment": "An event wraps are made for"
+    },
+    "VALENTINE'S": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WALENTYNKI"
+          }
+        }
+      },
+      "comment": "An event wraps are made for"
+    },
+    "Vehicles in wraps for four different events": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pojazdy w oklejeniach na cztery różne okazje"
+          }
+        }
+      }
+    },
+    "EACH ONE OUT FOR A FEW WEEKS": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KAŻDE JEŹDZI TYLKO KILKA TYGODNI"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -48,6 +48,16 @@ struct CatchDraft: Identifiable {
     var mode: CatchMode = .auto
     /// The book just before this catch, which the reveal counts from.
     var book = BookBefore()
+    /// An event wrap this vehicle may wear on the catch's date, and what the photo says.
+    var wrapFinding: WrapFinding?
+    /// The wrap it's caught in: shown by the photo, or confirmed on the reveal's chip.
+    var wrap: Wrap?
+}
+
+/// What the reveal's check found about a wrap the caught vehicle may wear (`WrapCheck`).
+struct WrapFinding: Equatable {
+    let wrap: Wrap
+    let verdict: WrapVerdict
 }
 
 /// The book as it stood at the shutter. The reveal counts from this rather than a live query:

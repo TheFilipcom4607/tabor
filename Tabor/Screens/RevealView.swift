@@ -46,6 +46,8 @@ struct RevealView: View {
     /// A crop is being read; the next number/model change is the crop's, not an edit.
     @State private var rereading = false
     @State private var skipEdit = false
+    /// The wrap's own sparkle: on when the reveal lands in a wrap, or the chip adds one.
+    @State private var foilBurst = 0
 
     private let catalog = Fleet.catalog
     private let holdDuration = 0.55
@@ -89,7 +91,10 @@ struct RevealView: View {
         let tier = model?.tier ?? .common
         let ready = model != nil && number != nil
         let choices = choices
-        let accent = tier == .common ? Palette.yellow : tier.color
+        let wrap = ready ? draft.wrap : nil
+        let accent = wrap != nil ? Palette.foilInk : tier == .common ? Palette.yellow : tier.color
+        // Already in the book, but never in this wrap: a new form of it.
+        let newForm = wrap.map { w in existing.map { !$0.wraps.contains(w.id) } ?? false } ?? false
 
         ZStack {
             Palette.bg.ignoresSafeArea()
@@ -136,7 +141,8 @@ struct RevealView: View {
                 .padding(.bottom, -12)
 
                 VStack(alignment: .leading, spacing: 7) {
-                    Mono(kicker(isNewVehicle: isNewVehicle, isNewModel: isNewModel, modelOwned: modelOwned, added: added, existing: existing),
+                    Mono(newForm && landed ? String(localized: "NEW FORM · SIGHTING #\((existing?.timesSeen ?? 0) + 1)")
+                         : kicker(isNewVehicle: isNewVehicle, isNewModel: isNewModel, modelOwned: modelOwned, added: added, existing: existing),
                          size: 12, spacing: 0.16, color: accent)
                     Text(model?.name ?? (number == nil ? String(localized: "What did you catch?")
                         : choices.isEmpty ? String(localized: "Which model is it?") : String(localized: "Which one is it?")))
@@ -147,11 +153,17 @@ struct RevealView: View {
                     if let line = draft.line?.nonEmpty {
                         Mono("LINE \(line.uppercased())", size: 11, weight: 600, spacing: 0.12, color: Palette.sub)
                     }
+                    // A wrap taken from the chip shows as the chip itself.
+                    if let wrap, landed, draft.wrapFinding?.verdict != .unsure {
+                        WrapTag(wrap: wrap, size: 11, animated: true)
+                            .padding(.top, 3)
+                            .transition(.scale(scale: 0.6, anchor: .leading).combined(with: .opacity))
+                    }
                 }
                 .padding(.top, 20)
                 .padding(.horizontal, 26)
 
-                stage(number: number, model: model, tier: tier, isNew: isNewVehicle && ready)
+                stage(number: number, model: model, tier: tier, isNew: isNewVehicle && ready, foil: wrap != nil)
                     .frame(maxWidth: .infinity)
                     .frame(height: 250)
                     .padding(.top, 12)
@@ -188,8 +200,11 @@ struct RevealView: View {
                     .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.1), value: landed)
 
                     let also = draft.alsoInShot.filter { !misreads.contains($0.number) }
-                    if model.takesSecondCar(number) || !also.isEmpty {
+                    // Only for a wrap the photo couldn't settle: one tap says it's wearing it.
+                    let offer = draft.wrapFinding.flatMap { $0.verdict == .unsure ? $0.wrap : nil }
+                    if model.takesSecondCar(number) || !also.isEmpty || offer != nil {
                         let chips = HStack(spacing: 8) {
+                            if let offer { wrapChip(offer) }
                             if model.takesSecondCar(number) { partnerChip(partner: partner?.number, isNew: partnerIsNew) }
                             ForEach(also) { v in
                                 alsoChip(v, isNew: stats.vehicle(number: v.number, modelId: v.model.id) == nil)
@@ -213,8 +228,9 @@ struct RevealView: View {
                     let sameModel = partner.flatMap { $0.model.id == model.id ? [$0.number] : nil } ?? []
                     let owned = Set(stats.owned(modelId: model.id).map(\.number)).union([number] + sameModel)
                     let firstWorks = model.works && !stats.vehicles.contains { catalog.model(id: $0.modelId)?.works == true }
-                    Text(RevealHint.text(model: model, number: number, owned: owned, isNewVehicle: isNewVehicle,
-                                         timesSeen: (existing?.timesSeen ?? 0) + 1, firstWorks: firstWorks))
+                    Text(wrap.map { RevealHint.wrapped($0, isNewVehicle: isNewVehicle, newForm: newForm) }
+                         ?? RevealHint.text(model: model, number: number, owned: owned, isNewVehicle: isNewVehicle,
+                                            timesSeen: (existing?.timesSeen ?? 0) + 1, firstWorks: firstWorks))
                         .font(TaborFont.grotesk(13))
                         .foregroundStyle(Palette.greenInk)
                         .lineSpacing(3)
@@ -324,6 +340,7 @@ struct RevealView: View {
             if skipEdit { skipEdit = false } else { edited() }
         }
         .onChange(of: draft.partner) { _, _ in refreshAlso() }
+        .animation(.spring(response: 0.45, dampingFraction: 0.6), value: draft.wrap)
         // Only now may the book scroll to the catch: CATCH (and this cover with it) goes as the
         // tab switches, so the cover's own onDismiss never runs.
         .onDisappear { router.revealGone() }
@@ -438,6 +455,81 @@ struct RevealView: View {
         .overlay(Capsule().strokeBorder(partner == nil ? Palette.yellow.opacity(0.6) : Color.white.opacity(0.14),
                                         style: StrokeStyle(lineWidth: 1, dash: partner == nil ? [4, 3] : [])))
         .animation(.snappy, value: partner)
+    }
+
+    /// "+ CHRISTMAS 2025?": the vehicle may be in its wrap today and the photo couldn't say.
+    /// A tap says it is (the same deal as the second car: suggested, never automatic); the
+    /// tag it turns into takes it off again.
+    private func wrapChip(_ offered: Wrap) -> some View {
+        let on = draft.wrap?.id == offered.id
+        return Button {
+            if on {
+                Haptics.shared.tick()
+                draft.wrap = nil
+                draft.debug?.log("wrap-off", number: draft.number, modelId: draft.modelId, note: offered.id)
+            } else {
+                Haptics.shared.wrapAdded()
+                draft.wrap = offered
+                foilBurst += 1
+                draft.debug?.log("wrap-confirmed", number: draft.number, modelId: draft.modelId, note: offered.id)
+            }
+        } label: {
+            HStack(spacing: 7) {
+                Image(systemName: offered.symbol).font(.system(size: 11, weight: .bold))
+                if on {
+                    Mono(offered.nameDisplay, size: 12, weight: 700, spacing: 0.1, color: Palette.foilDeep)
+                    Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).opacity(0.6)
+                } else {
+                    Mono("+ \(offered.nameDisplay)?" as String, size: 12, weight: 700, spacing: 0.1, color: Palette.foilInk)
+                }
+            }
+            .foregroundStyle(on ? Palette.foilDeep : Palette.foilInk)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 14)
+            .background { if on { Foil(animated: true).clipShape(Capsule()) } }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .overlay(Capsule().strokeBorder(on ? Color.clear : Palette.foilInk.opacity(0.7),
+                                        style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+        .accessibilityLabel(on ? Text("In its \(offered.nameDisplay.lowercased()) wrap. Take it off")
+                               : Text("Is it in its \(offered.nameDisplay.lowercased()) wrap? Say it is"))
+    }
+
+    /// Whether the vehicle wears a wrap it may be in on the catch's date: the photo's words,
+    /// its special line, its colours (`WrapCheck`). A wrap you confirmed by hand stays while
+    /// it's still the one on offer.
+    private func checkWrap(sticker: Data?) async {
+        guard let model, let number = draft.number else {
+            draft.wrapFinding = nil
+            draft.wrap = nil
+            return
+        }
+        let candidates = catalog.wraps(kind: model.kind, number: number, on: draft.date)
+        guard !candidates.isEmpty else {
+            draft.wrapFinding = nil
+            draft.wrap = nil
+            return
+        }
+        let report = await draft.photoRead?.value
+        let texts = ((report?.full ?? []) + (report?.tiles ?? [])).map(\.text)
+        let photo = draft.photo
+        let colours = await Task.detached(priority: .userInitiated) {
+            WrapColours.shares(sticker: sticker, photo: photo)
+        }.value
+        let line = draft.line?.trimmingCharacters(in: .whitespaces).nonEmpty
+        let findings = candidates.map { WrapFinding(wrap: $0, verdict: WrapCheck.verdict(wrap: $0, colours: colours, texts: texts, line: line)) }
+        // Dressed beats unsure beats plain.
+        let rank: (WrapVerdict) -> Int = { if case .dressed = $0 { 0 } else if $0 == .unsure { 1 } else { 2 } }
+        let best = findings.min { rank($0.verdict) < rank($1.verdict) }!
+        let confirmed = draft.wrap.flatMap { w in best.verdict == .unsure && w.id == best.wrap.id ? w : nil }
+        draft.wrapFinding = best
+        if case .dressed = best.verdict { draft.wrap = best.wrap } else { draft.wrap = confirmed }
+        let masked = colours?.masked == true
+        draft.debug?.update {
+            $0.wrap = .init(wrap: best.wrap.id, verdict: best.verdict.label, from: colours == nil ? nil : masked ? "sticker" : "photo",
+                            shares: colours?.summary)
+        }
     }
 
     /// Suggestions follow the number and model; a partner that no longer fits them goes.
@@ -598,7 +690,7 @@ struct RevealView: View {
 
     /// Photo while developing, die-cut sticker once landed.
     @ViewBuilder
-    private func stage(number: Int?, model: VehicleModel?, tier: Tier, isNew: Bool) -> some View {
+    private func stage(number: Int?, model: VehicleModel?, tier: Tier, isNew: Bool, foil: Bool) -> some View {
         let batch = number.flatMap { model?.batch(containing: $0) }
         ZStack {
             // 1. The raw photo, washed out and pulsing while the cut-out is made.
@@ -606,6 +698,12 @@ struct RevealView: View {
             if !landed || stickerImage == nil {
                 VStack(spacing: 10) {
                     photoCard
+                        .background {
+                            if landed && foil {
+                                Foil(animated: true).clipShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
+                                    .padding(-3)
+                            }
+                        }
                     if landed { stickerCaption(number: number, model: model, tier: tier, batch: batch) }
                 }
                 .transition(.scale(scale: 0.92).combined(with: .opacity))
@@ -618,6 +716,7 @@ struct RevealView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: 330, maxHeight: 170)
+                        .modifier(FoilIf(on: foil, image: Image(uiImage: img), width: 5, animated: true))
                         // Shadow before the sheen: under it, the blur was redrawn every frame.
                         .shadow(color: .black.opacity(0.6), radius: 14, y: 16)
                         .overlay {
@@ -635,6 +734,8 @@ struct RevealView: View {
             }
         }
         .overlay { if sparkle { SparkleBurst(color: tier == .common ? Palette.yellow : tier.color) } }
+        // The wrap's own: foil-coloured, again whenever the chip adds it.
+        .overlay { if foilBurst > 0 { SparkleBurst(color: Palette.foilInk, colors: Palette.foil, reach: 1.15).id(foilBurst) } }
         .rotation3DEffect(.degrees(Double(tilt.width) / 8), axis: (x: 0, y: 1, z: 0))
         .rotation3DEffect(.degrees(Double(-tilt.height) / 8), axis: (x: 1, y: 0, z: 0))
         .rotationEffect(.degrees(sticking ? 0 : -2.2 + (nudge ? 3 : 0)))
@@ -810,17 +911,22 @@ struct RevealView: View {
             editing = true
             return
         }
+        await checkWrap(sticker: stickerPNG)
+        guard run == revealRun else { return }
         let isNewModel = draft.book.stats.ownedCount(modelId: model.id) == 0
-        let build = Self.buildTime(model.tier)
-        Haptics.shared.reveal(tier: model.tier, isNewModel: isNewModel)
+        // In its wrap: the longest build and its own haptic, over any tier's.
+        let wrapped = draft.wrap != nil
+        let build = wrapped ? Haptics.wrapBuild : Self.buildTime(model.tier)
+        if wrapped { Haptics.shared.wrapReveal() } else { Haptics.shared.reveal(tier: model.tier, isNewModel: isNewModel) }
         withAnimation(.easeIn(duration: build)) { charge = 1 }
         try? await Task.sleep(for: .seconds(build))
         guard run == revealRun else { return }
-        withAnimation(.spring(response: 0.42, dampingFraction: 0.58)) {
+        withAnimation(.spring(response: wrapped ? 0.5 : 0.42, dampingFraction: wrapped ? 0.5 : 0.58)) {
             developing = false
             landed = true
         }
-        sparkle = isNewModel || model.tier != .common
+        sparkle = !wrapped && (isNewModel || model.tier != .common)
+        if wrapped { foilBurst += 1 }
         try? await Task.sleep(for: .seconds(0.9))
         withAnimation(.easeOut(duration: 0.8)) { charge = 0.35 }
     }
@@ -848,6 +954,7 @@ struct RevealView: View {
         developing = true
         charge = 0
         sparkle = false
+        foilBurst = 0
         let run = revealRun
         Task { await playReveal(run: run) }
     }
@@ -888,8 +995,9 @@ struct RevealView: View {
         let s = Sighting(number: number, modelId: model.id, date: draft.date, line: line,
                          photoFile: PhotoStore.save(draft.photo, ext: ext),
                          stickerFile: stickerPNG.flatMap { PhotoStore.save($0, ext: "png") })
+        s.wrap = draft.wrap?.id
         context.insert(s)
-        draft.debug?.log("stuck", number: number, modelId: model.id, line: s.line)
+        draft.debug?.log("stuck", number: number, modelId: model.id, line: s.line, note: s.wrap)
         // A coupled tram's other car: a catch of its own, with its own copies of the files so
         // deleting either car leaves the other whole. The model you shot, or for a trailer and
         // its motor car the tram model that pairs (never `catalog.match`: its number may be a
@@ -1009,6 +1117,8 @@ struct RevealView: View {
 /// A one-shot burst of tier-coloured sparks from behind the sticker.
 struct SparkleBurst: View {
     let color: Color
+    /// Sparks in turn from these instead (an event wrap's foil).
+    var colors: [Color]? = nil
     /// 1 for the reveal sticker; smaller for badge medals.
     var reach: CGFloat = 1
     @State private var go = false
@@ -1018,9 +1128,9 @@ struct SparkleBurst: View {
 
     var body: some View {
         ZStack {
-            ForEach(Array(sparks.enumerated()), id: \.offset) { _, s in
+            ForEach(Array(sparks.enumerated()), id: \.offset) { i, s in
                 Circle()
-                    .fill(s.size > 5 ? color : .white)
+                    .fill(colors.map { $0[i % $0.count] } ?? (s.size > 5 ? color : .white))
                     .frame(width: s.size, height: s.size)
                     .offset(x: go ? cos(s.angle * .pi / 180) * s.dist * reach : 0,
                             y: go ? sin(s.angle * .pi / 180) * s.dist * 0.7 * reach : 0)

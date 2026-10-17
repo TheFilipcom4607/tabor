@@ -74,6 +74,14 @@ struct VehicleView: View {
                             .padding(.top, 5)
                             .accessibilityLabel(Text("Special livery: \(livery.name.lowercased())"))
                         }
+                        // The wraps you caught it in, newest first.
+                        let worn = wornWraps(mine)
+                        if !worn.isEmpty {
+                            FlowRow(spacing: 5) {
+                                ForEach(worn) { WrapTag(wrap: $0, size: 9.5) }
+                            }
+                            .padding(.top, 6)
+                        }
                         if let coupled = coupledWith {
                             Button {
                                 router.openVehicle(modelId: coupled.modelId, number: coupled.number)
@@ -105,6 +113,14 @@ struct VehicleView: View {
                     .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Palette.hairline))
                     .padding(.top, 16)
                     .padding(.horizontal, 22)
+
+                if let model {
+                    let wraps = Fleet.catalog.wraps(kind: model.kind, number: number)
+                    if !wraps.isEmpty {
+                        WrapForms(wraps: wraps, mine: mine) { s in useInBook(s, of: mine) }
+                            .padding(.top, 18)
+                    }
+                }
 
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 9), GridItem(.flexible())], spacing: 9) {
                     StatTile(label: String(localized: "VEHICLE AGE"), value: age(batch?.year), valueSize: 20,
@@ -183,6 +199,9 @@ struct VehicleView: View {
                         Text(Self.stamp.string(from: s.date))
                             .font(TaborFont.grotesk(13.5, 600))
                         Mono(logLine(s, isFirst: i == mine.count - 1), size: 11, spacing: 0.05, color: Palette.sub)
+                        if let wrap = s.wrap.flatMap(Fleet.catalog.wrap(id:)) {
+                            WrapTag(wrap: wrap, size: 9).padding(.top, 5)
+                        }
                         if choosable, s.id == inBook?.id {
                             Mono("IN THE BOOK", size: 9.5, weight: 700, spacing: 0.1, color: Palette.yellow)
                                 .padding(.top, 5)
@@ -216,6 +235,9 @@ struct VehicleView: View {
                         Button { useInBook(s, of: mine) } label: { Label("Show this picture in the book", systemImage: "book") }
                     }
                     Button { editing = s } label: { Label("Fix number, model or line", systemImage: "pencil") }
+                    if let wrap = s.wrap.flatMap(Fleet.catalog.wrap(id:)) {
+                        Button { takeOff(s) } label: { Label("Not in its \(wrap.nameDisplay.lowercased()) wrap", systemImage: "sparkles") }
+                    }
                     Button(role: .destructive) { delete(s, wasLast: mine.count == 1) } label: { Label("Delete sighting", systemImage: "trash") }
                 }
             }
@@ -320,6 +342,19 @@ struct VehicleView: View {
         Haptics.shared.tick()
     }
 
+    /// The wraps it was caught in, newest first, each once.
+    private func wornWraps(_ mine: [Sighting]) -> [Wrap] {
+        var seen = Set<String>()
+        return mine.compactMap(\.wrap).filter { seen.insert($0).inserted }.compactMap(Fleet.catalog.wrap(id:))
+    }
+
+    /// A wrap claimed by mistake comes off; the catch stays.
+    private func takeOff(_ s: Sighting) {
+        s.wrap = nil
+        try? context.save()
+        Haptics.shared.tick()
+    }
+
     /// No dialog: it goes at once, and the toast at the bottom can bring it back.
     private func delete(_ s: Sighting, wasLast: Bool) {
         withAnimation { undo.delete(s, in: context, closingPage: wasLast) }
@@ -411,8 +446,16 @@ struct EditSightingSheet: View {
     init(sighting: Sighting, onSave: @escaping (Bool) -> Void) {
         self.sighting = sighting
         self.onSave = onSave
-        _draft = State(initialValue: CatchDraft(photo: Data(), number: sighting.number, modelId: sighting.modelId,
-                                                line: sighting.line, date: sighting.date, fromCamera: false))
+        var draft = CatchDraft(photo: Data(), number: sighting.number, modelId: sighting.modelId,
+                               line: sighting.line, date: sighting.date, fromCamera: false)
+        // A wrap it could have worn that day can be put on or taken off here.
+        let catalog = Fleet.catalog
+        if let model = catalog.model(id: sighting.modelId),
+           let wrap = sighting.wrap.flatMap(catalog.wrap(id:)) ?? catalog.wraps(kind: model.kind, number: sighting.number, on: sighting.date).first {
+            draft.wrapFinding = WrapFinding(wrap: wrap, verdict: .unsure)
+            draft.wrap = sighting.wrap == nil ? nil : wrap
+        }
+        _draft = State(initialValue: draft)
     }
 
     var body: some View {
@@ -425,11 +468,14 @@ struct EditSightingSheet: View {
         guard let number = draft.number, let modelId = draft.modelId else { return }
         let line = draft.line?.trimmingCharacters(in: .whitespaces).nonEmpty
         let moved = number != sighting.number || modelId != sighting.modelId
-        guard moved || line != sighting.line else { return }
+        // Another vehicle doesn't wear this one's wrap.
+        let wrap = moved ? nil : draft.wrap?.id
+        guard moved || line != sighting.line || wrap != sighting.wrap else { return }
         if moved { relink(to: number, modelId: modelId) }
         sighting.number = number
         sighting.modelId = modelId
         sighting.line = line
+        sighting.wrap = wrap
         if draft.modelPickedByHand { context.assign(number: number, to: modelId, existing: manual) }
         try? context.save()
         onSave(moved)
@@ -451,6 +497,94 @@ struct EditSightingSheet: View {
             let fits = model.flatMap { catalog.secondCarModel(second.number, of: number, model: $0) }?.id == second.modelId
             second.pairedWith = fits ? number : nil
         }
+    }
+}
+
+/// A vehicle that has worn event wraps, form by form: its everyday paint, then each wrap, caught
+/// (its sticker on foil) or still to find (a dashed slot with the dates it was due out).
+private struct WrapForms: View {
+    let wraps: [Wrap]
+    let mine: [Sighting]
+    /// Shows that form's catch in the book.
+    let pick: (Sighting) -> Void
+
+    private static let span: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = .app
+        f.setLocalizedDateFormatFromTemplate("dMMMyyyy")
+        return f
+    }()
+
+    var body: some View {
+        let caughtIn = Set(mine.compactMap(\.wrap))
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(alignment: .firstTextBaseline) {
+                SectionLabel(text: String(localized: "FORMS"))
+                Spacer()
+                Mono("\(caughtIn.intersection(wraps.map(\.id)).count + (mine.contains { $0.wrap == nil } ? 1 : 0))/\(wraps.count + 1)",
+                     size: 10.5, weight: 600, color: Palette.foilInk)
+            }
+            .padding(.horizontal, 22)
+            ScrollView(.horizontal) {
+                HStack(alignment: .top, spacing: 12) {
+                    form(title: String(localized: "EVERYDAY"), symbol: "bus.fill", caught: mine.first { $0.wrap == nil }, wrap: nil)
+                    ForEach(wraps.reversed()) { w in
+                        form(title: w.nameDisplay, symbol: w.symbol, caught: mine.first { $0.wrap == w.id }, wrap: w)
+                    }
+                }
+                .padding(.horizontal, 22)
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+
+    private func form(title: String, symbol: String, caught: Sighting?, wrap: Wrap?) -> some View {
+        Button {
+            guard let caught else { return }
+            pick(caught)
+        } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                ZStack {
+                    // No number tag: the page is this vehicle's already.
+                    if let sticker = caught?.stickerFile, let img = PhotoStore.thumbnail(sticker, maxPixel: 300) {
+                        Image(uiImage: img).resizable().scaledToFit()
+                            .modifier(FoilIf(on: wrap != nil, image: Image(uiImage: img), width: 3))
+                            .shadow(color: .black.opacity(0.5), radius: 4, y: 3)
+                    } else if let caught {
+                        CatchPhoto(file: caught.photoFile, maxPixel: 300)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .padding(3)
+                            .background(wrap != nil ? AnyShapeStyle(LinearGradient(colors: Palette.foil, startPoint: .topLeading, endPoint: .bottomTrailing))
+                                                    : AnyShapeStyle(Palette.paper),
+                                        in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                    } else {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(wrap == nil ? Color.white.opacity(0.12) : Palette.foilInk.opacity(0.5),
+                                          style: StrokeStyle(lineWidth: 1.2, dash: [4, 4]))
+                            .background(Palette.slot.opacity(0.6), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .overlay(Image(systemName: symbol).font(.system(size: 18, weight: .bold))
+                                .foregroundStyle(wrap == nil ? Palette.ghost : Palette.foilInk.opacity(0.6)))
+                    }
+                }
+                .frame(width: 112, height: 66)
+                Mono(title, size: 9.5, weight: 700, spacing: 0.1, color: wrap == nil ? Palette.sub : Palette.foilInk)
+                    .lineLimit(1)
+                if let wrap, caught == nil, let from = Wrap.parse(wrap.from), let to = wrap.until {
+                    Mono("\(Self.span.string(from: from)) – \(Self.span.string(from: to))".uppercased(), size: 8.5, color: Palette.faint)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                } else {
+                    Mono(caught == nil ? String(localized: "NOT CAUGHT YET") : String(localized: "CAUGHT"), size: 8.5,
+                         color: caught == nil ? Palette.faint : Palette.sub)
+                }
+            }
+            .frame(width: 112, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(caught == nil)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(caught == nil ? Text("\(title): not caught yet") : Text("\(title): caught. Show it in the book"))
     }
 }
 

@@ -152,12 +152,18 @@ private struct CatchLogRow: View {
                         Mono(details(s), size: 10.5, spacing: 0.05, color: Palette.dim)
                             .lineLimit(1)
                         // The tag stays whole; the place before it gives way.
+                        if let wrap = s.wrap.flatMap(Fleet.catalog.wrap(id:)) {
+                            WrapTag(wrap: wrap, size: 9)
+                        }
                         switch mark {
                         case .newModel:
                             Mono("NEW MODEL", size: 9.5, weight: 700, spacing: 0.1, color: model?.tier.color ?? Palette.yellow)
                                 .fixedSize()
                         case .newVehicle:
                             Mono("NEW VEHICLE", size: 9.5, weight: 700, spacing: 0.1, color: Palette.sub)
+                                .fixedSize()
+                        case .newForm:
+                            Mono("NEW FORM", size: 9.5, weight: 700, spacing: 0.1, color: Palette.foilInk)
                                 .fixedSize()
                         case .again:
                             EmptyView()
@@ -178,9 +184,11 @@ private struct CatchLogRow: View {
     private func picture(_ s: Sighting) -> some View {
         if let sticker = s.stickerFile, let img = PhotoStore.thumbnail(sticker, maxPixel: 200) {
             Image(uiImage: img).resizable().scaledToFit()
+                .modifier(FoilIf(on: s.wrap != nil, image: Image(uiImage: img), width: 2))
         } else if s.photoFile != nil {
             CatchPhoto(file: s.photoFile, maxPixel: 200)
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .modifier(FoilFrameIf(on: s.wrap != nil, cornerRadius: 6))
         }
     }
 

@@ -21,11 +21,14 @@ public struct BackupManifest: Codable, Sendable {
         public var pairedWith: Int?
         /// The picture picked for the book. Older backups don't have it.
         public var cover: Bool?
+        /// The event wrap it wore (`Wrap.id`). Older backups don't have it.
+        public var wrap: String?
 
         public init(id: UUID, number: Int, modelId: String, date: Date, latitude: Double? = nil,
                     longitude: Double? = nil, street: String? = nil, district: String? = nil,
                     line: String? = nil, photoFile: String? = nil, stickerFile: String? = nil,
-                    weatherCode: Int? = nil, temperature: Double? = nil, pairedWith: Int? = nil, cover: Bool? = nil) {
+                    weatherCode: Int? = nil, temperature: Double? = nil, pairedWith: Int? = nil, cover: Bool? = nil,
+                    wrap: String? = nil) {
             self.id = id
             self.number = number
             self.modelId = modelId
@@ -41,6 +44,7 @@ public struct BackupManifest: Codable, Sendable {
             self.temperature = temperature
             self.pairedWith = pairedWith
             self.cover = cover
+            self.wrap = wrap
         }
     }
 
