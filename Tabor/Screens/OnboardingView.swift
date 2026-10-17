@@ -11,14 +11,14 @@ struct OnboardingView: View {
     @State private var askedLocation = false
     private let location = LocationService.shared
 
-    enum Page: Int, CaseIterable { case welcome, book, rarity, camera, buttons, hunt, specials }
+    enum Page: Int, CaseIterable { case welcome, book, rarity, camera, buttons, hunt, specials, wraps }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 Mono("TABOR", size: 12, weight: 600, spacing: 0.3, color: Palette.ink)
                 Spacer()
-                if page != .specials {
+                if page != .wraps {
                     Button("SKIP") { finish() }
                         .font(TaborFont.mono(12, 500))
                         .foregroundStyle(Palette.dim)
@@ -36,6 +36,7 @@ struct OnboardingView: View {
                 ButtonsPage().tag(Page.buttons)
                 HuntPage().tag(Page.hunt)
                 SpecialsPage(active: page == .specials).tag(Page.specials)
+                WrapsPage(active: page == .wraps).tag(Page.wraps)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .onChange(of: page) { Haptics.shared.tick() }
@@ -93,7 +94,7 @@ struct OnboardingView: View {
     /// The permission this page is about hasn't been asked for yet.
     private var needsPermission: Bool {
         switch page {
-        case .welcome, .book, .rarity, .specials, .buttons: false
+        case .welcome, .book, .rarity, .specials, .wraps, .buttons: false
         case .camera: AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined
         case .hunt: location.authorization == .notDetermined
         }
@@ -102,16 +103,16 @@ struct OnboardingView: View {
     private var primaryLabel: String {
         switch page {
         case .welcome: String(localized: "LET'S GO")
-        case .book, .rarity, .buttons: String(localized: "NEXT")
+        case .book, .rarity, .buttons, .specials: String(localized: "NEXT")
         case .camera: needsPermission ? String(localized: "ALLOW CAMERA") : String(localized: "NEXT")
         case .hunt: needsPermission ? String(localized: "ALLOW LOCATION") : String(localized: "NEXT")
-        case .specials: String(localized: "START CATCHING")
+        case .wraps: String(localized: "START CATCHING")
         }
     }
 
     private func primary() {
         switch page {
-        case .welcome, .book, .rarity, .buttons:
+        case .welcome, .book, .rarity, .buttons, .specials:
             advance()
         case .camera:
             guard needsPermission else { return advance() }
@@ -123,7 +124,7 @@ struct OnboardingView: View {
             guard needsPermission else { return advance() }
             askedLocation = true
             location.requestPermission()
-        case .specials:
+        case .wraps:
             finish()
         }
     }
@@ -408,6 +409,82 @@ private struct SpecialsPage: View {
             .scaleEffect(shown ? 1 : 1.6)
             .rotationEffect(.degrees(shown ? 0 : -12))
             .opacity(shown ? 1 : 0)
+    }
+}
+
+/// The finale: event wraps, the rarest thing in the book. The app's own sticker turns to foil,
+/// then a tag for each event slaps down round it, then the words. Drawn, not photographed: the
+/// wrap photos we have are other people's.
+private struct WrapsPage: View {
+    let active: Bool
+    @State private var dressed = false
+    @State private var stuck = 0
+    @State private var told = false
+
+    private static let board = CGSize(width: 340, height: 290)
+    /// One tag per event, as the fleet file names them, placed round the sticker.
+    private static let tags: [(event: String, at: CGPoint, tilt: Double)] = [
+        ("christmas", CGPoint(x: 92, y: 34), -8),
+        ("valentines", CGPoint(x: 262, y: 52), 6),
+        ("summer", CGPoint(x: 64, y: 246), 5),
+        ("chopin", CGPoint(x: 268, y: 238), -6),
+        ("halloween", CGPoint(x: 170, y: 276), 2),
+    ]
+
+    var body: some View {
+        PageLayout(kicker: String(localized: "EVENT WRAPS"),
+                   title: String(localized: "And a few weeks a year, dressed up."),
+                   text: String(localized: "For Christmas, Valentine's or the summer holidays, a bus or tram gets a wrap of its own. Catch it in the wrap and it goes in your book as a separate form, in foil. The wrap has to be in your photo; HUNT tells you when one is out."),
+                   wordsShown: told) {
+            GeometryReader { g in
+                let scale = min(1, g.size.width / Self.board.width, g.size.height / Self.board.height)
+                ZStack(alignment: .topLeading) {
+                    Image("WelcomeSticker")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 220)
+                        .modifier(FoilIf(on: dressed, image: Image("WelcomeSticker"), width: 6, animated: true))
+                        .shadow(color: Palette.foilInk.opacity(dressed ? 0.45 : 0), radius: 18)
+                        .scaleEffect(dressed ? 1.04 : 1)
+                        .overlay { if dressed { SparkleBurst(color: Palette.foilInk, colors: Palette.foil, reach: 0.8) } }
+                        .position(x: Self.board.width / 2, y: Self.board.height / 2 - 6)
+                    ForEach(Array(Self.tags.enumerated()), id: \.offset) { i, t in
+                        tag(t.event)
+                            .rotationEffect(.degrees(t.tilt))
+                            .scaleEffect(stuck > i ? 1 : 1.7)
+                            .opacity(stuck > i ? 1 : 0)
+                            .position(t.at)
+                    }
+                }
+                .frame(width: Self.board.width, height: Self.board.height)
+                .scaleEffect(scale)
+                .frame(width: g.size.width, height: g.size.height)
+            }
+        }
+        // Only once it's the page on screen: a TabView builds its neighbours early.
+        .task(id: active) {
+            guard active, !dressed else { return }
+            try? await Task.sleep(for: .milliseconds(900))
+            Haptics.shared.wrapReveal()
+            try? await Task.sleep(for: .seconds(Haptics.wrapBuild + 0.1))
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.5)) { dressed = true }
+            try? await Task.sleep(for: .milliseconds(700))
+            for i in Self.tags.indices {
+                guard !Task.isCancelled else { return }
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.55)) { stuck = i + 1 }
+                try? await Task.sleep(for: .milliseconds(90))
+                Haptics.shared.tick()
+                try? await Task.sleep(for: .milliseconds(220))
+            }
+            withAnimation(.easeOut(duration: 0.45)) { told = true }
+        }
+    }
+
+    /// The event's name on foil, like a caught wrap's tag.
+    private func tag(_ event: String) -> some View {
+        WrapTag(wrap: Wrap(id: event, kind: .bus, number: 0, from: "", to: "", name: Wrap.eventName(event), event: event),
+                size: 11)
+            .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
     }
 }
 

@@ -10187,6 +10187,26 @@
           }
         }
       }
+    },
+    "And a few weeks a year, dressed up.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A kilka tygodni w roku — odświętnie."
+          }
+        }
+      }
+    },
+    "For Christmas, Valentine's or the summer holidays, a bus or tram gets a wrap of its own. Catch it in the wrap and it goes in your book as a separate form, in foil. The wrap has to be in your photo; HUNT tells you when one is out.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na święta, walentynki albo wakacje autobus czy tramwaj dostaje własne oklejenie. Złap go w nim, a trafi do albumu jako osobna wersja, w folii. Oklejenie musi być na zdjęciu; HUNT powie, kiedy taki pojazd jeździ."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
