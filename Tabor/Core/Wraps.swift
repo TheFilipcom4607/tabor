@@ -65,6 +65,16 @@ public struct Wrap: Codable, Hashable, Sendable, Identifiable {
     /// The window's last day, for "until 6 Jan".
     public var until: Date? { Self.parse(to) }
 
+    /// Whether the window ended before `date`'s Warsaw day.
+    public func isOver(_ date: Date) -> Bool { Self.day(date) > to }
+
+    /// The wraps worth a place on a shelf: the ones caught, and the ones still out or coming.
+    /// A wrap that came off before you could catch it isn't a gap in your book, just bad luck
+    /// (most of them came off before TABOR existed), so it drops out rather than staying empty.
+    public static func shelf(_ wraps: [Wrap], caught: Set<String>, now: Date = .now) -> [Wrap] {
+        wraps.filter { caught.contains($0.id) || !$0.isOver(now) }
+    }
+
     /// A window date ("2025-12-01") as noon in Warsaw, so it shows as that day anywhere nearby.
     public static func parse(_ day: String) -> Date? { dayFormatter.date(from: day)?.addingTimeInterval(12 * 3600) }
 

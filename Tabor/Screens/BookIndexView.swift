@@ -67,15 +67,18 @@ struct BookIndexView: View {
 
             ScrollView {
                 LazyVStack(spacing: 9) {
-                    // Event wraps first: a set of their own, each only out for a few weeks.
-                    let wraps = catalog.wraps.filter { w in
+                    // Event wraps first: a set of their own, each only out for a few weeks. Hidden
+                    // until the first one's caught: before that it's a row of slots for wraps most
+                    // people never had a chance at.
+                    let caughtWraps = Set(sightings.compactMap(\.wrap))
+                    let wraps = Wrap.shelf(catalog.wraps, caught: caughtWraps).filter { w in
                         switch filter {
                         case .all, .missing: true
                         case .bus: w.kind == .bus
                         case .tram: w.kind == .tram
                         }
                     }
-                    if !wraps.isEmpty {
+                    if !caughtWraps.isEmpty, !wraps.isEmpty {
                         WrapShelf(wraps: wraps, sightings: sightings, catalog: catalog)
                             .padding(.bottom, 8)
                     }
@@ -249,8 +252,8 @@ extension Int {
     }
 }
 
-/// Every event wrap, newest first: the catch in it on foil, or a slot to find it in. Each
-/// opens its vehicle's page, where the wraps are forms side by side.
+/// The event wraps caught, and those still out or coming, newest first: the catch in it on foil,
+/// or a slot to find it in. Each opens its vehicle's page, where the wraps are forms side by side.
 private struct WrapShelf: View {
     let wraps: [Wrap]
     let sightings: [Sighting]

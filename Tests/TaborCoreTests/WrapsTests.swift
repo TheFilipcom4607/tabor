@@ -43,6 +43,17 @@ private func wrap(_ id: String) -> Wrap { catalog.wrap(id: id)! }
     #expect(catalog.wraps(kind: .bus, number: 3148, on: day("2025-12-20")).isEmpty)
 }
 
+@Test func aShelfLeavesOutWrapsThatCameOffUncaught() {
+    let all = catalog.wraps(kind: .bus, number: 5887)
+    // Chopin and Christmas 2025 are long over: gone unless caught; summer 2026 ended in August.
+    #expect(Wrap.shelf(all, caught: [], now: day("2026-10-18")).isEmpty)
+    #expect(Wrap.shelf(all, caught: ["bus-5887-xmas-2025"], now: day("2026-10-18")).map(\.id) == ["bus-5887-xmas-2025"])
+    // Still out on its last day, and slots stay up for wraps still to come.
+    #expect(Wrap.shelf(all, caught: [], now: day("2026-01-06", hour: 23)).map(\.id) == ["bus-5887-xmas-2025", "bus-5887-summer-2026"])
+    #expect(Wrap.shelf(all, caught: [], now: day("2026-01-07", hour: 0)).map(\.id) == ["bus-5887-summer-2026"])
+    #expect(Wrap.shelf(all, caught: [], now: day("2026-07-01")).map(\.id) == ["bus-5887-summer-2026"])
+}
+
 @Test func wrapsOnTheirCutOutsAreDressed() {
     let cases: [(String, HueShares)] = [
         ("bus-4323-xmas-2021", shares(true, red: 9.7, orange: 1.0, yellow: 2.1, green: 9.2, navy: 4.6)),

@@ -115,7 +115,9 @@ struct VehicleView: View {
                     .padding(.horizontal, 22)
 
                 if let model {
-                    let wraps = Fleet.catalog.wraps(kind: model.kind, number: number)
+                    // Wraps that came off before it was caught in them aren't missing forms.
+                    let wraps = Wrap.shelf(Fleet.catalog.wraps(kind: model.kind, number: number),
+                                           caught: Set(mine.compactMap(\.wrap)))
                     if !wraps.isEmpty {
                         WrapForms(wraps: wraps, mine: mine) { s in useInBook(s, of: mine) }
                             .padding(.top, 18)
@@ -500,8 +502,8 @@ struct EditSightingSheet: View {
     }
 }
 
-/// A vehicle that has worn event wraps, form by form: its everyday paint, then each wrap, caught
-/// (its sticker on foil) or still to find (a dashed slot with the dates it was due out).
+/// A vehicle's forms: its everyday paint, then each wrap caught (its sticker on foil) or still
+/// to find (a dashed slot with the dates it's due out).
 private struct WrapForms: View {
     let wraps: [Wrap]
     let mine: [Sighting]
