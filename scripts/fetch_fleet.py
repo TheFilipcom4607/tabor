@@ -693,7 +693,7 @@ SPLIT = {
 # (the Otokar Kent C) find their model.
 # (make, model, number, operator, year, depot.)
 EXTRA_BUSES = [
-    *[("Otokar", "Kent C LF Mild Hybrid", n, "Mobilis", 2026, "Ursus") for n in range(9601, 9655)],
+    *[("Otokar", "Kent C LF Mild Hybrid", n, "Mobilis", 2026, "Posag 7 Panien MOB") for n in range(9601, 9655)],
     *[("Yutong", "U12-B", n, "MZA", 2026, 'R-1 "Woronicza" (R-07)') for n in range(1940, 1970)],
     *[("Solaris", "Urbino 18E", n, "MZA", 2026, 'R-2 "Kleszczowa" (R-11)')
       for n in (5803, 5804, 5805, 5806, 5807, 5808, 5811, 5814, 5815, 5816, 5817, 5819, 5821,
@@ -757,7 +757,12 @@ STILL_RUNNING = {
 def with_vintage_extras(vehicles):
     """ZTM rows plus the preserved buses it doesn't list; marks split-out vintage rows."""
     out = []
+    # A city row wins over a hand-added one, but not with a blank depot (#5830): that alone
+    # would split the bus off into a batch of its own.
+    extra_depot = {str(n): depot for _, _, n, _, _, depot in EXTRA_BUSES}
     for v in vehicles:
+        if v["kind"] == "BUS" and not v["depot"] and v["number"] in extra_depot:
+            v = {**v, "depot": extra_depot[v["number"]]}
         carrier = short_carrier(v["carrier"])
         if v["number"].isdigit() and int(v["number"]) in RETIRED.get((v["kind"], v["make"], v["model"], carrier), set()):
             continue
