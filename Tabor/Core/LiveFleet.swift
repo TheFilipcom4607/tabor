@@ -642,9 +642,12 @@ public struct SavedHunts: Equatable, Sendable, RawRepresentable {
     }
 
     /// JSON of names and `HuntTargets` raw values, so a saved filter skips tokens it doesn't
-    /// know the same way the current one does.
+    /// know the same way the current one does. Keys sorted: JSONEncoder's order otherwise
+    /// changes from run to run, and as a RawRepresentable this compares by its raw value.
     public var rawValue: String {
-        let data = try? JSONEncoder().encode(list.map { Stored(name: $0.name, targets: $0.targets.rawValue) })
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let data = try? encoder.encode(list.map { Stored(name: $0.name, targets: $0.targets.rawValue) })
         return data.flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
     }
 
