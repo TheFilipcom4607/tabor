@@ -416,6 +416,9 @@ DISPLAY_NAMES = {
     ("Solaris", "Urbino 18H"): "Solaris Urbino 18 hybrid",
     ("Solaris", "Urbino 18CNG"): "Solaris Urbino 18 CNG",
     ("Solaris", "Urbino 12CNG"): "Solaris Urbino 12 CNG",
+    # #701, ex-Mobilis #9230, built 2016: an Urbino 8,9 LE (phototrans; czynaczas agrees).
+    # "Alpino 8.X" is ZTM's label, the name Solaris dropped for it.
+    ("Solaris", "Alpino 8.X"): "Solaris Urbino 8.9 LE",
     ("Autosan", "M18LF"): "Autosan Sancity 18LF",
     ("Solbus", "SM18"): "Solbus Solcity 18",
     ("Solbus", "SM12"): "Solbus Solcity 12",
