@@ -2,11 +2,17 @@ import Foundation
 import Testing
 @testable import TaborCore
 
+private let root = URL(fileURLWithPath: #filePath)
+    .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+
+private let bundled = try! FleetCatalog(json: Data(contentsOf: root.appendingPathComponent("Tabor/Resources/fleet.json")))
+
+/// The real fleet with the ten sourced wraps of 2021 to summer 2026. The app ships only wraps
+/// from Christmas 2026 on, but these are what the colour thresholds were fitted on.
 private let catalog: FleetCatalog = {
-    let url = URL(fileURLWithPath: #filePath)
-        .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        .appendingPathComponent("Tabor/Resources/fleet.json")
-    return try! FleetCatalog(json: Data(contentsOf: url))
+    var fleet = try! JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("Tabor/Resources/fleet.json"))) as! [String: Any]
+    fleet["wraps"] = try! JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("Tests/Fixtures/wraps-2021-2026.json")))
+    return try! FleetCatalog(json: JSONSerialization.data(withJSONObject: fleet))
 }()
 
 private func day(_ s: String, hour: Int = 12) -> Date {
@@ -24,12 +30,13 @@ private func shares(_ masked: Bool, red: Double = 0, orange: Double = 0, yellow:
 
 private func wrap(_ id: String) -> Wrap { catalog.wrap(id: id)! }
 
-@Test func fleetJsonCarriesTheSourcedWraps() {
-    #expect(catalog.wraps.count >= 10)
-    for w in catalog.wraps {
-        #expect(catalog.match(number: w.number, kind: w.kind) != .unknown, "\(w.id)")
-        #expect(w.from <= w.to)
+@Test func shippedWrapsPointAtRealVehicles() {
+    // Only the shipped ones: a fixture bus leaving the fleet mustn't fail the nightly run.
+    for w in bundled.wraps {
+        #expect(bundled.match(number: w.number, kind: w.kind) != .unknown, "\(w.id)")
     }
+    #expect(catalog.wraps.count == 10)
+    for w in catalog.wraps + bundled.wraps { #expect(w.from <= w.to, "\(w.id)") }
     #expect(catalog.wraps(kind: .bus, number: 5887).map(\.event) == ["chopin", "christmas", "summer"])
 }
 

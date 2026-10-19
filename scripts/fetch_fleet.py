@@ -321,47 +321,11 @@ SUBURBAN_BLUE = "RAL 5010 (L)"
 # something a plain bus's display could show ("CHOPINA": line 175 runs to Lotnisko Chopina);
 # `lines` the special lines it alone ran. Radio Kolor (radiokolor.pl, "Na antenie") and MZA
 # (mza.waw.pl, ?s=oklej) announce most; czynaczas.pl's specialVehicles via the Wayback Machine.
+# Only wraps from Christmas 2026 on (the user, 2026-10-19): a handful of people have photos of
+# an older one, and everyone else could never finish the set. The ten sourced wraps from 2021 to
+# summer 2026 live on as the tests' fixture (Tests/Fixtures/wraps-2021-2026.json).
 # (id, kind, number, from, to, name, Polish name, event, hues, words, lines)
 WRAPS = [
-    # MZA "Jestem świąteczny" (7 Dec 2021, its photo shows #4323; "until the first half of
-    # January") and a photo. Green and red, a wrapped present.
-    ("bus-4323-xmas-2021", "BUS", 4323, "2021-12-07", "2022-01-15", "CHRISTMAS 2021", "ŚWIĘTA 2021",
-     "christmas", ["green", "red"], ["ŚWIĄTECZNY"], []),
-    # The city and TransInfo ("elektryczny Solaris Urbino 18 o numerze 5899"), MZA's photo
-    # (8 Dec 2023: "a bit navy, a bit dark pink", "until early January").
-    ("bus-5899-xmas-2023", "BUS", 5899, "2023-12-07", "2024-01-06", "CHRISTMAS 2023", "ŚWIĘTA 2023",
-     "christmas", ["navy", "pink"], [], []),
-    # MZA "Gwiazdkowy prezent" (9 Dec 2024, names 5919: pinks, purples, greens), Radio Kolor,
-    # czynaczas (archived Jan 2025: 4 Dec – 6 Jan). "ŚWIĄTECZNY AUTOBUS" on its rear.
-    ("bus-5919-xmas-2024", "BUS", 5919, "2024-12-04", "2025-01-06", "CHRISTMAS 2024", "ŚWIĘTA 2024",
-     "christmas", ["blue", "navy", "pink", "purple"], ["ŚWIĄTECZNY AUTOBUS"], []),
-    # Polskie Radio quoting the city ("line 175, fleet number 5887"), czynaczas (archived Nov 2025).
-    ("bus-5887-chopin-2025", "BUS", 5887, "2025-10-14", "2025-10-23", "CHOPIN 2025", "CHOPIN 2025",
-     "chopin", ["pink", "navy"], [], []),
-    # MZA "Kolorowo Halloweenowo" (27 Oct 2025; its photo of #1976 from 25 Oct, the picnic on
-    # the 26th), TransInfo (31 Oct 2025). It kept the yellow body.
-    ("bus-1976-halloween-2025", "BUS", 1976, "2025-10-25", "2025-10-26", "HALLOWEEN 2025", "HALLOWEEN 2025",
-     "halloween", ["purple", "navy"], [], []),
-    # The Świętobus: czynaczas (archived Jan 2026), MZA "Na ulicach już świątecznie" (1 Dec
-    # 2025, "until early January") and a photo on line 158. Red, with navy.
-    ("bus-5887-xmas-2025", "BUS", 5887, "2025-12-01", "2026-01-06", "CHRISTMAS 2025", "ŚWIĘTA 2025",
-     "christmas", ["red", "navy"], [], []),
-    # The Prezentobus on special line M: Radio Kolor ("Solarisa o numerze bocznym 1919"),
-    # MZA "Kolorowo z radiem Kolor" (15 Dec 2025, "until Friday"), WP.pl's photo.
-    ("bus-1919-gifts-2025", "BUS", 1919, "2025-12-15", "2025-12-19", "GIFT BUS 2025", "PREZENTOBUS 2025",
-     "christmas", ["blue", "red", "pink"], [], ["M"]),
-    # "Zakochany autobus" on W26: Radio Kolor ("numer boczny 1915"), MZA (11 Feb 2026), a photo
-    # (plate WX 5480C).
-    ("bus-1915-valentines-2026", "BUS", 1915, "2026-02-13", "2026-02-15", "VALENTINE'S 2026", "WALENTYNKI 2026",
-     "valentines", ["pink", "purple", "red"], ["ZAKOCHANY"], ["W26"]),
-    # The Autobusiaki summer bus ("Miło was widzieć"): MZA "Magiczny autobus" (13 Jul 2026),
-    # Radio Kolor, czynaczas, 19115, and Klakson (Sep 2026: its run ended on 29 Aug).
-    ("bus-5887-summer-2026", "BUS", 5887, "2026-07-13", "2026-08-29", "SUMMER 2026", "WAKACJE 2026",
-     "summer", ["green", "blue"], ["WAS WIDZIEĆ"], ["WAKACJE"]),
-    # The city's "Świąteczne pojazdy" (Dec 2025) and czynaczas (archived Jan 2026). No photo
-    # yet, so no colours: a catch gets the chip.
-    ("tram-3148-xmas-2025", "TRAM", 3148, "2025-12-01", "2026-01-06", "CHRISTMAS 2025", "ŚWIĘTA 2025",
-     "christmas", [], [], []),
 ]
 
 

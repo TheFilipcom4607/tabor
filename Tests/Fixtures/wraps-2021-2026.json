@@ -1,0 +1,177 @@
+[
+ {
+  "id": "bus-4323-xmas-2021",
+  "kind": "BUS",
+  "number": 4323,
+  "from": "2021-12-07",
+  "to": "2022-01-15",
+  "name": "CHRISTMAS 2021",
+  "namePl": "ŚWIĘTA 2021",
+  "event": "christmas",
+  "hues": [
+   "green",
+   "red"
+  ],
+  "words": [
+   "ŚWIĄTECZNY"
+  ],
+  "lines": []
+ },
+ {
+  "id": "bus-5899-xmas-2023",
+  "kind": "BUS",
+  "number": 5899,
+  "from": "2023-12-07",
+  "to": "2024-01-06",
+  "name": "CHRISTMAS 2023",
+  "namePl": "ŚWIĘTA 2023",
+  "event": "christmas",
+  "hues": [
+   "navy",
+   "pink"
+  ],
+  "words": [],
+  "lines": []
+ },
+ {
+  "id": "bus-5919-xmas-2024",
+  "kind": "BUS",
+  "number": 5919,
+  "from": "2024-12-04",
+  "to": "2025-01-06",
+  "name": "CHRISTMAS 2024",
+  "namePl": "ŚWIĘTA 2024",
+  "event": "christmas",
+  "hues": [
+   "blue",
+   "navy",
+   "pink",
+   "purple"
+  ],
+  "words": [
+   "ŚWIĄTECZNY AUTOBUS"
+  ],
+  "lines": []
+ },
+ {
+  "id": "bus-5887-chopin-2025",
+  "kind": "BUS",
+  "number": 5887,
+  "from": "2025-10-14",
+  "to": "2025-10-23",
+  "name": "CHOPIN 2025",
+  "namePl": "CHOPIN 2025",
+  "event": "chopin",
+  "hues": [
+   "pink",
+   "navy"
+  ],
+  "words": [],
+  "lines": []
+ },
+ {
+  "id": "bus-1976-halloween-2025",
+  "kind": "BUS",
+  "number": 1976,
+  "from": "2025-10-25",
+  "to": "2025-10-26",
+  "name": "HALLOWEEN 2025",
+  "namePl": "HALLOWEEN 2025",
+  "event": "halloween",
+  "hues": [
+   "purple",
+   "navy"
+  ],
+  "words": [],
+  "lines": []
+ },
+ {
+  "id": "bus-5887-xmas-2025",
+  "kind": "BUS",
+  "number": 5887,
+  "from": "2025-12-01",
+  "to": "2026-01-06",
+  "name": "CHRISTMAS 2025",
+  "namePl": "ŚWIĘTA 2025",
+  "event": "christmas",
+  "hues": [
+   "red",
+   "navy"
+  ],
+  "words": [],
+  "lines": []
+ },
+ {
+  "id": "tram-3148-xmas-2025",
+  "kind": "TRAM",
+  "number": 3148,
+  "from": "2025-12-01",
+  "to": "2026-01-06",
+  "name": "CHRISTMAS 2025",
+  "namePl": "ŚWIĘTA 2025",
+  "event": "christmas",
+  "hues": [],
+  "words": [],
+  "lines": []
+ },
+ {
+  "id": "bus-1919-gifts-2025",
+  "kind": "BUS",
+  "number": 1919,
+  "from": "2025-12-15",
+  "to": "2025-12-19",
+  "name": "GIFT BUS 2025",
+  "namePl": "PREZENTOBUS 2025",
+  "event": "christmas",
+  "hues": [
+   "blue",
+   "red",
+   "pink"
+  ],
+  "words": [],
+  "lines": [
+   "M"
+  ]
+ },
+ {
+  "id": "bus-1915-valentines-2026",
+  "kind": "BUS",
+  "number": 1915,
+  "from": "2026-02-13",
+  "to": "2026-02-15",
+  "name": "VALENTINE'S 2026",
+  "namePl": "WALENTYNKI 2026",
+  "event": "valentines",
+  "hues": [
+   "pink",
+   "purple",
+   "red"
+  ],
+  "words": [
+   "ZAKOCHANY"
+  ],
+  "lines": [
+   "W26"
+  ]
+ },
+ {
+  "id": "bus-5887-summer-2026",
+  "kind": "BUS",
+  "number": 5887,
+  "from": "2026-07-13",
+  "to": "2026-08-29",
+  "name": "SUMMER 2026",
+  "namePl": "WAKACJE 2026",
+  "event": "summer",
+  "hues": [
+   "green",
+   "blue"
+  ],
+  "words": [
+   "WAS WIDZIEĆ"
+  ],
+  "lines": [
+   "WAKACJE"
+  ]
+ }
+]
