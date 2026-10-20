@@ -302,15 +302,20 @@ DRIVES = {
 # can't be trusted with this. Its scheme field says who specified the paint, not how it looks
 # (#8802, "producencki", is plain red and yellow), and its colour field misses repaints (#5869
 # is still "srebrny", silver, but has been red and yellow since at least May 2025).
-# (kind, number) -> a `Livery` in the app. Photos from phototrans.eu.
+# (kind, number) -> a `Livery` in the app, or None for plain red and yellow whatever the city
+# says. Photos from phototrans.eu.
 LIVERIES = {
     ("BUS", 8396): "greyRed",  # Urbino 18 hybrid: grey with a red skirt, Wawelska, March 2026
     ("BUS", 8397): "greyRed",  # the same, 2023 (no newer photo)
     ("BUS", 8399): "greyRed",  # the same, 16 July 2026
 }
-# The one colour the city's list gets right: suburban (L) buses are blue, whole models of
-# them (confirmed on the street, 2026-09-28).
-SUBURBAN_BLUE = "RAL 5010 (L)"
+# The colour codes the city's list gets right, by bus. Suburban (L) buses are blue, whole
+# models of them (confirmed on the street, 2026-09-28). RAL 1004+3003 is the old yellow and red
+# with a red band over the windows (the 2008-09 Urbinos #8890 and #1859 on phototrans,
+# 2024): flyingkonstal's scheme list in #95. Today's paint is RAL 1003+3020, and the
+# electrics' skyline goes by drive, which HUNT already filters on. Vintage buses share the old
+# code but wear their own era's paint, so they're left to their tier.
+CITY_PAINTS = {"RAL 5010 (L)": "suburbanBlue", "RAL 1004+3003": "oldYellowRed"}
 
 # Event wraps: a vehicle dressed for an event between two dates, emitted as fleet.json's
 # "wraps" (older builds ignore the key). A row says only that the vehicle *may* be dressed:
@@ -850,8 +855,12 @@ def build(vehicles, city=None):
                 odd[json.dumps(s, sort_keys=True)].append(int(c["number"]))
         variants = sorted(({"specs": json.loads(s), "numbers": sorted(ns)} for s, ns in odd.items()),
                           key=lambda v: v["numbers"][0])
-        liveries = {c["number"]: "suburbanBlue" for c in in_city if c.get("colour") == SUBURBAN_BLUE}
+        vintage = model_id in VINTAGE or split or all(v["vintage"] for v in vs)
+        old_paint_ok = kind == "BUS" and not vintage
+        liveries = {c["number"]: CITY_PAINTS[c.get("colour")] for c in in_city
+                    if c.get("colour") in CITY_PAINTS and (CITY_PAINTS[c["colour"]] != "oldYellowRed" or old_paint_ok)}
         liveries |= {v["number"]: LIVERIES[(kind, int(v["number"]))] for v in vs if (kind, int(v["number"])) in LIVERIES}
+        liveries = {n: l for n, l in liveries.items() if l}
         models.append({
             "id": model_id,
             "name": f"{model} {WORKS_JOBS[works][0]}" if works else display_name(make, model),
@@ -866,7 +875,7 @@ def build(vehicles, city=None):
             "lastYear": max(years) if years else None,
             "batches": batches,
             # Curated models, split-out sets, and models that exist only as preserved buses.
-            "vintage": model_id in VINTAGE or split or all(v["vintage"] for v in vs),
+            "vintage": vintage,
             "onTest": all(v.get("onTest", False) for v in vs),
             **({"works": True} if works else {}),
             **(dict(zip(("runs", "trial", "runsPl", "trialPl"), TRIALS[(make, model)]))

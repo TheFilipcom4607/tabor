@@ -719,6 +719,9 @@ struct HuntView: View {
                 ForEach(ModelSpecs.Floor.allCases.filter { picked.floors.contains($0) }, id: \.self) { f in
                     targetChip(f.name.uppercased(), color: Palette.ink) { targets.floors.remove(f) }
                 }
+                ForEach(Livery.allCases.filter { picked.paints.contains($0) }, id: \.self) { l in
+                    targetChip(l.name, color: Palette.ink) { targets.paints.remove(l) }
+                }
             }
             .padding(.horizontal, 20)
         }

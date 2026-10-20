@@ -392,16 +392,20 @@ public enum Livery: String, Sendable, CaseIterable {
     case greyRed
     /// The blue of the suburban (L) lines: whole models wear it, so it's no badge.
     case suburbanBlue
+    /// The old yellow and red with a red band over the windows, on the oldest Urbinos (#95).
+    /// Fifty-odd still wear it, too many for a badge.
+    case oldYellowRed
 
     public var name: String {
         switch self {
         case .greyRed: String(localized: "GREY & RED")
         case .suburbanBlue: String(localized: "SUBURBAN BLUE")
+        case .oldYellowRed: String(localized: "OLD YELLOW & RED")
         }
     }
 
     /// One vehicle standing out from its fleet, rather than a whole model's colours.
-    public var special: Bool { self != .suburbanBlue }
+    public var special: Bool { self == .greyRed }
 }
 
 public struct Depot: Codable, Hashable, Sendable {

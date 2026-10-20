@@ -11,6 +11,26 @@
         }
       }
     },
+    "OLD YELLOW & RED": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "STARY ŻÓŁTO-CZERWONY"
+          }
+        }
+      }
+    },
+    "PAINT": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MALOWANIE"
+          }
+        }
+      }
+    },
     "Zoom in on the vehicle": {
       "localizations": {
         "pl": {

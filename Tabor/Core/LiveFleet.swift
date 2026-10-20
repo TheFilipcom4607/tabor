@@ -426,9 +426,12 @@ public struct HuntTargets: Equatable, Sendable, RawRepresentable {
     public var lengths: Set<LengthBand>
     public var drives: Set<ModelSpecs.Drive>
     public var floors: Set<ModelSpecs.Floor>
+    /// Paint other than today's (#95), from the fleet file's liveries. Buses only, like drive.
+    public var paints: Set<Livery>
 
     public init(tiers: Set<Tier> = [], models: Set<String> = [], kind: VehicleKind? = nil, line: String? = nil,
-                lengths: Set<LengthBand> = [], drives: Set<ModelSpecs.Drive> = [], floors: Set<ModelSpecs.Floor> = []) {
+                lengths: Set<LengthBand> = [], drives: Set<ModelSpecs.Drive> = [], floors: Set<ModelSpecs.Floor> = [],
+                paints: Set<Livery> = []) {
         self.tiers = tiers
         self.models = models
         self.kind = kind
@@ -436,18 +439,19 @@ public struct HuntTargets: Equatable, Sendable, RawRepresentable {
         self.lengths = lengths
         self.drives = drives
         self.floors = floors
+        self.paints = paints
     }
 
     public var isEmpty: Bool { !isCityWide && kind == nil }
     /// Rarities or models picked: these add to each other.
     public var hasPicks: Bool { !tiers.isEmpty || !models.isEmpty }
-    public var hasSpecs: Bool { !lengths.isEmpty || !drives.isEmpty || !floors.isEmpty }
+    public var hasSpecs: Bool { !lengths.isEmpty || !drives.isEmpty || !floors.isEmpty || !paints.isEmpty }
     /// You're after something specific, so HUNT looks across the whole city. Buses or trams
     /// alone keep the usual view around you.
     public var isCityWide: Bool { hasPicks || hasSpecs || line != nil }
     public var count: Int {
         tiers.count + models.count + (kind == nil ? 0 : 1) + (line == nil ? 0 : 1)
-            + lengths.count + drives.count + floors.count
+            + lengths.count + drives.count + floors.count + paints.count
     }
 
     /// Whether a model can match at all, whatever vehicle and line: for counting picks.
@@ -467,6 +471,7 @@ public struct HuntTargets: Equatable, Sendable, RawRepresentable {
         // Trams have no drive in the city's data: a drive picked means buses.
         if !drives.isEmpty, !(specs?.drive.map(drives.contains) ?? false) { return false }
         if !floors.isEmpty, !(specs?.floor.map(floors.contains) ?? false) { return false }
+        if !paints.isEmpty, !(model.livery(of: number).map(paints.contains) ?? false) { return false }
         return true
     }
 
@@ -485,6 +490,7 @@ public struct HuntTargets: Equatable, Sendable, RawRepresentable {
         if !lengths.isEmpty, !specs.contains(where: { $0?.length.flatMap(LengthBand.of).map(lengths.contains) ?? false }) { t.lengths = [] }
         if !drives.isEmpty, !specs.contains(where: { $0?.drive.map(drives.contains) ?? false }) { t.drives = [] }
         if !floors.isEmpty, !specs.contains(where: { $0?.floor.map(floors.contains) ?? false }) { t.floors = [] }
+        if !paints.isEmpty, !model.numbers.contains(where: { model.livery(of: $0).map(paints.contains) ?? false }) { t.paints = [] }
         return t
     }
 
@@ -525,7 +531,7 @@ public struct HuntTargets: Equatable, Sendable, RawRepresentable {
         ((kind.map { ["kind:\($0.rawValue)"] } ?? []) + tiers.map { "tier:\($0.rawValue)" }.sorted()
             + models.map { "model:\($0)" }.sorted() + (line.map { ["line:\($0)"] } ?? [])
             + lengths.sorted().map { "length:\($0.rawValue)" } + drives.map { "drive:\($0.rawValue)" }.sorted()
-            + floors.map { "floor:\($0.rawValue)" }.sorted())
+            + floors.map { "floor:\($0.rawValue)" }.sorted() + paints.map { "paint:\($0.rawValue)" }.sorted())
             .joined(separator: ",")
     }
 
@@ -543,6 +549,7 @@ public struct HuntTargets: Equatable, Sendable, RawRepresentable {
             case "length": if let l = LengthBand(rawValue: value) { t.lengths.insert(l) }
             case "drive": if let d = ModelSpecs.Drive(rawValue: value) { t.drives.insert(d) }
             case "floor": if let f = ModelSpecs.Floor(rawValue: value) { t.floors.insert(f) }
+            case "paint": if let l = Livery(rawValue: value) { t.paints.insert(l) }
             default: break
             }
         }
@@ -564,6 +571,7 @@ extension HuntTargets {
         parts += lengths.sorted().map(\.name)
         parts += ModelSpecs.Drive.allCases.filter(drives.contains).map(\.name)
         parts += ModelSpecs.Floor.allCases.filter(floors.contains).map { $0.name.uppercased() }
+        parts += Livery.allCases.filter(paints.contains).map(\.name)
         return parts.joined(separator: " · ")
     }
 }

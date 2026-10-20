@@ -1046,6 +1046,25 @@ private func nearby(_ vehicles: [LiveVehicle]) -> [NearbyVehicle] {
     #expect(HuntTargets(rawValue: "drive:steam,length:99,line:,floor:XF") == HuntTargets())
 }
 
+@Test func huntTargetsPaintGoesByTheVehicle() {
+    let urbino18 = catalog.model(id: "bus-solaris-urbino-18")!
+    let hybrid = catalog.model(id: "bus-solaris-urbino-18h")!
+    // #8890 is a 2009 Urbino 18 in the old yellow and red; #5221 (2016) wears today's paint.
+    let old = HuntTargets(paints: [.oldYellowRed])
+    #expect(urbino18.livery(of: 8890) == .oldYellowRed && urbino18.livery(of: 5221) == nil)
+    #expect(old.matches(urbino18, number: 8890, line: "522") && !old.matches(urbino18, number: 5221, line: "105"))
+    // Paints picked add up, and hunt across the city.
+    let both = HuntTargets(paints: [.oldYellowRed, .greyRed])
+    #expect(both.matches(hybrid, number: 8396, line: "1") && both.isCityWide)
+    // Only the grey hybrids earn the badge; 50-odd old Urbinos and whole blue models don't.
+    #expect(Livery.allCases.filter(\.special) == [.greyRed])
+    // Round-trips; a paint an older build doesn't know is skipped.
+    #expect(both.rawValue == "paint:greyRed,paint:oldYellowRed" && HuntTargets(rawValue: both.rawValue) == both)
+    #expect(HuntTargets(rawValue: "paint:tartan") == HuntTargets())
+    // Adding a model drops a paint none of its vehicles wear.
+    #expect(old.adding(hybrid).paints.isEmpty && old.adding(urbino18).paints == [.oldYellowRed])
+}
+
 @Test func huntTargetsAddingAModelKeepsItInView() {
     let lionG = catalog.model(id: "bus-man-a23")!
     let swing = catalog.model(id: "tram-pesa-120n")!
