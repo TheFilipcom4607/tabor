@@ -66,6 +66,13 @@ struct OnboardingView: View {
                     .padding(.horizontal, 24)
                     .opacity(page == .specials ? 1 : 0)
                     .animation(.easeOut(duration: 0.3), value: page)
+                Text("Drawn by the developer, with a mouse.")
+                    .font(TaborFont.grotesk(10))
+                    .foregroundStyle(Palette.faint)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                    .opacity(page == .wraps ? 1 : 0)
+                    .animation(.easeOut(duration: 0.3), value: page)
             }
             .frame(height: 44)
             .padding(.bottom, 6)
@@ -413,8 +420,8 @@ private struct SpecialsPage: View {
 }
 
 /// The finale: event wraps, the rarest thing in the book. The app's own sticker turns to foil,
-/// then a tag for each event slaps down round it, then the words. Drawn, not photographed: the
-/// wrap photos we have are other people's.
+/// then a tag for each event slaps down round it, then the words. The user's own drawing of a
+/// Christmas bus: the wrap photos we have are other people's.
 private struct WrapsPage: View {
     let active: Bool
     @State private var dressed = false
@@ -427,7 +434,7 @@ private struct WrapsPage: View {
         ("christmas", CGPoint(x: 92, y: 34), -8),
         ("valentines", CGPoint(x: 262, y: 52), 6),
         ("summer", CGPoint(x: 64, y: 246), 5),
-        ("chopin", CGPoint(x: 268, y: 238), -6),
+        ("chopin", CGPoint(x: 250, y: 238), -6),
         ("halloween", CGPoint(x: 170, y: 276), 2),
     ]
 
@@ -439,11 +446,11 @@ private struct WrapsPage: View {
             GeometryReader { g in
                 let scale = min(1, g.size.width / Self.board.width, g.size.height / Self.board.height)
                 ZStack(alignment: .topLeading) {
-                    Image("WelcomeSticker")
+                    Image("IntroStickerWrap")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 220)
-                        .modifier(FoilIf(on: dressed, image: Image("WelcomeSticker"), width: 6, animated: true))
+                        .frame(width: 290)
+                        .modifier(FoilIf(on: dressed, image: Image("IntroStickerWrap"), width: 6, animated: true))
                         .shadow(color: Palette.foilInk.opacity(dressed ? 0.45 : 0), radius: 18)
                         .scaleEffect(dressed ? 1.04 : 1)
                         .overlay { if dressed { SparkleBurst(color: Palette.foilInk, colors: Palette.foil, reach: 0.8) } }

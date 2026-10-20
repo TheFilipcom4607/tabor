@@ -7711,6 +7711,16 @@
         }
       }
     },
+    "Drawn by the developer, with a mouse.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Narysował autor, myszką."
+          }
+        }
+      }
+    },
     "Konstal 13N #795 photo: Janusz Jakubowski, CC BY 2.0, cut out as a sticker.": {
       "localizations": {
         "pl": {
