@@ -18,8 +18,13 @@ only links it, for a human to open.
 Writes a Markdown issue body to the given path when there's anything, nothing when there isn't.
 Exits 1 if neither the feed nor MZA could be read, so the caller leaves the issue alone.
 
-Usage:  python3 scripts/possible_wraps.py <body.md>
+--skip leaves out hints a human has already dismissed: one per line, a post's URL or a vehicle
+as `BUS #1976 | M`. The Action builds it from the wraps issues closed as not planned, so closing
+one that way sticks; the bot's own close (as completed) dismisses nothing.
+
+Usage:  python3 scripts/possible_wraps.py <body.md> [--skip <file>]
 """
+import argparse
 import html
 import json
 import re
@@ -71,16 +76,29 @@ def mza_posts(today):
     posts = {}
     for term in TERMS:
         body = get(MZA.format(urllib.parse.quote(term))).decode("utf-8", "replace")
-        for day, url, title in re.findall(
-                r'<time datetime="(\d{4}\.\d\d\.\d\d)">.*?<h2 class="news-box__title"><a href="([^"]+)">(.*?)</a>',
-                body, re.S):
-            posted = datetime.strptime(day, "%Y.%m.%d").date()
+        # One block per post, so a date can't pair with the next post's title. The first result's
+        # title is an <h3>, the rest <h2>s.
+        for block in re.split(r'class="grid-posts-item\b', body)[1:]:
+            day = re.search(r'<time datetime="(\d{4}\.\d\d\.\d\d)">', block)
+            link = re.search(r'<h[23] class="news-box__title"><a href="([^"]+)">(.*?)</a>', block, re.S)
+            if not day or not link:
+                continue
+            url, title = link.groups()
+            posted = datetime.strptime(day.group(1), "%Y.%m.%d").date()
             if today - posted <= POST_WINDOW:
                 posts[url] = (posted, html.unescape(re.sub(r"<[^>]+>", "", title)).strip(), url)
     return sorted(posts.values(), reverse=True)
 
 
 def main():
+    args = argparse.ArgumentParser()
+    args.add_argument("body")
+    args.add_argument("--skip", type=Path)
+    args = args.parse_args()
+    skip = set()
+    if args.skip and args.skip.exists():
+        skip = {l.strip() for l in args.skip.read_text().splitlines() if l.strip()}
+
     fleet = json.loads((ROOT / "Tabor/Resources/fleet.json").read_text())
     today = date.today()
     # Wraps already in, and running now: nothing to report about them.
@@ -89,11 +107,12 @@ def main():
 
     lines, posts, failed = [], [], []
     try:
-        lines = [x for x in event_lines() if (x[0], x[1]) not in known]
+        lines = [x for x in event_lines()
+                 if (x[0], x[1]) not in known and f"{x[0]} #{x[1]} | {x[2]}" not in skip]
     except Exception as e:
         failed.append(f"the live feed ({e})")
     try:
-        posts = mza_posts(today)
+        posts = [p for p in mza_posts(today) if p[2] not in skip]
     except Exception as e:
         failed.append(f"MZA's news ({e})")
     for f in failed:
@@ -123,7 +142,7 @@ def main():
         out.append("Couldn't read: " + "; ".join(failed) + ".")
     text = "\n".join(out) + "\n"
     print(text)
-    Path(sys.argv[1]).write_text(text)
+    Path(args.body).write_text(text)
 
 
 if __name__ == "__main__":

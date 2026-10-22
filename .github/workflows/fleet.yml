@@ -19,7 +19,8 @@ name: Refresh fleet data
 #   ("Fleet: buses on trial"), for a human to add to TEST_BUSES once a source names them.
 # - Event wraps (a Christmas bus, a Valentine's bus) aren't in any list either. Vehicles on an
 #   event line in the live feed and fresh MZA posts about them go in a third issue ("Fleet:
-#   possible event wraps"), for a human to add to WRAPS once a source names the bus.
+#   possible event wraps"), for a human to add to WRAPS once a source names the bus. Closing
+#   that issue as not planned dismisses its hints for good.
 # The tests run here because a push or PR made with the workflow's own token starts no
 # other workflow.
 #
@@ -100,11 +101,22 @@ jobs:
           python3 scripts/trial_buses.py trials.md
           touch trials-checked
 
-      # The same for event wraps: nothing read leaves the issue as it is.
+      # The same for event wraps: nothing read leaves the issue as it is. Hints in an issue a
+      # human closed as not planned stay dismissed (the bot's own close is "completed"), or
+      # the next run would only open a new issue with the same posts.
       - name: Look for signs of event wraps
         continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          python3 scripts/possible_wraps.py wraps.md
+          gh issue list --state closed --search "in:title \"$WRAPS_TITLE\"" --limit 100 \
+            --json title,stateReason,body \
+            --jq "map(select(.title == \"$WRAPS_TITLE\" and .stateReason == \"NOT_PLANNED\")) | .[].body" \
+            | { grep -oE '\]\(https://[^)]+\)|^\| (BUS|TRAM) #[^|]+\|[^|]+\|' || true; } \
+            | sed -E 's/^\]\((.*)\)$/\1/; s/^\| (.*[^ ]) *\|$/\1/; s/ +\| +/ | /' | sort -u > skip.txt
+          echo "$(wc -l < skip.txt) dismissed hints"
+          python3 scripts/possible_wraps.py wraps.md --skip skip.txt
           touch wraps-checked
 
       # apply: commit to main. review: open or update the PR. close: the fleet is main's again,
