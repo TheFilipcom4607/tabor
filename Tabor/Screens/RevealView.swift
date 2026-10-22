@@ -12,6 +12,8 @@ struct RevealView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Environment(Router.self) private var router
+    /// Measured here: a full-screen cover is laid out on its own.
+    @State private var wide = false
 
     /// Photo shown, waiting for the cut-out / build-up.
     @State private var developing = true
@@ -96,10 +98,165 @@ struct RevealView: View {
         // Already in the book, but never in this wrap: a new form of it.
         let newForm = wrap.map { w in existing.map { !$0.wraps.contains(w.id) } ?? false } ?? false
 
+        // The pieces, down the screen on a phone and beside the stage on a wide one.
+        let header = VStack(alignment: .leading, spacing: 7) {
+            Mono(newForm && landed ? String(localized: "NEW FORM · SIGHTING #\((existing?.timesSeen ?? 0) + 1)")
+                 : kicker(isNewVehicle: isNewVehicle, isNewModel: isNewModel, modelOwned: modelOwned, added: added, existing: existing),
+                 size: 12, spacing: 0.16, color: accent)
+            Text(model?.name ?? (number == nil ? String(localized: "What did you catch?")
+                : choices.isEmpty ? String(localized: "Which model is it?") : String(localized: "Which one is it?")))
+                .font(TaborFont.grotesk(30, 700))
+                .em(-0.03, size: 30)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+            if let line = draft.line?.nonEmpty {
+                Mono("LINE \(line.uppercased())", size: 11, weight: 600, spacing: 0.12, color: Palette.sub)
+            }
+            // A wrap taken from the chip shows as the chip itself.
+            if let wrap, landed, draft.wrapFinding?.verdict != .unsure {
+                WrapTag(wrap: wrap, size: 11, animated: true)
+                    .padding(.top, 3)
+                    .transition(.scale(scale: 0.6, anchor: .leading).combined(with: .opacity))
+            }
+        }
+        .padding(.top, 20)
+        .padding(.horizontal, 26)
+        let details = Group {
+            if ready, let model, let number {
+                HStack(spacing: 10) {
+                    let seen = (existing?.timesSeen ?? 0) + 1
+                    // YOUR 12th of 60 for a new vehicle, YOUR 3rd sighting for one you have:
+                    // its own "YOUR", since Polish says TWÓJ 12. but TWOJA 3. obserwacja.
+                    StatTile(label: isNewVehicle ? String(localized: "YOUR", comment: "Reveal tile: your Nth of this model")
+                                 : String(localized: "reveal.your.sighting", defaultValue: "YOUR",
+                                          comment: "Reveal tile: your Nth sighting of this vehicle"),
+                             value: Ordinal.string(isNewVehicle ? modelOwned + added : seen),
+                             valueColor: Palette.yellow,
+                             caption: isNewVehicle ? String(localized: "of \(model.fleet)")
+                                 : String(localized: "caption.sighting", defaultValue: "sighting"))
+                    StatTile(label: String(localized: "MODEL"), value: isNewModel ? String(localized: "NEW", comment: "Reveal tile: a model new to you") : "\(modelOwned + added)",
+                             valueColor: isNewModel ? Palette.green : Palette.ink,
+                             caption: isNewModel ? String(localized: "species") : String(localized: "of \(model.fleet)"))
+                    if Calendar.current.isDateInToday(draft.date) {
+                        let streak = draft.book.streak
+                        StatTile(label: String(localized: "STREAK"), value: "\(streak)",
+                                 caption: PluralCaption.days(streak))
+                    } else {
+                        // Imported shot from another day: it doesn't touch today's streak.
+                        StatTile(label: String(localized: "SHOT", comment: "Reveal tile: the date an imported photo was taken"), value: Self.shotDate.string(from: draft.date).uppercased(),
+                                 valueSize: 18, caption: Self.shotYear.string(from: draft.date))
+                    }
+                }
+                .padding(.top, 14)
+                .padding(.horizontal, 26)
+                .opacity(landed ? 1 : 0)
+                .offset(y: landed ? 0 : 14)
+                .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.1), value: landed)
+
+                let also = draft.alsoInShot.filter { !misreads.contains($0.number) }
+                // Only for a wrap the photo couldn't settle: one tap says it's wearing it.
+                let offer = draft.wrapFinding.flatMap { $0.verdict == .unsure ? $0.wrap : nil }
+                if model.takesSecondCar(number) || !also.isEmpty || offer != nil {
+                    let chips = HStack(spacing: 8) {
+                        if let offer { wrapChip(offer) }
+                        if model.takesSecondCar(number) { partnerChip(partner: partner?.number, isNew: partnerIsNew) }
+                        ForEach(also) { v in
+                            alsoChip(v, isNew: stats.vehicle(number: v.number, modelId: v.model.id) == nil)
+                        }
+                    }
+                    .padding(.horizontal, 26)
+                    // Two other vehicles and a second car don't fit across: then they scroll.
+                    ViewThatFits(in: .horizontal) {
+                        chips.frame(maxWidth: .infinity, alignment: .leading)
+                        ScrollView(.horizontal, showsIndicators: false) { chips }
+                    }
+                    // A scroll view takes any height it's offered; just the chips'.
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 12)
+                    .opacity(landed ? 1 : 0)
+                    .offset(y: landed ? 0 : 16)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.14), value: landed)
+                }
+
+                // A trailer is another model's: it doesn't count toward this one.
+                let sameModel = partner.flatMap { $0.model.id == model.id ? [$0.number] : nil } ?? []
+                let owned = Set(stats.owned(modelId: model.id).map(\.number)).union([number] + sameModel)
+                let firstWorks = model.works && !stats.vehicles.contains { catalog.model(id: $0.modelId)?.works == true }
+                Text(wrap.map { RevealHint.wrapped($0, isNewVehicle: isNewVehicle, newForm: newForm) }
+                     ?? RevealHint.text(model: model, number: number, owned: owned, isNewVehicle: isNewVehicle,
+                                        timesSeen: (existing?.timesSeen ?? 0) + 1, firstWorks: firstWorks))
+                    .font(TaborFont.grotesk(13))
+                    .foregroundStyle(Palette.greenInk)
+                    .lineSpacing(3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 13)
+                    .padding(.horizontal, 15)
+                    .background(Palette.green.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.green.opacity(0.28)))
+                    .padding(.top, 14)
+                    .padding(.horizontal, 26)
+                    .opacity(landed ? 1 : 0)
+                    .offset(y: landed ? 0 : 18)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.18), value: landed)
+            }
+        }
+        let actions = VStack(spacing: 10) {
+            if ready {
+                holdButton
+            } else if !choices.isEmpty {
+                ForEach(choices) { choiceButton($0) }
+            } else {
+                Button {
+                    editing = true
+                } label: {
+                    Text(number == nil ? "Type the number" : "Pick the model")
+                        .font(TaborFont.grotesk(16, 700))
+                        .frame(maxWidth: .infinity)
+                        .padding(17)
+                        .foregroundStyle(Palette.bg)
+                        .background(Palette.yellow, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .buttonStyle(StickerPressStyle())
+            }
+            HStack(spacing: 10) {
+                Button {
+                    editing = true
+                } label: {
+                    secondaryLabel(ready ? String(localized: "WRONG NUMBER?") : String(localized: "EDIT DETAILS"))
+                }
+                .buttonStyle(.plain)
+                if number == nil, landed {
+                    Button {
+                        Haptics.shared.tick()
+                        cropping = true
+                    } label: {
+                        secondaryLabel(String(localized: "CROP"))
+                            .opacity(rereading ? 0.5 : 1)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(rereading)
+                    .transition(.opacity)
+                }
+                // Only when the photo had something else worth cutting.
+                if ready, landed, stickerImage != nil, cut?.canRecut == true {
+                    Button(action: recut) {
+                        secondaryLabel(String(localized: "WRONG CUTOUT?"))
+                            .opacity(recutting ? 0.5 : 1)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(recutting)
+                    .transition(.opacity)
+                }
+            }
+        }
+        .padding(.horizontal, 26)
+        .padding(.bottom, 20)
+        .opacity(sticking ? 0 : 1)
+
         ZStack {
             Palette.bg.ignoresSafeArea()
             RadialGradient(colors: [accent.opacity(0.08 + 0.34 * charge), .clear],
-                           center: .init(x: 0.5, y: 0.34), startRadius: 10, endRadius: 340)
+                           center: wide ? .init(x: 0.3, y: 0.5) : .init(x: 0.5, y: 0.34), startRadius: 10, endRadius: 340)
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
@@ -140,171 +297,38 @@ struct RevealView: View {
                 .padding(.top, -2)
                 .padding(.bottom, -12)
 
-                VStack(alignment: .leading, spacing: 7) {
-                    Mono(newForm && landed ? String(localized: "NEW FORM · SIGHTING #\((existing?.timesSeen ?? 0) + 1)")
-                         : kicker(isNewVehicle: isNewVehicle, isNewModel: isNewModel, modelOwned: modelOwned, added: added, existing: existing),
-                         size: 12, spacing: 0.16, color: accent)
-                    Text(model?.name ?? (number == nil ? String(localized: "What did you catch?")
-                        : choices.isEmpty ? String(localized: "Which model is it?") : String(localized: "Which one is it?")))
-                        .font(TaborFont.grotesk(30, 700))
-                        .em(-0.03, size: 30)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.7)
-                    if let line = draft.line?.nonEmpty {
-                        Mono("LINE \(line.uppercased())", size: 11, weight: 600, spacing: 0.12, color: Palette.sub)
-                    }
-                    // A wrap taken from the chip shows as the chip itself.
-                    if let wrap, landed, draft.wrapFinding?.verdict != .unsure {
-                        WrapTag(wrap: wrap, size: 11, animated: true)
-                            .padding(.top, 3)
-                            .transition(.scale(scale: 0.6, anchor: .leading).combined(with: .opacity))
-                    }
-                }
-                .padding(.top, 20)
-                .padding(.horizontal, 26)
-
-                stage(number: number, model: model, tier: tier, isNew: isNewVehicle && ready, foil: wrap != nil)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 250)
-                    .padding(.top, 12)
-
-                if ready, let model, let number {
-                    HStack(spacing: 10) {
-                        let seen = (existing?.timesSeen ?? 0) + 1
-                        // YOUR 12th of 60 for a new vehicle, YOUR 3rd sighting for one you have:
-                        // its own "YOUR", since Polish says TWÓJ 12. but TWOJA 3. obserwacja.
-                        StatTile(label: isNewVehicle ? String(localized: "YOUR", comment: "Reveal tile: your Nth of this model")
-                                     : String(localized: "reveal.your.sighting", defaultValue: "YOUR",
-                                              comment: "Reveal tile: your Nth sighting of this vehicle"),
-                                 value: Ordinal.string(isNewVehicle ? modelOwned + added : seen),
-                                 valueColor: Palette.yellow,
-                                 caption: isNewVehicle ? String(localized: "of \(model.fleet)")
-                                     : String(localized: "caption.sighting", defaultValue: "sighting"))
-                        StatTile(label: String(localized: "MODEL"), value: isNewModel ? String(localized: "NEW", comment: "Reveal tile: a model new to you") : "\(modelOwned + added)",
-                                 valueColor: isNewModel ? Palette.green : Palette.ink,
-                                 caption: isNewModel ? String(localized: "species") : String(localized: "of \(model.fleet)"))
-                        if Calendar.current.isDateInToday(draft.date) {
-                            let streak = draft.book.streak
-                            StatTile(label: String(localized: "STREAK"), value: "\(streak)",
-                                     caption: PluralCaption.days(streak))
-                        } else {
-                            // Imported shot from another day: it doesn't touch today's streak.
-                            StatTile(label: String(localized: "SHOT", comment: "Reveal tile: the date an imported photo was taken"), value: Self.shotDate.string(from: draft.date).uppercased(),
-                                     valueSize: 18, caption: Self.shotYear.string(from: draft.date))
+                if wide {
+                    // An opened foldable: the sticker big on the left, what it is and what to do
+                    // with it in a phone's column on the right.
+                    HStack(spacing: 0) {
+                        stage(number: number, model: model, tier: tier, isNew: isNewVehicle && ready, foil: wrap != nil)
+                            .scaleEffect(1.2)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .padding(.leading, 16)
+                        VStack(alignment: .leading, spacing: 0) {
+                            header
+                            details
+                            Spacer(minLength: 16)
+                            actions
                         }
+                        .frame(width: 440)
                     }
-                    .padding(.top, 14)
-                    .padding(.horizontal, 26)
-                    .opacity(landed ? 1 : 0)
-                    .offset(y: landed ? 0 : 14)
-                    .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.1), value: landed)
-
-                    let also = draft.alsoInShot.filter { !misreads.contains($0.number) }
-                    // Only for a wrap the photo couldn't settle: one tap says it's wearing it.
-                    let offer = draft.wrapFinding.flatMap { $0.verdict == .unsure ? $0.wrap : nil }
-                    if model.takesSecondCar(number) || !also.isEmpty || offer != nil {
-                        let chips = HStack(spacing: 8) {
-                            if let offer { wrapChip(offer) }
-                            if model.takesSecondCar(number) { partnerChip(partner: partner?.number, isNew: partnerIsNew) }
-                            ForEach(also) { v in
-                                alsoChip(v, isNew: stats.vehicle(number: v.number, modelId: v.model.id) == nil)
-                            }
-                        }
-                        .padding(.horizontal, 26)
-                        // Two other vehicles and a second car don't fit across: then they scroll.
-                        ViewThatFits(in: .horizontal) {
-                            chips.frame(maxWidth: .infinity, alignment: .leading)
-                            ScrollView(.horizontal, showsIndicators: false) { chips }
-                        }
-                        // A scroll view takes any height it's offered; just the chips'.
-                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    header
+                    stage(number: number, model: model, tier: tier, isNew: isNewVehicle && ready, foil: wrap != nil)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 250)
                         .padding(.top, 12)
-                        .opacity(landed ? 1 : 0)
-                        .offset(y: landed ? 0 : 16)
-                        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.14), value: landed)
-                    }
-
-                    // A trailer is another model's: it doesn't count toward this one.
-                    let sameModel = partner.flatMap { $0.model.id == model.id ? [$0.number] : nil } ?? []
-                    let owned = Set(stats.owned(modelId: model.id).map(\.number)).union([number] + sameModel)
-                    let firstWorks = model.works && !stats.vehicles.contains { catalog.model(id: $0.modelId)?.works == true }
-                    Text(wrap.map { RevealHint.wrapped($0, isNewVehicle: isNewVehicle, newForm: newForm) }
-                         ?? RevealHint.text(model: model, number: number, owned: owned, isNewVehicle: isNewVehicle,
-                                            timesSeen: (existing?.timesSeen ?? 0) + 1, firstWorks: firstWorks))
-                        .font(TaborFont.grotesk(13))
-                        .foregroundStyle(Palette.greenInk)
-                        .lineSpacing(3)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 13)
-                        .padding(.horizontal, 15)
-                        .background(Palette.green.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.green.opacity(0.28)))
-                        .padding(.top, 14)
-                        .padding(.horizontal, 26)
-                        .opacity(landed ? 1 : 0)
-                        .offset(y: landed ? 0 : 18)
-                        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.18), value: landed)
+                    details
+                    Spacer(minLength: 16)
+                    actions
                 }
-
-                Spacer(minLength: 16)
-
-                VStack(spacing: 10) {
-                    if ready {
-                        holdButton
-                    } else if !choices.isEmpty {
-                        ForEach(choices) { choiceButton($0) }
-                    } else {
-                        Button {
-                            editing = true
-                        } label: {
-                            Text(number == nil ? "Type the number" : "Pick the model")
-                                .font(TaborFont.grotesk(16, 700))
-                                .frame(maxWidth: .infinity)
-                                .padding(17)
-                                .foregroundStyle(Palette.bg)
-                                .background(Palette.yellow, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        }
-                        .buttonStyle(StickerPressStyle())
-                    }
-                    HStack(spacing: 10) {
-                        Button {
-                            editing = true
-                        } label: {
-                            secondaryLabel(ready ? String(localized: "WRONG NUMBER?") : String(localized: "EDIT DETAILS"))
-                        }
-                        .buttonStyle(.plain)
-                        if number == nil, landed {
-                            Button {
-                                Haptics.shared.tick()
-                                cropping = true
-                            } label: {
-                                secondaryLabel(String(localized: "CROP"))
-                                    .opacity(rereading ? 0.5 : 1)
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(rereading)
-                            .transition(.opacity)
-                        }
-                        // Only when the photo had something else worth cutting.
-                        if ready, landed, stickerImage != nil, cut?.canRecut == true {
-                            Button(action: recut) {
-                                secondaryLabel(String(localized: "WRONG CUTOUT?"))
-                                    .opacity(recutting ? 0.5 : 1)
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(recutting)
-                            .transition(.opacity)
-                        }
-                    }
-                }
-                .padding(.horizontal, 26)
-                .padding(.bottom, 20)
-                .opacity(sticking ? 0 : 1)
             }
             .foregroundStyle(Palette.ink)
             .padding(.top, missingInsets.top)
             .padding(.bottom, missingInsets.bottom)
         }
+        .onGeometryChange(for: Bool.self) { WideLayout.isWide($0.size) } action: { wide = $0 }
         // Belt and braces for imports: a reveal that came up while the photo picker was still
         // leaving was laid out with no safe area (CANCEL under the status bar). Whatever the
         // presentation reports, keep clear of what the window itself keeps clear of.

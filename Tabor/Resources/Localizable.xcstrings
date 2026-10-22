@@ -10557,6 +10557,17 @@
           }
         }
       }
+    },
+    "PICK A MODEL": {
+      "comment": "BOOK on a wide screen, beside the index before a model is picked",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WYBIERZ MODEL"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

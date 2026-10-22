@@ -104,6 +104,7 @@ struct CatchView: View {
     /// Zoom when the current pinch started.
     @State private var pinchStart: CGFloat?
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.wide) private var wide
     @Environment(Router.self) private var router
 
     private let catalog = Fleet.catalog
@@ -124,7 +125,7 @@ struct CatchView: View {
                 }
                 .clipped()
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { finderFrame = $0 }
-                .ignoresSafeArea(edges: .top)
+                .ignoresSafeArea(edges: [.top, .horizontal])
 
             Color.black.opacity(frozen == nil ? 0 : 0.6)
                 .ignoresSafeArea()
@@ -137,42 +138,60 @@ struct CatchView: View {
                 .init(color: Color(hex: 0x060709, opacity: 0.35), location: 0.72),
                 .init(color: Color(hex: 0x060709, opacity: 0.88), location: 1),
             ], startPoint: .top, endPoint: .bottom)
-            .ignoresSafeArea(edges: .top)
+            .ignoresSafeArea(edges: [.top, .horizontal])
             .allowsHitTesting(false)
 
-            VStack(spacing: 0) {
-                topBar
-                    .padding(.top, 6)
-                    .padding(.horizontal, 20)
+            if wide {
+                HStack(spacing: 0) {
+                    VStack(spacing: 0) {
+                        topBar
+                            .padding(.top, 6)
+                            .padding(.horizontal, 20)
+                        hintPill
+                            .padding(.top, 14)
+                        brackets
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 14)
+                            .frame(maxHeight: .infinity)
+                            .allowsHitTesting(false)
+                        controlTip
+                            .frame(maxWidth: WideLayout.column, maxHeight: 78, alignment: .bottomLeading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 14)
+                    }
+                    sideControls
+                }
+            } else {
+                VStack(spacing: 0) {
+                    topBar
+                        .padding(.top, 6)
+                        .padding(.horizontal, 20)
 
-                hintPill
-                    .padding(.top, 14)
+                    hintPill
+                        .padding(.top, 14)
 
-                Spacer(minLength: 12)
+                    Spacer(minLength: 12)
 
-                // A 3:2 landscape frame, like a photo: the shot is cropped to it.
-                ViewfinderBrackets()
-                    .opacity(camera.status == .running ? 1 : 0)
-                    .overlay { frozenShot }
-                    .aspectRatio(3 / 2, contentMode: .fit)
-                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { bracketGlobal = $0 }
-                    .padding(.horizontal, 20)
-                    .allowsHitTesting(false)
+                    brackets
+                        .padding(.horizontal, 20)
+                        .allowsHitTesting(false)
 
-                Spacer(minLength: 12)
+                    Spacer(minLength: 12)
 
-                // Fixed slot, so the brackets don't jump when the tip comes and goes.
-                controlTip
-                    .frame(maxWidth: .infinity, maxHeight: 78, alignment: .bottomLeading)
-                    .padding(.horizontal, 20)
+                    // Fixed slot, so the brackets don't jump when the tip comes and goes.
+                    controlTip
+                        .frame(maxWidth: .infinity, maxHeight: 78, alignment: .bottomLeading)
+                        .padding(.horizontal, 20)
 
-                controls
-                    .padding(.top, 16)
-                    .padding(.bottom, 16)
+                    controls
+                        .padding(.top, 16)
+                        .padding(.bottom, 16)
+                }
             }
 
             Color.white.opacity(flash ? 0.85 : 0)
-                .ignoresSafeArea(edges: .top)
+                .ignoresSafeArea(edges: [.top, .horizontal])
                 .allowsHitTesting(false)
         }
         .background(Color.black.ignoresSafeArea())
@@ -338,6 +357,8 @@ struct CatchView: View {
                             .background(Palette.yellow, in: Capsule())
                     }
                 }
+                // Centred on the brackets, clear of the side column on a wide screen.
+                .padding(.trailing, wide ? Self.sideColumn : 0)
             }
         }
     }
@@ -413,78 +434,135 @@ struct CatchView: View {
         .animation(.easeInOut(duration: 0.2), value: text)
     }
 
+    // A 3:2 landscape frame, like a photo: the shot is cropped to it.
+    private var brackets: some View {
+        ViewfinderBrackets()
+            .opacity(camera.status == .running ? 1 : 0)
+            .overlay { frozenShot }
+            .aspectRatio(3 / 2, contentMode: .fit)
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { bracketGlobal = $0 }
+    }
+
     private var controls: some View {
         VStack(spacing: 16) {
             HStack {
-                settingToggle($geotag, name: String(localized: "GEOTAG"), on: "location.fill", off: "location.slash.fill")
+                geotagToggle
                 Spacer()
-                if camera.status == .running, camera.zoomStops.count > 1 { zoomBar }
+                if showsZoom { zoomBar() }
                 Spacer()
-                settingToggle($saveToGallery, name: String(localized: "SAVE TO PHOTOS"), on: "photo.badge.arrow.down.fill", off: "photo.badge.arrow.down")
+                galleryToggle
             }
 
             HStack {
-                PhotosPicker(selection: $pickerItem, matching: .images) {
-                    Image(systemName: "photo.on.rectangle.angled")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .frame(width: 50, height: 50)
-                        .glass(Circle())
-                }
-                .buttonStyle(StickerPressStyle())
-                .disabled(capturing)
-                .accessibilityLabel("Import a photo")
-
+                importButton
                 Spacer()
-
-                // Shutter
-                Button {
-                    Task { await shoot() }
-                } label: {
-                    ZStack {
-                        Circle().stroke(.white.opacity(0.92), lineWidth: 4)
-                            .frame(width: 76, height: 76)
-                        Circle().fill(Palette.red)
-                            .frame(width: 60, height: 60)
-                            .scaleEffect(shutterDown ? 0.86 : 1)
-                    }
-                    .animation(.spring(response: 0.25, dampingFraction: 0.5), value: shutterDown)
-                    // Hit in a hurry without looking: a 100 pt target around the 76 pt ring.
-                    .contentShape(Circle().inset(by: -12))
-                }
-                .buttonStyle(ShutterStyle(pressed: $shutterDown))
-                .disabled(capturing || camera.status != .running)
-                .opacity(camera.status == .running ? 1 : 0.4)
-                .accessibilityLabel("Catch")
-
+                shutter
                 Spacer()
-
-                Button {
-                    Haptics.shared.tick()
-                    camera.toggleTorch()
-                } label: {
-                    Image(systemName: camera.torchOn ? "flashlight.on.fill" : "flashlight.off.fill")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(camera.torchOn ? Palette.bg : .white.opacity(0.85))
-                        .contentTransition(.symbolEffect(.replace))
-                        .frame(width: 50, height: 50)
-                        .background(Palette.yellow.opacity(camera.torchOn ? 1 : 0), in: Circle())
-                        .glass(Circle())
-                }
-                .buttonStyle(.plain)
-                .opacity(camera.hasTorch ? 1 : 0.35)
-                .disabled(!camera.hasTorch)
-                .accessibilityLabel("Torch")
+                torch
             }
         }
         .padding(.horizontal, 28)
     }
 
+    /// An opened foldable: the controls in a column down the side, like the Camera app held
+    /// sideways, so the brackets get the whole width of the screen beside them.
+    private var sideControls: some View {
+        VStack(spacing: 0) {
+            geotagToggle
+            Spacer(minLength: 12)
+            VStack(spacing: 18) {
+                torch
+                if showsZoom { zoomBar(vertical: true) }
+            }
+            shutter
+                .padding(.vertical, 24)
+            importButton
+            Spacer(minLength: 12)
+            galleryToggle
+        }
+        .padding(.vertical, 16)
+        .frame(width: Self.sideColumn)
+        .frame(maxHeight: .infinity)
+        // Darker towards the edge, so the controls read over a bright street.
+        .background {
+            LinearGradient(colors: [Color(hex: 0x060709, opacity: 0), Color(hex: 0x060709, opacity: 0.7)],
+                           startPoint: .leading, endPoint: .trailing)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+        }
+    }
+
+    private static let sideColumn: CGFloat = 116
+
+    private var showsZoom: Bool { camera.status == .running && camera.zoomStops.count > 1 }
+
+    private var geotagToggle: some View {
+        settingToggle($geotag, name: String(localized: "GEOTAG"), on: "location.fill", off: "location.slash.fill")
+    }
+
+    private var galleryToggle: some View {
+        settingToggle($saveToGallery, name: String(localized: "SAVE TO PHOTOS"), on: "photo.badge.arrow.down.fill", off: "photo.badge.arrow.down")
+    }
+
+    private var importButton: some View {
+        PhotosPicker(selection: $pickerItem, matching: .images) {
+            Image(systemName: "photo.on.rectangle.angled")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.85))
+                .frame(width: 50, height: 50)
+                .glass(Circle())
+        }
+        .buttonStyle(StickerPressStyle())
+        .disabled(capturing)
+        .accessibilityLabel("Import a photo")
+    }
+
+    private var shutter: some View {
+        Button {
+            Task { await shoot() }
+        } label: {
+            ZStack {
+                Circle().stroke(.white.opacity(0.92), lineWidth: 4)
+                    .frame(width: 76, height: 76)
+                Circle().fill(Palette.red)
+                    .frame(width: 60, height: 60)
+                    .scaleEffect(shutterDown ? 0.86 : 1)
+            }
+            .animation(.spring(response: 0.25, dampingFraction: 0.5), value: shutterDown)
+            // Hit in a hurry without looking: a 100 pt target around the 76 pt ring.
+            .contentShape(Circle().inset(by: -12))
+        }
+        .buttonStyle(ShutterStyle(pressed: $shutterDown))
+        .disabled(capturing || camera.status != .running)
+        .opacity(camera.status == .running ? 1 : 0.4)
+        .accessibilityLabel("Catch")
+    }
+
+    private var torch: some View {
+        Button {
+            Haptics.shared.tick()
+            camera.toggleTorch()
+        } label: {
+            Image(systemName: camera.torchOn ? "flashlight.on.fill" : "flashlight.off.fill")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(camera.torchOn ? Palette.bg : .white.opacity(0.85))
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 50, height: 50)
+                .background(Palette.yellow.opacity(camera.torchOn ? 1 : 0), in: Circle())
+                .glass(Circle())
+        }
+        .buttonStyle(.plain)
+        .opacity(camera.hasTorch ? 1 : 0.35)
+        .disabled(!camera.hasTorch)
+        .accessibilityLabel("Torch")
+    }
+
     /// One button per lens, like the Camera app: the active one shows the exact zoom.
-    private var zoomBar: some View {
+    private func zoomBar(vertical: Bool = false) -> some View {
         let stops = camera.zoomStops
         let active = stops.last { camera.zoom >= $0 - 0.05 } ?? stops.first!
-        return HStack(spacing: 8) {
+        let layout = vertical ? AnyLayout(VStackLayout(spacing: 8)) : AnyLayout(HStackLayout(spacing: 8))
+        return layout {
             ForEach(stops, id: \.self) { s in
                 let on = s == active
                 Button {

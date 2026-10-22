@@ -19,7 +19,28 @@ extension View {
     /// safe area there starts too high, so push it down; iPhones are untouched. Full-screen
     /// covers don't inherit it, so they call this too.
     func windowControlsClearance() -> some View {
-        safeAreaPadding(.top, UIDevice.current.model.hasPrefix("iPad") ? 26 : 0)
+        modifier(WindowClearance(iPad: true))
+    }
+
+    /// The same for an opened foldable's rounded corners, again inside a NavigationStack: it
+    /// starts each page's safe area afresh. (The iPad window's controls aren't over the book.)
+    func foldableClearance() -> some View {
+        modifier(WindowClearance(iPad: false))
+    }
+}
+
+private struct WindowClearance: ViewModifier {
+    let iPad: Bool
+    /// An opened foldable keeps its status bar in a column down the side, so its safe area
+    /// starts at the very top: the headers would sit in the rounded corner.
+    @State private var wide = false
+    /// Inside the app, a column of a wide screen (BOOK's index) is wide too.
+    @Environment(\.wide) private var inWide
+
+    func body(content: Content) -> some View {
+        content
+            .safeAreaPadding(.top, iPad && UIDevice.current.model.hasPrefix("iPad") ? 26 : wide || inWide ? 16 : 0)
+            .onGeometryChange(for: Bool.self) { WideLayout.isWide($0.size) } action: { wide = $0 }
     }
 }
 
@@ -132,6 +153,14 @@ final class Router {
         tab = .book
         bookPath = [.model(modelId), .vehicle(modelId: modelId, number: number)]
     }
+
+    /// A page picked in the index beside it, on a wide screen: it takes the place of the one open.
+    func pick(_ route: BookRoute) {
+        switch route {
+        case .model: bookPath = [route]
+        case .vehicle(let modelId, _): bookPath = [.model(modelId), route]
+        }
+    }
 }
 
 struct RootView: View {
@@ -142,6 +171,8 @@ struct RootView: View {
     /// instant and keeps where you were: HUNT's map and pins, how far down the book you were.
     @State private var opened: Set<AppTab> = []
     @State private var tabBarHeight: CGFloat = 0
+    /// An opened foldable: see `EnvironmentValues.wide`.
+    @State private var wide = false
     @Query private var sightings: [Sighting]
     @Environment(\.modelContext) private var context
     @Environment(\.scenePhase) private var scenePhase
@@ -156,6 +187,8 @@ struct RootView: View {
         }
         .onChange(of: router.tab, initial: true) { _, tab in opened.insert(tab) }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Folding or unfolding the phone flips it, and every screen lays itself out again.
+        .onGeometryChange(for: Bool.self) { WideLayout.isWide($0.size) } action: { wide = $0 }
         .overlay(alignment: .bottom) {
             if undo.pending != nil {
                 UndoToast {
@@ -180,6 +213,7 @@ struct RootView: View {
         .background(Palette.bg.ignoresSafeArea())
         .environment(router)
         .environment(undo)
+        .environment(\.wide, wide)
         // Keep the live feed ticking on every tab, so HUNT opens with trails already drawn.
         .onAppear { LiveFleetService.shared.start(LiveFleetService.appClient) }
         .onChange(of: scenePhase) { _, phase in
@@ -301,22 +335,75 @@ struct BookTab: View {
     /// or the end of every book list runs under the bar (#43).
     let tabBarHeight: CGFloat
     @Environment(Router.self) private var router
+    @Environment(\.wide) private var wide
 
     var body: some View {
+        if wide { split } else { stack }
+    }
+
+    private var stack: some View {
         @Bindable var router = router
-        NavigationStack(path: $router.bookPath) {
+        return NavigationStack(path: $router.bookPath) {
             BookIndexView()
                 .safeAreaPadding(.bottom, tabBarHeight)
-                .navigationDestination(for: BookRoute.self) { route in
-                    Group {
-                        switch route {
-                        case .model(let id): ModelPageView(modelId: id)
-                        case .vehicle(let modelId, let number): VehicleView(modelId: modelId, number: number)
-                        }
-                    }
-                    .safeAreaPadding(.bottom, tabBarHeight)
-                }
+                .foldableClearance()
+                .navigationDestination(for: BookRoute.self) { page($0) }
         }
+    }
+
+    /// An opened foldable: the index down the left and the page picked in it beside, so going
+    /// through the book is a tap per model rather than in and back out again. The same path
+    /// as on a phone: its first page is the one beside the index, the rest push on top of it.
+    private var split: some View {
+        let beside = Binding<[BookRoute]>(get: { Array(router.bookPath.dropFirst()) },
+                                          set: { router.bookPath = Array(router.bookPath.prefix(1)) + $0 })
+        return HStack(spacing: 0) {
+            NavigationStack {
+                BookIndexView()
+                    .safeAreaPadding(.bottom, tabBarHeight)
+                    .foldableClearance()
+            }
+            .frame(width: 380)
+            Rectangle().fill(Palette.hairline).frame(width: 1).ignoresSafeArea()
+            NavigationStack(path: beside) {
+                Group {
+                    if case .model(let id) = router.bookPath.first {
+                        ModelPageView(modelId: id).id(id)
+                    } else {
+                        PickAModel()
+                    }
+                }
+                .safeAreaPadding(.bottom, tabBarHeight)
+                .foldableClearance()
+                .navigationDestination(for: BookRoute.self) { page($0) }
+            }
+        }
+    }
+
+    private func page(_ route: BookRoute) -> some View {
+        Group {
+            switch route {
+            case .model(let id): ModelPageView(modelId: id)
+            case .vehicle(let modelId, let number): VehicleView(modelId: modelId, number: number)
+            }
+        }
+        .safeAreaPadding(.bottom, tabBarHeight)
+        .foldableClearance()
+    }
+}
+
+/// Beside the index before a model's picked.
+private struct PickAModel: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "square.grid.3x3.fill")
+                .font(.system(size: 30))
+                .foregroundStyle(Palette.faint)
+            Mono(String(localized: "PICK A MODEL", comment: "BOOK on a wide screen, beside the index before a model is picked"),
+                 size: 11, spacing: 0.14, color: Palette.sub)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .taborScreen()
     }
 }
 
@@ -354,7 +441,7 @@ struct StatusBarScrim: View {
             ], startPoint: .top, endPoint: .bottom)
             .frame(height: top + fade)
         }
-        .ignoresSafeArea(edges: .top)
+        .ignoresSafeArea(edges: [.top, .horizontal])
         .allowsHitTesting(false)
     }
 }

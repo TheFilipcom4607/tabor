@@ -18,6 +18,8 @@ struct BookIndexView: View {
     @Query private var sightings: [Sighting]
     @State private var filter: DexFilter = .all
     @AppStorage("bookOrder") private var order: BookOrder = .progress
+    @Environment(\.wide) private var wide
+    @Environment(Router.self) private var router
     private let catalog = Fleet.catalog
 
     var body: some View {
@@ -162,8 +164,9 @@ struct BookIndexView: View {
     }
 
     private func row(_ m: VehicleModel, stats: CollectionStats) -> some View {
-        NavigationLink(value: BookRoute.model(m.id)) {
-            DexRow(model: m, owned: stats.ownedCount(modelId: m.id), latest: latestSticker(m.id, stats: stats))
+        BookLink(route: .model(m.id)) {
+            DexRow(model: m, owned: stats.ownedCount(modelId: m.id), latest: latestSticker(m.id, stats: stats),
+                   selected: wide && router.bookPath.first == .model(m.id))
         }
         .buttonStyle(RowPressStyle())
     }
@@ -178,6 +181,9 @@ struct DexRow: View {
     let model: VehicleModel
     let owned: Int
     var latest: (number: Int, sticker: String?, photo: String?)? = nil
+    /// The page open beside the index, on a wide screen: edged in its tier's colour.
+    var selected = false
+    @Environment(\.wide) private var wide
 
     var body: some View {
         VStack(spacing: 9) {
@@ -202,16 +208,20 @@ struct DexRow: View {
         }
         .padding(.vertical, 13)
         .padding(.horizontal, 15)
-        .padding(.trailing, latest == nil ? 0 : 64)
+        // Room for the sticker: more where it sits inside the edge.
+        .padding(.trailing, latest == nil ? 0 : wide ? 76 : 64)
         .background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.06)))
+        // Under the sticker, which peeks over the edge.
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .stroke(selected ? model.tier.color : Color.white.opacity(0.06), lineWidth: selected ? 1.5 : 1))
         // Your latest catch of this model, peeking off the edge of the row.
         .overlay(alignment: .trailing) {
             if let latest {
                 DieCut(number: latest.number, sticker: latest.sticker, photo: latest.photo, height: 44, tagSize: 9, maxPixel: 240)
                     .frame(width: 74)
                     .rotationEffect(.degrees(stickerTilt(latest.number, range: 6)))
-                    .offset(x: 6)
+                    // Inside the edge on a wide screen, where the picked row's edge is lit up.
+                    .offset(x: wide ? -8 : 6)
             }
         }
         .contentShape(Rectangle())
@@ -229,6 +239,23 @@ struct DexRow: View {
         let years = model.yearsDisplay ?? model.trialDisplay ?? String(localized: "YEAR ?")
         if model.batches.count > 1 { return String(localized: "\(years) · \(model.batches.count) BATCHES") }
         return "\(years) · \(model.rangeDisplay)"
+    }
+}
+
+/// A way into a page from the index: pushed on a phone; on a wide screen the page opens
+/// beside the index instead (`BookTab`).
+struct BookLink<Label: View>: View {
+    let route: BookRoute
+    @ViewBuilder var label: () -> Label
+    @Environment(\.wide) private var wide
+    @Environment(Router.self) private var router
+
+    var body: some View {
+        if wide {
+            Button { router.pick(route) } label: { label() }
+        } else {
+            NavigationLink(value: route) { label() }
+        }
     }
 }
 
@@ -323,7 +350,7 @@ private struct WrapShelf: View {
         }
         .frame(width: 118, alignment: .leading)
         if let modelId {
-            NavigationLink(value: BookRoute.vehicle(modelId: modelId, number: w.number)) { label }
+            BookLink(route: .vehicle(modelId: modelId, number: w.number)) { label }
                 .buttonStyle(StickerPressStyle(tilt: stickerTilt(w.number)))
                 .accessibilityLabel(caught == nil ? Text("\(w.nameDisplay), \(String(w.number)): not caught yet")
                                                   : Text("\(w.nameDisplay), \(String(w.number)): caught"))

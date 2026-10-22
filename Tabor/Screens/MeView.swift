@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 struct MeView: View {
     @Query(sort: \Sighting.date, order: .reverse) private var sightings: [Sighting]
     @Environment(Router.self) private var router
+    @Environment(\.wide) private var wide
     @State private var showSettings = false
     @State private var showMap = false
     @State private var showStats = false
@@ -42,103 +43,31 @@ struct MeView: View {
                     .buttonStyle(.plain)
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    ScreenTitle(text: String(localized: "Trophy shelf"))
-                    Mono(trophies.isEmpty ? "NOTHING ON THE SHELF YET"
-                         : "YOUR \(trophies.count) RAREST OF \(stats.caught)",
-                         size: 11, color: Palette.sub)
-                }
-                .padding(.top, 16)
-                .padding(.horizontal, 22)
-
-                TrophyShelf(trophies: trophies, sightings: sightings)
-                    .padding(.top, 20)
-                    .padding(.horizontal, 22)
-
-                HStack(alignment: .firstTextBaseline) {
-                    SectionLabel(text: String(localized: "STATS"))
-                    Spacer()
-                    if !sightings.isEmpty {
-                        Button {
-                            showStats = true
-                        } label: { Mono("ALL STATS", size: 10.5, color: Palette.yellow) }
-                        .buttonStyle(.plain)
+                if wide {
+                    // An opened foldable: what you've got on the left, the badges and the log
+                    // beside it, scrolling together.
+                    HStack(alignment: .top, spacing: 0) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            shelf(trophies, stats: stats)
+                            statsSection(stats)
+                            tipCard
+                            spotMap
+                        }
+                        .frame(maxWidth: .infinity)
+                        VStack(alignment: .leading, spacing: 0) {
+                            badgeShelf
+                            catchLog
+                        }
+                        .frame(maxWidth: .infinity)
                     }
+                } else {
+                    shelf(trophies, stats: stats)
+                    statsSection(stats)
+                    tipCard
+                    badgeShelf
+                    catchLog
+                    spotMap
                 }
-                .padding(.top, 18)
-                .padding(.bottom, 9)
-                .padding(.horizontal, 22)
-
-                Button {
-                    if !sightings.isEmpty { showStats = true }
-                } label: {
-                    StatsStrip(items: [
-                        (stats.caught.grouped, String(localized: "CAUGHT"), Palette.ink),
-                        (fleetShareText(stats.fleetShare(catalog: catalog)), String(localized: "OF FLEET"), Palette.yellow),
-                        ("\(Streak.days(sightings.map(\.date)))", String(localized: "DAY STREAK"), Palette.ink),
-                        (depotsTouched(stats), String(localized: "DEPOTS"), Palette.ink),
-                    ])
-                }
-                .buttonStyle(StickerPressStyle())
-                .padding(.horizontal, 22)
-
-                // One nudge at a time: the widgets first, then (much later) the tips.
-                if !widgetTipSeen, sightings.count >= WidgetTip.afterCatches {
-                    TipCard(icon: "square.grid.2x2.fill", kicker: "NEW: WIDGETS", title: "Put your book on your Home Screen") {
-                        showWidgetHowTo = true
-                        widgetTipSeen = true
-                    } dismiss: {
-                        withAnimation(.snappy) { widgetTipSeen = true }
-                    }
-                    .padding(.top, 18)
-                    .padding(.horizontal, 22)
-                } else if !supportTipSeen, !TipJar.shared.tipped, SupportAsks.count < SupportAsk.maxAsks,
-                          sightings.count >= SupportTip.afterCatches {
-                    TipCard(icon: "heart.fill", kicker: "ENJOYING TABOR?", title: "Consider supporting it with a tip") {
-                        SupportAsks.record()
-                        router.supportSheet = .meCard
-                        supportTipSeen = true
-                    } dismiss: {
-                        withAnimation(.snappy) { supportTipSeen = true }
-                    }
-                    .padding(.top, 18)
-                    .padding(.horizontal, 22)
-                }
-
-                BadgeShelf(badges: Achievements.evaluate(sightings.map(\.record), catalog: catalog))
-                    .padding(.top, 18)
-                    .padding(.horizontal, 22)
-
-                if !sightings.isEmpty {
-                    CatchLogSection(sightings: sightings)
-                        .padding(.top, 16)
-                        .padding(.horizontal, 22)
-                }
-
-                HStack(alignment: .firstTextBaseline) {
-                    SectionLabel(text: String(localized: "WHERE YOU SPOT"))
-                    Spacer()
-                    Button {
-                        showMap = true
-                    } label: { Mono("OPEN MAP", size: 10.5, color: Palette.yellow) }
-                    .buttonStyle(.plain)
-                }
-                .padding(.top, 16)
-                .padding(.bottom, 9)
-                .padding(.horizontal, 22)
-
-                SpotSnapshot(sightings: sightings)
-                    .frame(height: 190)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.06)))
-                    .onTapGesture {
-                        showMap = true
-                    }
-                    .padding(.horizontal, 22)
-                mapCaption
-                    .padding(.horizontal, 22)
-                    .padding(.top, 8)
-                    .padding(.bottom, 22)
             }
             .fitScrollWidth()
         }
@@ -180,6 +109,122 @@ struct MeView: View {
             }
             .windowControlsClearance()
             .preferredColorScheme(.dark)
+        }
+    }
+
+    private func shelf(_ trophies: [OwnedVehicle], stats: CollectionStats) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 4) {
+                ScreenTitle(text: String(localized: "Trophy shelf"))
+                Mono(trophies.isEmpty ? "NOTHING ON THE SHELF YET"
+                     : "YOUR \(trophies.count) RAREST OF \(stats.caught)",
+                     size: 11, color: Palette.sub)
+            }
+            .padding(.top, 16)
+            .padding(.horizontal, 22)
+
+            TrophyShelf(trophies: trophies, sightings: sightings)
+                .padding(.top, 20)
+                .padding(.horizontal, 22)
+        }
+    }
+
+    private func statsSection(_ stats: CollectionStats) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                SectionLabel(text: String(localized: "STATS"))
+                Spacer()
+                if !sightings.isEmpty {
+                    Button {
+                        showStats = true
+                    } label: { Mono("ALL STATS", size: 10.5, color: Palette.yellow) }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.top, 18)
+            .padding(.bottom, 9)
+            .padding(.horizontal, 22)
+
+            Button {
+                if !sightings.isEmpty { showStats = true }
+            } label: {
+                StatsStrip(items: [
+                    (stats.caught.grouped, String(localized: "CAUGHT"), Palette.ink),
+                    (fleetShareText(stats.fleetShare(catalog: catalog)), String(localized: "OF FLEET"), Palette.yellow),
+                    ("\(Streak.days(sightings.map(\.date)))", String(localized: "DAY STREAK"), Palette.ink),
+                    (depotsTouched(stats), String(localized: "DEPOTS"), Palette.ink),
+                ])
+            }
+            .buttonStyle(StickerPressStyle())
+            .padding(.horizontal, 22)
+        }
+    }
+
+    @ViewBuilder private var tipCard: some View {
+        // One nudge at a time: the widgets first, then (much later) the tips.
+        if !widgetTipSeen, sightings.count >= WidgetTip.afterCatches {
+            TipCard(icon: "square.grid.2x2.fill", kicker: "NEW: WIDGETS", title: "Put your book on your Home Screen") {
+                showWidgetHowTo = true
+                widgetTipSeen = true
+            } dismiss: {
+                withAnimation(.snappy) { widgetTipSeen = true }
+            }
+            .padding(.top, 18)
+            .padding(.horizontal, 22)
+        } else if !supportTipSeen, !TipJar.shared.tipped, SupportAsks.count < SupportAsk.maxAsks,
+                  sightings.count >= SupportTip.afterCatches {
+            TipCard(icon: "heart.fill", kicker: "ENJOYING TABOR?", title: "Consider supporting it with a tip") {
+                SupportAsks.record()
+                router.supportSheet = .meCard
+                supportTipSeen = true
+            } dismiss: {
+                withAnimation(.snappy) { supportTipSeen = true }
+            }
+            .padding(.top, 18)
+            .padding(.horizontal, 22)
+        }
+    }
+
+    private var badgeShelf: some View {
+        BadgeShelf(badges: Achievements.evaluate(sightings.map(\.record), catalog: catalog))
+            .padding(.top, 18)
+            .padding(.horizontal, 22)
+    }
+
+    @ViewBuilder private var catchLog: some View {
+        if !sightings.isEmpty {
+            CatchLogSection(sightings: sightings)
+                .padding(.top, 16)
+                .padding(.horizontal, 22)
+        }
+    }
+
+    private var spotMap: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                SectionLabel(text: String(localized: "WHERE YOU SPOT"))
+                Spacer()
+                Button {
+                    showMap = true
+                } label: { Mono("OPEN MAP", size: 10.5, color: Palette.yellow) }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, 16)
+            .padding(.bottom, 9)
+            .padding(.horizontal, 22)
+
+            SpotSnapshot(sightings: sightings)
+                .frame(height: 190)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.06)))
+                .onTapGesture {
+                    showMap = true
+                }
+                .padding(.horizontal, 22)
+            mapCaption
+                .padding(.horizontal, 22)
+                .padding(.top, 8)
+                .padding(.bottom, 22)
         }
     }
 

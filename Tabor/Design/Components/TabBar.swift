@@ -34,6 +34,7 @@ struct TabBar: View {
     @Namespace private var glow
     /// Bumped when a tab becomes active, so only that icon bounces (not the one left behind).
     @State private var bounces: [AppTab: Int] = [:]
+    @Environment(\.wide) private var wide
 
     var body: some View {
         HStack(spacing: 0) {
@@ -71,15 +72,17 @@ struct TabBar: View {
             }
         }
         .padding(.horizontal, 10)
+        // Four tabs a thumb's reach apart, not spread across an opened foldable.
+        .wideColumn(wide)
         .padding(.top, 4)
         .padding(.bottom, 2)
         // Frosted, so whatever scrolls underneath still reads as being there.
         .background {
             Rectangle().fill(.ultraThinMaterial)
                 .overlay(Palette.bg.opacity(0.72))
-                .ignoresSafeArea(edges: .bottom)
+                .overlay(alignment: .top) { Rectangle().fill(Palette.hairline).frame(height: 1) }
+                .ignoresSafeArea(edges: [.bottom, .horizontal])
         }
-        .overlay(alignment: .top) { Rectangle().fill(Palette.hairline).frame(height: 1) }
         // Also when the app switches tabs itself (a catch jumping to the book).
         .onChange(of: selection) { _, new in bounces[new, default: 0] += 1 }
     }

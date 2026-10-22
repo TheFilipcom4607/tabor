@@ -26,6 +26,8 @@ struct ModelPageView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
+    /// Beside the index on a wide screen, where there's nothing to go back to.
+    @Environment(\.wide) private var wide
 
     var body: some View {
         if let model = Fleet.catalog.model(id: modelId) {
@@ -40,8 +42,10 @@ struct ModelPageView: View {
     private var missingModel: some View {
         VStack(alignment: .leading, spacing: 0) {
             TopBar {
-                Button { dismiss() } label: { Mono("← BACK", size: 12, spacing: 0.16) }
-                    .buttonStyle(.plain)
+                if !wide {
+                    Button { dismiss() } label: { Mono("← BACK", size: 12, spacing: 0.16) }
+                        .buttonStyle(.plain)
+                }
             } trailing: { EmptyView() }
             ScreenTitle(text: String(localized: "Model not in the fleet data"))
                 .padding(.top, 16)
@@ -62,8 +66,10 @@ struct ModelPageView: View {
 
         return VStack(alignment: .leading, spacing: 0) {
             TopBar {
-                Button { dismiss() } label: { Mono("← ALL MODELS", size: 12, spacing: 0.16) }
-                    .buttonStyle(.plain)
+                if !wide {
+                    Button { dismiss() } label: { Mono("← ALL MODELS", size: 12, spacing: 0.16) }
+                        .buttonStyle(.plain)
+                }
             } trailing: {
                 HStack(spacing: 14) {
                     StarButton(modelId: model.id, chip: false)
