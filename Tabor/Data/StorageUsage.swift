@@ -39,14 +39,14 @@ enum StorageUsage {
         return b
     }
 
-    /// Files nothing needs any more. Exported ZIPs were left in tmp after the share sheet
-    /// closed (a debug ZIP reached 2.9 GB), and iOS doesn't reliably clear it.
+    /// Files nothing needs any more. Exported ZIPs (and CSVs) were left in tmp after the share
+    /// sheet closed (a debug ZIP reached 2.9 GB), and iOS doesn't reliably clear it.
     /// `.default_SUPPORT` is SwiftData's external storage: only the parked iCloud branch ever
     /// wrote there (photos as store records), and phones put back on main keep it orphaned.
     static func sweep() {
         let fm = FileManager.default
         for url in (try? fm.contentsOfDirectory(at: fm.temporaryDirectory, includingPropertiesForKeys: nil)) ?? []
-        where url.pathExtension == "zip" && url.lastPathComponent.hasPrefix("TABOR ") {
+        where ["zip", "csv"].contains(url.pathExtension) && url.lastPathComponent.hasPrefix("TABOR ") {
             try? fm.removeItem(at: url)
         }
         let support = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]

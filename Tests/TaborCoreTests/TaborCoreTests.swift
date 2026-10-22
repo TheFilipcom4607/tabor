@@ -2093,3 +2093,29 @@ private let shelfStats = CollectionStats(sightings: (1...100).map {
     #expect(BookOrder.newest.sort(shelf, stats: shelfStats).map(\.id) == ["rare", "common", "gold", "tiny", "legendary", "big"])
 }
 
+
+// MARK: - CSV export
+
+@Test func catchCSVIsShapedForExcelInPolish() throws {
+    let warsaw = TimeZone(identifier: "Europe/Warsaw")!
+    let records = [
+        SightingRecord(number: 1469, modelId: "tram-konstal-105n", date: fixtureNow, line: "17",
+                       street: #"al. "Solidarności"; róg"#, latitude: 52.2297, longitude: 21.0122),
+        SightingRecord(number: 1470, modelId: "tram-konstal-105n", date: fixtureNow - 0.001, line: "17", pairedWith: 1469),
+        SightingRecord(number: FleetNumber.coded("P1")!, modelId: "tram-works-tamping-plasser-theurer-pt-08-16-m",
+                       date: fixtureNow - 86400),
+    ]
+    let csv = CatchCSV.make(records: records, catalog: catalog, timeZone: warsaw, decimal: ",")
+    // The BOM is what makes Excel read it as UTF-8.
+    #expect(csv.hasPrefix("\u{FEFF}Date;Time;Fleet number;"))
+    let rows = csv.dropFirst().components(separatedBy: "\r\n").filter { !$0.isEmpty }
+    #expect(rows.count == 4)
+    // Newest first; a field with a separator or a quote is quoted, the quote doubled.
+    #expect(rows[1].hasPrefix("2026-09-25;19:24;1469;"))
+    #expect(rows[1].contains(#";"al. ""Solidarności""; róg";52,229700;21,012200;"#))
+    #expect(rows[1].contains(";Śródmieście;"))
+    // The second car says which car it was added alongside.
+    #expect(rows[2].hasPrefix("2026-09-25;19:23;1470;") && rows[2].hasSuffix(";1469"))
+    // A coded works car by its code.
+    #expect(rows[3].hasPrefix("2026-09-24;19:24;P1;Plasser & Theurer;"))
+}

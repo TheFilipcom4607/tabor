@@ -1,6 +1,156 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Export as spreadsheet (CSV)": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eksportuj jako arkusz (CSV)"
+          }
+        }
+      }
+    },
+    "Date": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data"
+          }
+        }
+      }
+    },
+    "Time": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Godzina"
+          }
+        }
+      }
+    },
+    "Fleet number": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Numer taborowy"
+          }
+        }
+      }
+    },
+    "Make": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Producent"
+          }
+        }
+      }
+    },
+    "Model": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model"
+          }
+        }
+      }
+    },
+    "Type": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rodzaj"
+          }
+        }
+      }
+    },
+    "Operator": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przewoźnik"
+          }
+        }
+      }
+    },
+    "Line": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linia"
+          }
+        }
+      }
+    },
+    "District": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dzielnica"
+          }
+        }
+      }
+    },
+    "Street": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ulica"
+          }
+        }
+      }
+    },
+    "Latitude": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szerokość geograficzna"
+          }
+        }
+      }
+    },
+    "Longitude": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Długość geograficzna"
+          }
+        }
+      }
+    },
+    "Event wrap": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oklejenie okolicznościowe"
+          }
+        }
+      }
+    },
+    "Second car of": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drugi wagon przy"
+          }
+        }
+      }
+    },
     "Progress": {
       "localizations": {
         "pl": {

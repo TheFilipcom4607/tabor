@@ -652,6 +652,8 @@ struct SettingsSheet: View {
                 Section {
                     Button(backingUp ? "Packing…" : "Export catches") { exportBackup() }
                         .disabled(allSightings.isEmpty || backingUp)
+                    Button("Export as spreadsheet (CSV)") { exportCSV() }
+                        .disabled(allSightings.isEmpty || backingUp)
                     Button("Import a backup…") { importing = true }
                         .disabled(backingUp)
                 } header: {
@@ -717,7 +719,7 @@ struct SettingsSheet: View {
         .onAppear { debugCount = DebugRecord.count }
         .task { await measureStorage() }
         .sheet(item: $exportURL) { url in
-            // The ZIP is only for handing over; wherever it went keeps its own copy.
+            // The ZIP or CSV is only for handing over; wherever it went keeps its own copy.
             ShareSheet(items: [url])
                 .onDisappear {
                     try? FileManager.default.removeItem(at: url)
@@ -843,6 +845,22 @@ extension SettingsSheet {
             case .success(let url): exportURL = url
             case .failure(let error): backupMessage = String(localized: "Couldn't export: \(error.localizedDescription)")
             }
+        }
+    }
+
+    /// The catches as a table for Excel or Numbers (#97). Not a backup: no photos, and
+    /// nothing reads it back in.
+    func exportCSV() {
+        let stamp = DateFormatter()
+        stamp.locale = Locale(identifier: "en_US_POSIX")
+        stamp.dateFormat = "yyyy-MM-dd HHmm"
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("TABOR catches \(stamp.string(from: Date())).csv")
+        do {
+            try Data(CatchCSV.make(records: allSightings.map(\.record), catalog: Fleet.catalog).utf8).write(to: url)
+            exportURL = url
+        } catch {
+            backupMessage = String(localized: "Couldn't export: \(error.localizedDescription)")
         }
     }
 
