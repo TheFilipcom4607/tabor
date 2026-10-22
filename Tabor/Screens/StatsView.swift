@@ -954,8 +954,9 @@ private struct StatsShareCard: View {
         let s = stats
         let rarest = s.records.rarest.flatMap { r in catalog.model(id: r.modelId).map { (r, $0) } }
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
+            HStack(spacing: 8) {
                 Text("TABOR").font(TaborFont.mono(13, 700)).em(0.2, size: 13)
+                SupporterMark()
                 Spacer()
                 Mono(dateLine, size: 10.5, color: Palette.sub)
             }
@@ -993,6 +994,7 @@ private struct StatsShareCard: View {
         .padding(.bottom, 22)
         .frame(width: 360, height: 640, alignment: .topLeading)
         .background(Palette.bg)
+        .supporterRim()
         .environment(\.colorScheme, .dark)
     }
 

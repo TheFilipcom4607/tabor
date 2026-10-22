@@ -1,6 +1,76 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "TABOR costs about 55 zł a month to run: the server behind HUNT's live map and Apple's developer fee. It's free with no ads, so tips are what keep it going.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utrzymanie TABORU kosztuje około 55 zł miesięcznie: serwer, z którego HUNT bierze mapę na żywo, i opłata deweloperska dla Apple. Aplikacja jest darmowa i bez reklam, więc to napiwki pozwalają jej działać."
+          }
+        }
+      }
+    },
+    "Any tip puts a heart next to ME, unlocks three extra app icons and a gold rim on the cards you share.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Każdy napiwek dodaje serduszko przy ME, odblokowuje trzy dodatkowe ikony aplikacji i złotą ramkę na kartach, które udostępniasz."
+          }
+        }
+      }
+    },
+    "Badges and everything else stay free.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odznaki i cała reszta zostają za darmo."
+          }
+        }
+      }
+    },
+    "Keep TABOR going": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomóż utrzymać TABOR"
+          }
+        }
+      }
+    },
+    "YOUR FIRST LEGENDARY": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TWÓJ PIERWSZY LEGENDARNY"
+          }
+        }
+      }
+    },
+    "NEW BADGE": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOWA ODZNAKA"
+          }
+        }
+      }
+    },
+    "NOT NOW": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NIE TERAZ"
+          }
+        }
+      }
+    },
     "Export as spreadsheet (CSV)": {
       "localizations": {
         "pl": {

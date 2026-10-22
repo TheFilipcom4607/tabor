@@ -341,6 +341,7 @@ struct RevealView: View {
         }
         .onChange(of: draft.partner) { _, _ in refreshAlso() }
         .animation(.spring(response: 0.45, dampingFraction: 0.6), value: draft.wrap)
+        .onAppear { router.revealShown() }
         // Only now may the book scroll to the catch: CATCH (and this cover with it) goes as the
         // tab switches, so the cover's own onDismiss never runs.
         .onDisappear { router.revealGone() }
@@ -1035,6 +1036,13 @@ struct RevealView: View {
             context.assign(number: number, to: model.id, existing: manual)
         }
         try? context.save()
+        // A moment worth asking for a tip on; the sheet waits until the reveal has gone.
+        let catches = (try? context.fetchCount(FetchDescriptor<Sighting>(predicate: #Predicate { $0.pairedWith == nil }))) ?? 0
+        let added = cars.filter { $0.pairedWith == nil }.count
+        let firstLegendary = SupportAsk.isFirstLegendary(before: draft.book.stats, caught: cars.map(\.modelId), catalog: catalog)
+        if let reason = SupportAsk.reason(catchesBefore: catches - added, catchesAfter: catches, firstLegendary: firstLegendary) {
+            router.askForSupport(reason)
+        }
         // Shrinking a full-size shot takes a moment: off the main thread, then each sighting
         // points at its own small copy (HEIC, so a new name) and the full-size one goes.
         let files = cars.map(\.photoFile)

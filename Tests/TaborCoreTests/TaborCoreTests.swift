@@ -2119,3 +2119,33 @@ private let shelfStats = CollectionStats(sightings: (1...100).map {
     // A coded works car by its code.
     #expect(rows[3].hasPrefix("2026-09-24;19:24;P1;Plasser & Theurer;"))
 }
+
+// MARK: - Asking for a tip
+
+@Test func supportAskPicksItsMoments() {
+    #expect(SupportAsk.reason(catchesBefore: 48, catchesAfter: 49, firstLegendary: false) == nil)
+    #expect(SupportAsk.reason(catchesBefore: 49, catchesAfter: 50, firstLegendary: false) == .milestone(50))
+    // Three vehicles in one shot can step over a milestone.
+    #expect(SupportAsk.reason(catchesBefore: 148, catchesAfter: 151, firstLegendary: false) == .milestone(150))
+    #expect(SupportAsk.reason(catchesBefore: 150, catchesAfter: 151, firstLegendary: false) == nil)
+    #expect(SupportAsk.reason(catchesBefore: 49, catchesAfter: 50, firstLegendary: true) == .firstLegendary)
+
+    let legendary = catalog.models.first { $0.tier == .legendary && $0.regular }!
+    let common = catalog.models.first { $0.tier == .common }!
+    let empty = CollectionStats(sightings: [])
+    #expect(SupportAsk.isFirstLegendary(before: empty, caught: [common.id, legendary.id], catalog: catalog))
+    #expect(!SupportAsk.isFirstLegendary(before: empty, caught: [common.id], catalog: catalog))
+    let had = CollectionStats(sightings: [SightingRecord(number: legendary.numbers[0], modelId: legendary.id, date: fixtureNow)])
+    #expect(!SupportAsk.isFirstLegendary(before: had, caught: [legendary.id], catalog: catalog))
+}
+
+@Test func supportAskIsRareAndNeverForTippers() {
+    let now = fixtureNow
+    #expect(SupportAsk.due(asks: 0, lastAsked: nil, now: now, tipped: false))
+    #expect(!SupportAsk.due(asks: 0, lastAsked: nil, now: now, tipped: true))
+    // Two weeks apart at least.
+    #expect(!SupportAsk.due(asks: 1, lastAsked: now - 13 * 86400, now: now, tipped: false))
+    #expect(SupportAsk.due(asks: 1, lastAsked: now - 14 * 86400, now: now, tipped: false))
+    // Three times ever.
+    #expect(!SupportAsk.due(asks: 3, lastAsked: now - 400 * 86400, now: now, tipped: false))
+}

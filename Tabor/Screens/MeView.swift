@@ -92,9 +92,11 @@ struct MeView: View {
                     }
                     .padding(.top, 18)
                     .padding(.horizontal, 22)
-                } else if !supportTipSeen, !TipJar.shared.tipped, sightings.count >= SupportTip.afterCatches {
+                } else if !supportTipSeen, !TipJar.shared.tipped, SupportAsks.count < SupportAsk.maxAsks,
+                          sightings.count >= SupportTip.afterCatches {
                     TipCard(icon: "heart.fill", kicker: "ENJOYING TABOR?", title: "Consider supporting it with a tip") {
-                        showSettings = true
+                        SupportAsks.record()
+                        router.supportSheet = .meCard
                         supportTipSeen = true
                     } dismiss: {
                         withAnimation(.snappy) { supportTipSeen = true }

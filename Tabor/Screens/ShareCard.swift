@@ -59,11 +59,12 @@ struct ShareCard: View {
         let accent = wrap != nil ? Palette.foilInk : tier == .common ? Palette.yellow : tier.color
 
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
+            HStack(spacing: 8) {
                 Text("TABOR")
                     .font(TaborFont.grotesk(15, 700))
                     .em(0.02, size: 15)
                     .foregroundStyle(Palette.ink)
+                SupporterMark()
                 Spacer()
                 Mono("CAUGHT · \(Self.day.string(from: sighting.date).uppercased())", size: 9.5, spacing: 0.14,
                      color: accent)
@@ -133,6 +134,7 @@ struct ShareCard: View {
                 ], center: .init(x: 0.5, y: 0.42), startRadius: 8, endRadius: 260)
             }
         }
+        .supporterRim()
         .environment(\.colorScheme, .dark)
     }
 
@@ -289,11 +291,12 @@ struct BadgeShareCard: View {
         let medal = badge.medal
 
         VStack(spacing: 0) {
-            HStack {
+            HStack(spacing: 8) {
                 Text("TABOR")
                     .font(TaborFont.grotesk(15, 700))
                     .em(0.02, size: 15)
                     .foregroundStyle(Palette.ink)
+                SupporterMark()
                 Spacer()
                 Mono(badge.kicker, size: 9.5, spacing: 0.14, color: medal.ink)
             }
@@ -346,6 +349,7 @@ struct BadgeShareCard: View {
                 ], center: .init(x: 0.5, y: 0.22), startRadius: 8, endRadius: 280)
             }
         }
+        .supporterRim()
         .environment(\.colorScheme, .dark)
     }
 
@@ -372,6 +376,37 @@ struct BadgeShareCard: View {
                         .frame(width: 96)
                     }
                 }
+            }
+        }
+    }
+}
+
+/// Supporters' share cards: a gold edge, and ♥ SUPPORTER by the wordmark, a thank-you that
+/// travels with what they share.
+struct SupporterMark: View {
+    var body: some View {
+        if TipJar.shared.isSupporter {
+            HStack(spacing: 3) {
+                Image(systemName: "heart.fill").font(.system(size: 7.5, weight: .bold))
+                Mono("SUPPORTER", size: 8.5, weight: 700, spacing: 0.12, color: Palette.yellow)
+            }
+            .foregroundStyle(Palette.yellow)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2.5)
+            .background(Palette.yellow.opacity(0.14), in: Capsule())
+            .fixedSize()
+        }
+    }
+}
+
+extension View {
+    func supporterRim() -> some View {
+        overlay {
+            if TipJar.shared.isSupporter {
+                Rectangle().strokeBorder(
+                    LinearGradient(colors: [Palette.goldWash, Palette.yellow, Palette.brass, Palette.yellow, Palette.goldWash],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing),
+                    lineWidth: 5)
             }
         }
     }

@@ -88,7 +88,34 @@ final class Router {
     func revealGone() {
         landing = pendingLanding
         pendingLanding = nil
+        revealOpen = false
+        revealClosed = Date()
     }
+
+    /// A reveal is on screen: nothing else may be presented over the app meanwhile.
+    private(set) var revealOpen = false
+    /// When the last one went, so a badge it earned can still count as its moment.
+    private(set) var revealClosed: Date?
+
+    func revealShown() { revealOpen = true }
+
+    /// A catch worth asking for a tip on (`SupportAsk`), held until the reveal and any badge
+    /// toasts have gone. The first reason wins.
+    private(set) var supportPending: SupportAsk.Reason?
+    /// The tip sheet, presented from RootView so it's never on top of the reveal.
+    var supportSheet: SupportAsk.Reason?
+
+    func askForSupport(_ reason: SupportAsk.Reason) {
+        if supportPending == nil { supportPending = reason }
+    }
+
+    /// From a badge earned by a catch just made (the badges are worked out once it settles).
+    func badgeEarned() {
+        guard let revealClosed, Date().timeIntervalSince(revealClosed) < 30 else { return }
+        askForSupport(.newBadge)
+    }
+
+    func supportAsked() { supportPending = nil }
 
     /// Its vehicles on HUNT's map. The filter is already set; the book keeps its place.
     func showOnHunt(_ modelId: String) {
@@ -207,6 +234,21 @@ struct RootView: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
+        // The tip sheet, once the reveal and the badge toasts are out of the way: a catch's
+        // badges arrive a couple of seconds after it settles, so give them time to start.
+        .task(id: router.supportPending) {
+            guard let reason = router.supportPending else { return }
+            try? await Task.sleep(for: .seconds(3.5))
+            for _ in 0..<40 where router.revealOpen || badges.busy {
+                try? await Task.sleep(for: .milliseconds(500))
+            }
+            guard !Task.isCancelled else { return }
+            router.supportAsked()
+            guard !router.revealOpen, !badges.busy, SupportAsks.due else { return }
+            SupportAsks.record()
+            router.supportSheet = reason
+        }
+        .sheet(item: $router.supportSheet) { reason in TipSheet(reason: reason) }
         .task { await FleetUpdater.checkIfDue() }
         .task { TipJar.shared.start() }
         .task { await Task.detached(priority: .background) { StorageUsage.sweep() }.value }
@@ -224,7 +266,7 @@ struct RootView: View {
             guard await settled() else { return }
             let earned = await Task.detached(priority: .utility) { Achievements.evaluate(records, catalog: catalog) }.value
             guard !Task.isCancelled else { return }
-            badges.update(earned)
+            if badges.update(earned) { router.badgeEarned() }
             await WeatherService.backfill(sightings, context: context)
         }
         // Refresh the Home / Lock Screen widgets whenever what they show could have changed.

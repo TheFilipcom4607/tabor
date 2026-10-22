@@ -556,21 +556,27 @@ final class BadgeTracker {
     private var showing = false
     private static let key = "badgeLevelsSeen"
 
-    func update(_ badges: [Achievement]) {
+    /// A toast is up or waiting.
+    var busy: Bool { showing || current != nil || !queue.isEmpty }
+
+    /// Queues a toast for anything newly earned; true if there was any.
+    @discardableResult
+    func update(_ badges: [Achievement]) -> Bool {
         let defaults = UserDefaults.standard
         let now = Dictionary(badges.map { ($0.id, $0.level) }, uniquingKeysWith: max)
         guard let seen = defaults.dictionary(forKey: Self.key) as? [String: Int] else {
             // First launch with badges: what's already earned arrives quietly.
             defaults.set(now, forKey: Self.key)
-            return
+            return false
         }
         let fresh = badges.filter { $0.level > (seen[$0.id] ?? 0) }
         // Remember the best level ever reached, so deleting and re-adding a catch doesn't replay it.
         defaults.set(seen.merging(now, uniquingKeysWith: max), forKey: Self.key)
-        guard !fresh.isEmpty else { return }
+        guard !fresh.isEmpty else { return false }
         let best = fresh.sorted { ($0.secret ? 1 : 0, $0.level) > ($1.secret ? 1 : 0, $1.level) }
         queue += best.count > 3 ? [Unlock(badge: best[0], others: best.count - 1)] : best.map { Unlock(badge: $0) }
         if !showing { Task { await playQueue() } }
+        return true
     }
 
     func dismiss() {
