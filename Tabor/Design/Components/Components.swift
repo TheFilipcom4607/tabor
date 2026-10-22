@@ -189,7 +189,7 @@ extension View {
     /// Only for full-width screens and sheets: in HUNT's bottom card it took the screen's width
     /// and pushed the card off both sides.
     func fitScrollWidth() -> some View {
-        containerRelativeFrame(.horizontal)
+        ScrollWidth { self }
     }
 
     /// Rows slide out from under a pinned header instead of being cut off at a hard line.
@@ -199,6 +199,23 @@ extension View {
                 .frame(height: height)
                 .allowsHitTesting(false)
         }
+    }
+}
+
+/// Exactly the width the scroll view offers, whatever its content would like. Not the
+/// container's: a page pushed onto a stack that spans a status bar down the side (a foldable's
+/// cover screen) measured that whole width and lost both margins off the screen.
+private struct ScrollWidth: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let content = subviews.first else { return .zero }
+        let width = proposal.width ?? content.sizeThatFits(.unspecified).width
+        return CGSize(width: width, height: content.sizeThatFits(ProposedViewSize(width: width, height: proposal.height)).height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        // Centred, as a container-relative frame placed it.
+        subviews.first?.place(at: CGPoint(x: bounds.midX, y: bounds.minY), anchor: .top,
+                              proposal: ProposedViewSize(width: bounds.width, height: bounds.height))
     }
 }
 
