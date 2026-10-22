@@ -1013,14 +1013,11 @@ private struct StatsShareCard: View {
         return ZStack {
             ForEach(Array(stickers.enumerated()).reversed(), id: \.offset) { i, s in
                 let spot = spots[i]
-                ZStack(alignment: .bottomTrailing) {
-                    Image(uiImage: s.2).resizable().scaledToFit()
-                        .frame(width: spot.w, height: spot.w * 0.7)
-                        .shadow(color: .black.opacity(0.55), radius: 5, y: 4)
-                    if i == 0 { TierNumber(number: s.0, tier: s.1, size: 12).offset(x: -8, y: -4) }
-                }
-                .rotationEffect(.degrees(spot.tilt))
-                .offset(x: spot.x, y: spot.y)
+                Image(uiImage: s.2).resizable().scaledToFit()
+                    .frame(width: spot.w, height: spot.w * 0.7)
+                    .shadow(color: .black.opacity(0.55), radius: 5, y: 4)
+                    .rotationEffect(.degrees(spot.tilt))
+                    .offset(x: spot.x, y: spot.y)
             }
         }
         .frame(maxWidth: .infinity)
