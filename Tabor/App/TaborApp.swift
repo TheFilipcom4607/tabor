@@ -31,16 +31,15 @@ extension View {
 
 private struct WindowClearance: ViewModifier {
     let iPad: Bool
-    /// An opened foldable keeps its status bar in a column down the side, so its safe area
-    /// starts at the very top: the headers would sit in the rounded corner.
-    @State private var wide = false
-    /// Inside the app, a column of a wide screen (BOOK's index) is wide too.
-    @Environment(\.wide) private var inWide
+    /// A foldable keeps its status bar in a column down the side when it's opened out wide,
+    /// and on its cover screen: its safe area then starts at the very top, and the headers
+    /// would sit in the rounded corner.
+    @State private var noStatusBar = false
 
     func body(content: Content) -> some View {
         content
-            .safeAreaPadding(.top, iPad && UIDevice.current.model.hasPrefix("iPad") ? 26 : wide || inWide ? 16 : 0)
-            .onGeometryChange(for: Bool.self) { WideLayout.isWide($0.size) } action: { wide = $0 }
+            .safeAreaPadding(.top, iPad && UIDevice.current.model.hasPrefix("iPad") ? 26 : noStatusBar ? 16 : 0)
+            .onGeometryChange(for: Bool.self) { $0.safeAreaInsets.top < 20 } action: { noStatusBar = $0 }
     }
 }
 
@@ -171,8 +170,9 @@ struct RootView: View {
     /// instant and keeps where you were: HUNT's map and pins, how far down the book you were.
     @State private var opened: Set<AppTab> = []
     @State private var tabBarHeight: CGFloat = 0
-    /// An opened foldable: see `EnvironmentValues.wide`.
+    /// An opened foldable: see `EnvironmentValues.wide` and `.tall`.
     @State private var wide = false
+    @State private var tall = false
     @Query private var sightings: [Sighting]
     @Environment(\.modelContext) private var context
     @Environment(\.scenePhase) private var scenePhase
@@ -188,7 +188,10 @@ struct RootView: View {
         .onChange(of: router.tab, initial: true) { _, tab in opened.insert(tab) }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         // Folding or unfolding the phone flips it, and every screen lays itself out again.
-        .onGeometryChange(for: Bool.self) { WideLayout.isWide($0.size) } action: { wide = $0 }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
+            wide = WideLayout.isWide(size)
+            tall = WideLayout.isTall(size)
+        }
         .overlay(alignment: .bottom) {
             if undo.pending != nil {
                 UndoToast {
@@ -214,6 +217,7 @@ struct RootView: View {
         .environment(router)
         .environment(undo)
         .environment(\.wide, wide)
+        .environment(\.tall, tall)
         // Keep the live feed ticking on every tab, so HUNT opens with trails already drawn.
         .onAppear { LiveFleetService.shared.start(LiveFleetService.appClient) }
         .onChange(of: scenePhase) { _, phase in

@@ -35,6 +35,7 @@ struct TabBar: View {
     /// Bumped when a tab becomes active, so only that icon bounces (not the one left behind).
     @State private var bounces: [AppTab: Int] = [:]
     @Environment(\.wide) private var wide
+    @Environment(\.tall) private var tall
 
     var body: some View {
         HStack(spacing: 0) {
@@ -73,7 +74,7 @@ struct TabBar: View {
         }
         .padding(.horizontal, 10)
         // Four tabs a thumb's reach apart, not spread across an opened foldable.
-        .wideColumn(wide)
+        .wideColumn(wide || tall)
         .padding(.top, 4)
         .padding(.bottom, 2)
         // Frosted, so whatever scrolls underneath still reads as being there.

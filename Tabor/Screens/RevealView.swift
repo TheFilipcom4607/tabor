@@ -14,6 +14,7 @@ struct RevealView: View {
     @Environment(Router.self) private var router
     /// Measured here: a full-screen cover is laid out on its own.
     @State private var wide = false
+    @State private var tall = false
 
     /// Photo shown, waiting for the cut-out / build-up.
     @State private var developing = true
@@ -315,9 +316,11 @@ struct RevealView: View {
                     }
                 } else {
                     header
+                    // Upright or half folded there's height to spare: a bigger sticker.
                     stage(number: number, model: model, tier: tier, isNew: isNewVehicle && ready, foil: wrap != nil)
+                        .scaleEffect(tall ? 1.3 : 1)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 250)
+                        .frame(height: tall ? 340 : 250)
                         .padding(.top, 12)
                     details
                     Spacer(minLength: 16)
@@ -325,10 +328,15 @@ struct RevealView: View {
                 }
             }
             .foregroundStyle(Palette.ink)
+            // A phone's width on a tall screen, not buttons stretched across it.
+            .frame(maxWidth: tall ? 560 : .infinity)
             .padding(.top, missingInsets.top)
             .padding(.bottom, missingInsets.bottom)
         }
-        .onGeometryChange(for: Bool.self) { WideLayout.isWide($0.size) } action: { wide = $0 }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
+            wide = WideLayout.isWide(size)
+            tall = WideLayout.isTall(size)
+        }
         // Belt and braces for imports: a reveal that came up while the photo picker was still
         // leaving was laid out with no safe area (CANCEL under the status bar). Whatever the
         // presentation reports, keep clear of what the window itself keeps clear of.

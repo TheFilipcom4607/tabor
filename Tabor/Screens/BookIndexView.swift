@@ -19,6 +19,7 @@ struct BookIndexView: View {
     @State private var filter: DexFilter = .all
     @AppStorage("bookOrder") private var order: BookOrder = .progress
     @Environment(\.wide) private var wide
+    @Environment(\.tall) private var tall
     @Environment(Router.self) private var router
     private let catalog = Fleet.catalog
 
@@ -36,33 +37,37 @@ struct BookIndexView: View {
         let sorted = order.sort(rows, stats: stats)
 
         VStack(alignment: .leading, spacing: 0) {
-            TopBar {
-                Mono("YOUR BOOK", size: 12, spacing: 0.16)
-            } trailing: {
-                // Same count as the widget: the total leaves vintage, test and works stock out, so the count must too.
-                Mono("\(stats.fleetCaught(catalog: catalog).grouped) / \(catalog.totalFleet.grouped)", size: 12)
-            }
-            ScreenTitle(text: String(localized: "Warsaw rolling stock"))
-                .padding(.top, 14)
-                .padding(.horizontal, 22)
-            // "WSZYSTKIE" and "AUTOBUSY" broke in two mid-word on a 6.3" phone (#49): chips
-            // never wrap, they tighten up first and scroll sideways only if that's not enough.
-            // The order menu (#99) stays put at the end; the chips get what's left.
-            HStack(spacing: 7) {
-                ViewThatFits(in: .horizontal) {
-                    filterChips(padding: 12)
-                    filterChips(padding: 9)
-                    filterChips(padding: 7)
-                    ScrollView(.horizontal) { filterChips(padding: 7) }
-                        .scrollIndicators(.hidden)
-                        .scrollClipDisabled()
+            // A phone's width on a tall screen: one row stretched across it is mostly empty bar.
+            VStack(alignment: .leading, spacing: 0) {
+                TopBar {
+                    Mono("YOUR BOOK", size: 12, spacing: 0.16)
+                } trailing: {
+                    // Same count as the widget: the total leaves vintage, test and works stock out, so the count must too.
+                    Mono("\(stats.fleetCaught(catalog: catalog).grouped) / \(catalog.totalFleet.grouped)", size: 12)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                orderMenu
+                ScreenTitle(text: String(localized: "Warsaw rolling stock"))
+                    .padding(.top, 14)
+                    .padding(.horizontal, 22)
+                // "WSZYSTKIE" and "AUTOBUSY" broke in two mid-word on a 6.3" phone (#49): chips
+                // never wrap, they tighten up first and scroll sideways only if that's not enough.
+                // The order menu (#99) stays put at the end; the chips get what's left.
+                HStack(spacing: 7) {
+                    ViewThatFits(in: .horizontal) {
+                        filterChips(padding: 12)
+                        filterChips(padding: 9)
+                        filterChips(padding: 7)
+                        ScrollView(.horizontal) { filterChips(padding: 7) }
+                            .scrollIndicators(.hidden)
+                            .scrollClipDisabled()
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    orderMenu
+                }
+                .padding(.top, 14)
+                .padding(.bottom, 2)
+                .padding(.horizontal, 22)
             }
-            .padding(.top, 14)
-            .padding(.bottom, 2)
-            .padding(.horizontal, 22)
+            .wideColumn(tall, width: Self.tallColumn)
 
             ScrollView {
                 LazyVStack(spacing: 9) {
@@ -107,6 +112,7 @@ struct BookIndexView: View {
                 }
                 .padding(.top, 10)
                 .padding(.horizontal, 22)
+                .frame(maxWidth: tall ? Self.tallColumn : .infinity)
                 .fitScrollWidth()
             }
             .scrollIndicators(.hidden)
@@ -114,6 +120,8 @@ struct BookIndexView: View {
         }
         .taborScreen()
     }
+
+    private static let tallColumn: CGFloat = 560
 
     private func filterChips(padding: CGFloat) -> some View {
         HStack(spacing: 7) {
@@ -184,6 +192,8 @@ struct DexRow: View {
     /// The page open beside the index, on a wide screen: edged in its tier's colour.
     var selected = false
     @Environment(\.wide) private var wide
+    /// Inside the edge where the picked row is lit up.
+    private var inset: Bool { wide }
 
     var body: some View {
         VStack(spacing: 9) {
@@ -209,7 +219,7 @@ struct DexRow: View {
         .padding(.vertical, 13)
         .padding(.horizontal, 15)
         // Room for the sticker: more where it sits inside the edge.
-        .padding(.trailing, latest == nil ? 0 : wide ? 76 : 64)
+        .padding(.trailing, latest == nil ? 0 : inset ? 76 : 64)
         .background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         // Under the sticker, which peeks over the edge.
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -220,8 +230,7 @@ struct DexRow: View {
                 DieCut(number: latest.number, sticker: latest.sticker, photo: latest.photo, height: 44, tagSize: 9, maxPixel: 240)
                     .frame(width: 74)
                     .rotationEffect(.degrees(stickerTilt(latest.number, range: 6)))
-                    // Inside the edge on a wide screen, where the picked row's edge is lit up.
-                    .offset(x: wide ? -8 : 6)
+                    .offset(x: inset ? -8 : 6)
             }
         }
         .contentShape(Rectangle())

@@ -105,6 +105,7 @@ struct CatchView: View {
     @State private var pinchStart: CGFloat?
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.wide) private var wide
+    @Environment(\.tall) private var tall
     @Environment(Router.self) private var router
 
     private let catalog = Fleet.catalog
@@ -161,6 +162,35 @@ struct CatchView: View {
                             .padding(.bottom, 14)
                     }
                     sideControls
+                }
+            } else if tall {
+                // Upright or half folded: the brackets above the fold, the controls below it,
+                // a thumb's reach across rather than out at the edges.
+                FoldSplit {
+                    VStack(spacing: 0) {
+                        topBar
+                            .padding(.top, 6)
+                            .padding(.horizontal, 20)
+                        hintPill
+                            .padding(.top, 14)
+                        brackets
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 14)
+                            .frame(maxHeight: .infinity)
+                            .allowsHitTesting(false)
+                    }
+                } bottom: {
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 12)
+                        controlTip
+                            .frame(maxWidth: WideLayout.column, maxHeight: 78, alignment: .bottomLeading)
+                            .padding(.horizontal, 20)
+                        controls
+                            .frame(maxWidth: 460)
+                            .padding(.top, 16)
+                        Spacer(minLength: 12)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
             } else {
                 VStack(spacing: 0) {
@@ -333,32 +363,42 @@ struct CatchView: View {
         case .denied, .unavailable, .interrupted, .failed:
             ZStack {
                 Color(hex: 0x0E1013)
-                VStack(spacing: 14) {
-                    Image(systemName: noCameraSymbol)
-                        .font(.system(size: 34, weight: .light))
-                        .foregroundStyle(Palette.faint)
-                    Mono(noCameraText, size: 11, color: Palette.sub)
-                    if camera.status == .denied {
-                        Button("Open Settings") {
-                            if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
-                        }
-                        .font(TaborFont.grotesk(14, 600))
-                        .tint(Palette.yellow)
-                    }
-                    if camera.status == .failed {
-                        Button("Try again") { Task { await camera.retry() } }
-                            .font(TaborFont.grotesk(14, 600))
-                            .tint(Palette.yellow)
-                    }
-                    PhotosPicker(selection: $pickerItem, matching: .images) {
-                        Mono("IMPORT A PHOTO INSTEAD", size: 11, weight: 600, color: Palette.bg)
-                            .padding(.vertical, 9)
-                            .padding(.horizontal, 14)
-                            .background(Palette.yellow, in: Capsule())
-                    }
+                // Centred on the brackets: clear of the side column on a wide screen, above
+                // the fold on a tall one.
+                if tall {
+                    FoldSplit { noCamera } bottom: { Color.clear }
+                } else {
+                    noCamera
+                        .padding(.trailing, wide ? Self.sideColumn : 0)
                 }
-                // Centred on the brackets, clear of the side column on a wide screen.
-                .padding(.trailing, wide ? Self.sideColumn : 0)
+            }
+        }
+    }
+
+    /// Why there's no camera, with the way round it.
+    private var noCamera: some View {
+        VStack(spacing: 14) {
+            Image(systemName: noCameraSymbol)
+                .font(.system(size: 34, weight: .light))
+                .foregroundStyle(Palette.faint)
+            Mono(noCameraText, size: 11, color: Palette.sub)
+            if camera.status == .denied {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                }
+                .font(TaborFont.grotesk(14, 600))
+                .tint(Palette.yellow)
+            }
+            if camera.status == .failed {
+                Button("Try again") { Task { await camera.retry() } }
+                    .font(TaborFont.grotesk(14, 600))
+                    .tint(Palette.yellow)
+            }
+            PhotosPicker(selection: $pickerItem, matching: .images) {
+                Mono("IMPORT A PHOTO INSTEAD", size: 11, weight: 600, color: Palette.bg)
+                    .padding(.vertical, 9)
+                    .padding(.horizontal, 14)
+                    .background(Palette.yellow, in: Capsule())
             }
         }
     }

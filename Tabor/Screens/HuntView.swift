@@ -37,6 +37,7 @@ struct HuntView: View {
     @Environment(Router.self) private var router
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.wide) private var wide
+    @Environment(\.tall) private var tall
     @AppStorage("huntFilter") private var filter: HuntFilter = .uncaught
     /// Rarities and models picked in the filter sheet; empty shows everything.
     @AppStorage("huntTargets") private var targets = HuntTargets()
@@ -125,6 +126,8 @@ struct HuntView: View {
             Group {
                 if wide {
                     widePanel(shown: shown, selected: selected, picked: picked)
+                } else if tall {
+                    tallPanel(shown: shown, selected: selected, picked: picked)
                 } else {
                     phonePanel(shown: shown, selected: selected, picked: picked)
                 }
@@ -302,9 +305,59 @@ struct HuntView: View {
 
     private static let panelWidth: CGFloat = 390
 
+    /// Upright or half folded: the map above the fold, the card or the list below it on a
+    /// solid half of its own, like a laptop's keyboard.
+    private func tallPanel(shown: [WantedPin], selected: WantedPin?, picked: HuntTargets) -> some View {
+        FoldSplit {
+            VStack(spacing: 12) {
+                header
+                filterBar
+                if !picked.isEmpty {
+                    targetChips
+                        .padding(.top, -4)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                if let out = wrapsOut.first, selectedId != out.id {
+                    wrapBanner(out, more: wrapsOut.count - 1)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                Spacer()
+                HStack(spacing: 8) {
+                    if let tracked = track.trackedId, tracked != selectedId {
+                        trackedButton(tracked)
+                            .transition(.scale(scale: 0.8, anchor: .leading).combined(with: .opacity))
+                    }
+                    Spacer()
+                    if let selected, !following {
+                        followButton(selected)
+                            .transition(.scale(scale: 0.8, anchor: .trailing).combined(with: .opacity))
+                    }
+                    if here != nil, offDefaultView || facing || location.hasHeading {
+                        locationButton
+                            .transition(.scale(scale: 0.8, anchor: .trailing).combined(with: .opacity))
+                    }
+                    mapStyleButton
+                }
+                .padding(.horizontal, 14)
+                .padding(.bottom, 10)
+            }
+        } bottom: {
+            bottomCard(shown: shown, selected: selected)
+                .frame(maxWidth: 560)
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .background(Palette.bg.ignoresSafeArea(edges: [.bottom, .horizontal]))
+        }
+    }
+
     /// Rows a list shows before it scrolls: a phone keeps the map above it open, the side
     /// panel has the screen's height to itself.
-    private func rows(_ phone: CGFloat) -> CGFloat { wide ? phone + 3 : phone }
+    private func rows(_ phone: CGFloat) -> CGFloat { wide ? phone + 3 : tall ? phone + 2 : phone }
+
+    /// The open part of the map isn't a band above a card at the bottom: work regions out
+    /// from `openPart`.
+    private var framed: Bool { wide || tall }
 
     /// The pins the header toggle and the filter let through.
     private func shown(_ pins: [WantedPin], picked: HuntTargets) -> [WantedPin] {
@@ -483,7 +536,7 @@ struct HuntView: View {
         let open = openPart
         // With the route open the card covers more: the middle of what's left. Beside a side
         // panel it's always the middle of the open part.
-        let middle = routeOpen || wide ? open.middle : 0.35
+        let middle = routeOpen || framed ? open.middle : 0.35
         return MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: coordinate.latitude - span.latitudeDelta * (0.5 - middle),
                                                                  longitude: coordinate.longitude - span.longitudeDelta * (open.centre - 0.5)),
                                   span: span)
@@ -500,6 +553,11 @@ struct HuntView: View {
             return (top, bottom, (top + bottom) / 2, left, right, (left + right) / 2)
         }
         let top = targets.isEmpty ? 0.19 : 0.24
+        if tall, let mapBottom, mapBottom > 0 {
+            // Above the fold, less the row of map buttons standing on it.
+            let bottom = min(max((WideLayout.foldY - 56) / mapBottom, top + 0.1), 0.9)
+            return (top, bottom, (top + bottom) / 2, 0, 1, 0.5)
+        }
         guard let cardTop, let mapBottom, mapBottom > 0 else { return (top, 0.5, (top + 0.5) / 2, 0, 1, 0.5) }
         // The row of map buttons (FOLLOW, 3 KM, the globe) stands on the card.
         let bottom = min(max((cardTop - 56) / mapBottom, top + 0.1), 0.9)
@@ -579,8 +637,9 @@ struct HuntView: View {
             latitudeDelta: min(current.latitudeDelta / 3, max((lats.max()! - lats.min()!) * 2.5, 0.002)),
             longitudeDelta: min(current.longitudeDelta / 3, max((lons.max()! - lons.min()!) * 2.5, 0.002)))
         // Off to the side of a side panel, in the middle of the map you can see.
-        let center = CLLocationCoordinate2D(latitude: (lats.max()! + lats.min()!) / 2,
-                                            longitude: (lons.max()! + lons.min()!) / 2 - span.longitudeDelta * (openPart.centre - 0.5))
+        let open = openPart
+        let center = CLLocationCoordinate2D(latitude: (lats.max()! + lats.min()!) / 2 - (framed ? span.latitudeDelta * (0.5 - open.middle) : 0),
+                                            longitude: (lons.max()! + lons.min()!) / 2 - span.longitudeDelta * (open.centre - 0.5))
         withAnimation(.easeInOut(duration: 0.6)) { position = .region(MKCoordinateRegion(center: center, span: span)) }
     }
 
@@ -931,13 +990,15 @@ struct HuntView: View {
     /// The default view: you in the middle, the 3 km the list covers around you.
     private func defaultRegion() -> MKCoordinateRegion? {
         guard let here = location.recent(maxAge: 300)?.coordinate ?? mapCenter else { return nil }
-        guard wide else { return MKCoordinateRegion(center: here, latitudinalMeters: Wanted.radius * 2, longitudinalMeters: Wanted.radius * 2) }
-        // Beside a side panel: the 6 km across the open part, you in its middle. A sliver of
-        // height, so MapKit fits the width and lets the height follow the screen.
+        guard framed, let mapBottom, let mapRight, mapRight > 0 else {
+            return MKCoordinateRegion(center: here, latitudinalMeters: Wanted.radius * 2, longitudinalMeters: Wanted.radius * 2)
+        }
+        // Beside a side panel or above the fold: the 6 km across the open part, you in its
+        // middle, and the map's own shape so MapKit takes the region as it is.
         let open = openPart
-        let span = MKCoordinateRegion(center: here, latitudinalMeters: 100,
-                                      longitudinalMeters: Wanted.radius * 2 / (open.right - open.left)).span
-        return MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: here.latitude,
+        let across = Wanted.radius * 2 / (open.right - open.left)
+        let span = MKCoordinateRegion(center: here, latitudinalMeters: across * mapBottom / mapRight, longitudinalMeters: across).span
+        return MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: here.latitude - span.latitudeDelta * (0.5 - open.middle),
                                                                  longitude: here.longitude - span.longitudeDelta * (open.centre - 0.5)),
                                   span: span)
     }
@@ -952,8 +1013,9 @@ struct HuntView: View {
                             (region.center.latitude, region.center.longitude + region.span.longitudeDelta / 2)) * 1000 * (open.right - open.left)
         let zoom = across / (Wanted.radius * 2)
         if zoom < 0.6 || zoom > 1.6 { return true }
-        let middle = region.center.longitude + region.span.longitudeDelta * (open.centre - 0.5)
-        return Geo.km((here.latitude, here.longitude), (region.center.latitude, middle)) > 0.5
+        let middle = (region.center.latitude + (framed ? region.span.latitudeDelta * (0.5 - open.middle) : 0),
+                      region.center.longitude + region.span.longitudeDelta * (open.centre - 0.5))
+        return Geo.km((here.latitude, here.longitude), middle) > 0.5
     }
 
     private func centerOnceOnYou() {
@@ -1150,7 +1212,7 @@ struct HuntView: View {
     private func fit(_ pins: [WantedPin]) {
         guard !pins.isEmpty else { return }
         // Beside a side panel the open part isn't a band across the map: work it out.
-        if wide, let region = region(fitting: pins.map { ($0.vehicle.latitude, $0.vehicle.longitude) }, minSpan: 0.02) {
+        if framed, let region = region(fitting: pins.map { ($0.vehicle.latitude, $0.vehicle.longitude) }, minSpan: 0.02) {
             following = false
             facing = false
             withAnimation(.easeInOut(duration: 0.7)) { position = .region(region) }
@@ -1720,7 +1782,7 @@ struct HuntView: View {
         withAnimation(.snappy) { selectedId = pin.id }
         following = true
         // Beside a side panel: about as close, in the middle of the map you can see.
-        if wide, let region = region(fitting: [(pin.vehicle.latitude, pin.vehicle.longitude)], minSpan: 0.015) {
+        if framed, let region = region(fitting: [(pin.vehicle.latitude, pin.vehicle.longitude)], minSpan: 0.015) {
             withAnimation(.easeInOut(duration: 0.6)) { position = .region(region) }
             return
         }
