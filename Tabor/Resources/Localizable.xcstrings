@@ -1,6 +1,46 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Progress": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Postęp"
+          }
+        }
+      }
+    },
+    "Rarity": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rzadkość"
+          }
+        }
+      }
+    },
+    "Latest catch": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ostatnio złapane"
+          }
+        }
+      }
+    },
+    "Order": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kolejność"
+          }
+        }
+      }
+    },
     "OFF ITS ROUTE": {
       "localizations": {
         "pl": {

@@ -17,6 +17,7 @@ enum DexFilter: String, CaseIterable {
 struct BookIndexView: View {
     @Query private var sightings: [Sighting]
     @State private var filter: DexFilter = .all
+    @AppStorage("bookOrder") private var order: BookOrder = .progress
     private let catalog = Fleet.catalog
 
     var body: some View {
@@ -30,17 +31,7 @@ struct BookIndexView: View {
             case .missing: Double(stats.ownedCount(modelId: m.id)) / Double(max(m.fleet, 1)) < 0.25
             }
         }
-        // Models you've started float to the top (most complete first); the rest go rarest first.
-        .sorted { a, b in
-            let oa = stats.ownedCount(modelId: a.id), ob = stats.ownedCount(modelId: b.id)
-            if (oa > 0) != (ob > 0) { return oa > 0 }
-            if oa > 0 {
-                let pa = Double(oa) / Double(a.fleet), pb = Double(ob) / Double(b.fleet)
-                if pa != pb { return pa > pb }
-            }
-            if a.fleet != b.fleet { return a.fleet < b.fleet }
-            return a.name < b.name
-        }
+        let sorted = order.sort(rows, stats: stats)
 
         VStack(alignment: .leading, spacing: 0) {
             TopBar {
@@ -54,12 +45,18 @@ struct BookIndexView: View {
                 .padding(.horizontal, 22)
             // "WSZYSTKIE" and "AUTOBUSY" broke in two mid-word on a 6.3" phone (#49): chips
             // never wrap, they tighten up first and scroll sideways only if that's not enough.
-            ViewThatFits(in: .horizontal) {
-                filterChips(padding: 12)
-                filterChips(padding: 9)
-                ScrollView(.horizontal) { filterChips(padding: 9) }
-                    .scrollIndicators(.hidden)
-                    .scrollClipDisabled()
+            // The order menu (#99) stays put at the end; the chips get what's left.
+            HStack(spacing: 7) {
+                ViewThatFits(in: .horizontal) {
+                    filterChips(padding: 12)
+                    filterChips(padding: 9)
+                    filterChips(padding: 7)
+                    ScrollView(.horizontal) { filterChips(padding: 7) }
+                        .scrollIndicators(.hidden)
+                        .scrollClipDisabled()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                orderMenu
             }
             .padding(.top, 14)
             .padding(.bottom, 2)
@@ -82,22 +79,22 @@ struct BookIndexView: View {
                         WrapShelf(wraps: wraps, sightings: sightings, catalog: catalog)
                             .padding(.bottom, 8)
                     }
-                    ForEach(rows.filter(\.regular)) { m in row(m, stats: stats) }
+                    ForEach(sorted.filter(\.regular)) { m in row(m, stats: stats) }
                     // Test, tourist-line and works stock live in sections of their own: they're
                     // passing through, seasonal or not for passengers, not rare.
-                    let onTest = rows.filter(\.onTest)
+                    let onTest = sorted.filter(\.onTest)
                     if !onTest.isEmpty {
                         sectionHeader(.onTest, note: String(localized: "BUSES ON TRIAL · NOT PART OF THE FLEET %"))
                         ForEach(onTest) { m in row(m, stats: stats) }
                     }
-                    let vintage = rows.filter(\.vintage)
+                    let vintage = sorted.filter(\.vintage)
                     if !vintage.isEmpty {
                         sectionHeader(.vintage, note: String(localized: "TOURIST LINES ON SUMMER WEEKENDS · NOT PART OF THE FLEET %"))
                         ForEach(vintage) { m in row(m, stats: stats) }
                     }
                     // Shown from the start: hidden until the first catch, nobody could find
                     // them to go looking (#78).
-                    let works = rows.filter(\.works)
+                    let works = sorted.filter(\.works)
                     if !works.isEmpty {
                         sectionHeader(.works, note: String(localized: "TRAMWAJE WARSZAWSKIE'S OWN CARS · NOT PART OF THE FLEET %"))
                         ForEach(works) { m in row(m, stats: stats) }
@@ -135,6 +132,23 @@ struct BookIndexView: View {
                 .buttonStyle(.plain)
             }
         }
+    }
+
+    private var orderMenu: some View {
+        Menu {
+            Picker(String(localized: "Order"), selection: $order) {
+                ForEach(BookOrder.allCases, id: \.self) { o in Text(o.name).tag(o) }
+            }
+        } label: {
+            // Lit up while it isn't the usual order, so a reordered book doesn't look broken.
+            Image(systemName: "arrow.up.arrow.down")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(order == .progress ? Palette.sub : Palette.bg)
+                .frame(width: 33, height: 31)
+                .background(order == .progress ? Palette.chip : Palette.ink, in: Capsule())
+        }
+        .accessibilityLabel(String(localized: "Order"))
+        .onChange(of: order) { Haptics.shared.tick() }
     }
 
     private func sectionHeader(_ tier: Tier, note: String) -> some View {

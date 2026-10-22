@@ -2060,3 +2060,36 @@ private var warsaw: Calendar {
     #expect(quiet.running.isEmpty && quiet.models.isEmpty && quiet.kind == .bus)
     #expect(LineLookup.lookup("167", snapshot: snap, routes: book, near: here, catalog: catalog).kind == nil)
 }
+
+// MARK: - Book order
+
+private func bookModel(_ id: String, fleet: Int) -> VehicleModel {
+    VehicleModel(id: id, name: id, make: "X", kind: .bus, operators: [], fleet: fleet, firstYear: nil, lastYear: nil,
+                 batches: [Batch(year: 2020, depotCode: "", depotName: "", numbers: Array(1...fleet))])
+}
+
+private let shelf = [bookModel("common", fleet: 200), bookModel("gold", fleet: 40), bookModel("legendary", fleet: 10),
+                     bookModel("rare", fleet: 70), bookModel("big", fleet: 300), bookModel("tiny", fleet: 2)]
+
+/// Half the common model, one of the gold one and one of the rare one, the rare one last.
+private let shelfStats = CollectionStats(sightings: (1...100).map {
+    SightingRecord(number: $0, modelId: "common", date: fixtureNow - 3600)
+} + [SightingRecord(number: 1, modelId: "gold", date: fixtureNow - 7200),
+     SightingRecord(number: 1, modelId: "rare", date: fixtureNow - 86400),
+     SightingRecord(number: 2, modelId: "rare", date: fixtureNow)])
+
+@Test func bookOrderByProgressKeepsTodaysOrder() {
+    // Started models by how complete they are, then the rest rarest first.
+    #expect(BookOrder.progress.sort(shelf, stats: shelfStats).map(\.id) == ["common", "rare", "gold", "tiny", "legendary", "big"])
+}
+
+@Test func bookOrderByRarity() {
+    // Caught models legendary to common, then the rest the same way.
+    #expect(BookOrder.rarity.sort(shelf, stats: shelfStats).map(\.id) == ["gold", "rare", "common", "tiny", "legendary", "big"])
+}
+
+@Test func bookOrderByNewestCatch() {
+    // The rare model's second car was caught last, so it leads even though its first came a day before.
+    #expect(BookOrder.newest.sort(shelf, stats: shelfStats).map(\.id) == ["rare", "common", "gold", "tiny", "legendary", "big"])
+}
+
