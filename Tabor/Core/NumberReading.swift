@@ -58,8 +58,10 @@ public enum NumberExtractor {
         for obs in observations {
             let tokens = digitTokens(obs.text).map { (value: $0.value, digits: $0.digits, lookalike: false) }
                 + lookalikeTokens(obs.text).map { (value: $0.value, digits: $0.digits, lookalike: true) }
+                + splitTokens(obs.text).map { (value: $0.value, digits: $0.digits, lookalike: true) }
             for (value, digits, lookalike) in tokens {
-                // A letter read as a digit only counts when it makes a real fleet number.
+                // A letter read as a digit, or a number read in two halves, only counts when it
+                // makes a real fleet number.
                 if lookalike, !catalog.isKnown(number: value) { continue }
                 // The mode is a preference: a number from the other kind still counts,
                 // it just ranks below one that fits the mode.
@@ -95,6 +97,7 @@ public enum NumberExtractor {
         observations.compactMap { obs in
             guard let box = obs.box else { return nil }
             let values = digitTokens(obs.text).map(\.value) + lookalikeTokens(obs.text).map(\.value)
+                + splitTokens(obs.text).map(\.value)
             return values.contains(number) ? box : nil
         }
     }
@@ -171,6 +174,32 @@ public enum NumberExtractor {
                 out.append((n, run.count))
             }
             i = j
+        }
+        return out
+    }
+
+    /// A 4-digit number read in two halves, "31 67" → 3167: on a Swing's nose the number is
+    /// painted across a seam, and Vision puts a space where the seam is (#103). Only two
+    /// halves of two digits, with the same outer boundaries as `digitTokens`.
+    public static func splitTokens(_ text: String) -> [(value: Int, digits: Int)] {
+        var out: [(Int, Int)] = []
+        let chars = Array(text)
+        let glue: Set<Character> = [":", ".", ",", "/"]
+        let isDigit = { (i: Int) in i >= 0 && i < chars.count && chars[i].isASCII && chars[i].isNumber }
+        var i = 0
+        while i + 4 < chars.count {
+            let before: Character = i > 0 ? chars[i - 1] : " "
+            let after: Character = i + 5 < chars.count ? chars[i + 5] : " "
+            if isDigit(i), isDigit(i + 1), chars[i + 2] == " ", isDigit(i + 3), isDigit(i + 4),
+               !isDigit(i - 1), !isDigit(i + 5), chars[i] != "0",
+               // Not two pairs out of a longer run, like a phone number's "22 55 44 00".
+               !(before == " " && isDigit(i - 2)), !(after == " " && isDigit(i + 6)),
+               !before.isLetter, !after.isLetter, !platePrefix(chars, before: i),
+               !glue.contains(before), !glue.contains(after),
+               let n = Int(String([chars[i], chars[i + 1], chars[i + 3], chars[i + 4]])) {
+                out.append((n, 4))
+            }
+            i += 1
         }
         return out
     }

@@ -118,6 +118,28 @@ private func sampleModel() -> VehicleModel {
     #expect(NumberExtractor.lookalikeTokens("8592").isEmpty)
 }
 
+@Test func numberSplitByASeam() {
+    // Swing #3167 (#103): the nose's seam runs through the number, and Vision reads "31 67".
+    #expect(NumberExtractor.splitTokens("31 67").map(\.value) == [3167])
+    #expect(NumberExtractor.splitTokens("3 167").isEmpty)
+    #expect(NumberExtractor.splitTokens("316 7").isEmpty)
+    #expect(NumberExtractor.splitTokens("WX 31 67").isEmpty)
+    #expect(NumberExtractor.splitTokens("22 55 44 00").isEmpty)
+    func read(_ text: String) -> Int? {
+        NumberExtractor.best(in: [TextObservation(text: text, confidence: 1, height: 0.03)], mode: .auto, catalog: catalog)
+    }
+    #expect(read("31 67") == 3167)
+    // 9099 isn't in the fleet: two halves are too weak a guess on their own.
+    #expect(read("90 99") == nil)
+    // The same number read whole wins over the halves.
+    let both = NumberExtractor.candidates(in: [TextObservation(text: "3167", confidence: 1, height: 0.03),
+                                               TextObservation(text: "31 67", confidence: 1, height: 0.03)],
+                                          mode: .auto, catalog: catalog)
+    #expect(both.count == 2 && abs(both[1].score - (both[0].score - 0.5)) < 1e-9)
+    #expect(NumberExtractor.boxes(of: 3167, in: [TextObservation(text: "31 67", confidence: 1, height: 0.03,
+                                                                 box: CGRect(x: 0.4, y: 0.5, width: 0.1, height: 0.03))]).count == 1)
+}
+
 @Test func extractorCorrectsLookalikesOnlyToKnownNumbers() {
     func read(_ text: String) -> Int? {
         NumberExtractor.best(in: [TextObservation(text: text, confidence: 1, height: 0.05)], mode: .auto, catalog: catalog)
