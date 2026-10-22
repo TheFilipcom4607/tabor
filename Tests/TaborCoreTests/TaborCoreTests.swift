@@ -2058,6 +2058,21 @@ private var warsaw: Calendar {
     #expect(moving?.at == "east20")
 }
 
+@Test func trackPlanRunsToAPickedStop() throws {
+    // #96: heading for a stop far down the line, nowhere near it yet.
+    let m = RouteMatch(shape: eastbound, along: 100, speed: 8)
+    let far = try #require(eastbound.stops.last)
+    let plan = try #require(TrackPlan.make(match: m, stop: far))
+    #expect(plan.stop == far.label)
+    #expect(plan.stops == eastbound.stops.filter { $0.along > 100 }.count)
+    #expect(abs(plan.distance - (far.along - 100)) < 1)
+    #expect(plan.target.latitude == far.latitude && plan.target.longitude == far.longitude)
+    // A stop it has already passed, or is standing at, has nothing to count down to.
+    let passed = try #require(eastbound.stops.first)
+    #expect(TrackPlan.make(match: RouteMatch(shape: eastbound, along: passed.along + 50, speed: 8), stop: passed) == nil)
+    #expect(TrackPlan.make(match: RouteMatch(shape: eastbound, along: passed.along - 5, speed: 8), stop: passed) == nil)
+}
+
 // MARK: - Correction sheet's line
 
 @Test func aTypedLineListsWhatRunsItNow() {

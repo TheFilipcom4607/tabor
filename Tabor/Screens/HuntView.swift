@@ -899,6 +899,8 @@ struct HuntView: View {
                         onStop: show(stop:),
                         onScrolling: stopsScrolling,
                         track: trackButton(selected),
+                        trackedStop: track.isTracking(selected) ? track.trackedStop : nil,
+                        onTrackStop: { trackTo(selected, stop: $0) },
                         onOpen: {
                             if selected.kind == .caught {
                                 router.openVehicle(modelId: selected.model.id, number: selected.vehicle.number)
@@ -1536,6 +1538,22 @@ struct HuntView: View {
         return PinCard.Track(state: .ready) { track.start(pin, plan: plan, sightings: sightings) }
     }
 
+    /// A bell in the stop list (#96): counts down to that stop rather than the one by you, so it
+    /// works on your way there, wherever you are now. Says why when it can't.
+    private func trackTo(_ pin: WantedPin, stop: RouteStop) -> String? {
+        guard track.enabled else {
+            return String(localized: "Live Activities are off for TABOR. Turn them on in Settings › TABOR to track it.")
+        }
+        if motion(of: pin) == .offRoute {
+            return String(localized: "It's off its line's route (a depot run or a detour), so there's no stop to count down to.")
+        }
+        guard let m = creeping(pin) ?? routeMatch(pin), let plan = TrackPlan.make(match: m, stop: stop) else {
+            return String(localized: "It's already at that stop or past it.")
+        }
+        track.start(pin, plan: plan, sightings: sightings)
+        return nil
+    }
+
     /// The selected vehicle, moved on to the last tick.
     private func creeping(_ pin: WantedPin) -> RouteMatch? { advanced(pin, at: tick) }
 
@@ -1829,6 +1847,9 @@ private struct StopList: View {
     let route: PinCard.Route
     let accent: Color
     let onStop: (RouteStop) -> Void
+    /// The stop TRACK counts down to, its bell filled.
+    let tracked: String?
+    let onTrack: (RouteStop) -> Void
     let onScrolling: (Bool) -> Void
 
     private struct Row: Identifiable {
@@ -1838,6 +1859,7 @@ private struct StopList: View {
     }
 
     private static let rowHeight: CGFloat = 28
+    private static let bellWidth: CGFloat = 34
 
     var body: some View {
         let rows = (route.last.map { [Row(stop: $0, passed: true)] } ?? []) + route.ahead.map { Row(stop: $0, passed: false) }
@@ -1845,9 +1867,16 @@ private struct StopList: View {
             ScrollView {
                 VStack(spacing: 0) {
                     ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
-                        Button { onStop(row.stop) } label: { line(row, first: i == 0, last: i == rows.count - 1) }
-                            .buttonStyle(.plain)
-                            .id(row.id)
+                        HStack(spacing: 0) {
+                            Button { onStop(row.stop) } label: { line(row, first: i == 0, last: i == rows.count - 1) }
+                                .buttonStyle(.plain)
+                            if row.passed {
+                                Color.clear.frame(width: Self.bellWidth)
+                            } else {
+                                bell(row.stop)
+                            }
+                        }
+                        .id(row.id)
                     }
                 }
             }
@@ -1863,6 +1892,20 @@ private struct StopList: View {
                 reader.scrollTo(rows[i - 2].id, anchor: .top)
             }
         }
+    }
+
+    /// TRACK to this stop, for when you're on your way to it rather than at it (#96).
+    private func bell(_ stop: RouteStop) -> some View {
+        let on = stop.label == tracked
+        return Button { onTrack(stop) } label: {
+            Image(systemName: on ? "bell.fill" : "bell")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(on ? Palette.radar : Palette.sub)
+                .frame(width: Self.bellWidth, height: Self.rowHeight, alignment: .trailing)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(on ? Text("Stop tracking it") : Text("Track it to \(stop.label) on the Lock Screen"))
     }
 
     private func line(_ row: Row, first: Bool, last: Bool) -> some View {
@@ -1942,6 +1985,10 @@ private struct PinCard: View {
     let onScrolling: (Bool) -> Void
     /// Follow it on the Lock Screen (#42).
     let track: Track
+    /// The stop it's tracked to, when it is.
+    let trackedStop: String?
+    /// Track it to a stop picked in the list (#96); why not, when it can't.
+    let onTrackStop: (RouteStop) -> String?
     let onOpen: () -> Void
     /// Why TRACK is greyed out, shown for a few seconds after tapping it.
     @State private var trackHint: String?
@@ -2078,7 +2125,8 @@ private struct PinCard: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityHint(!opens ? Text(verbatim: "") : routeOpen ? Text("Hides the stops") : Text("Shows every stop to the end of its run"))
                 if routeOpen, let route, !route.ahead.isEmpty {
-                    StopList(route: route, accent: pin.accent, onStop: onStop, onScrolling: onScrolling)
+                    StopList(route: route, accent: pin.accent, onStop: onStop, tracked: trackedStop,
+                             onTrack: trackStop, onScrolling: onScrolling)
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
@@ -2150,6 +2198,19 @@ private struct PinCard: View {
         }
         // Coming your way now: whatever held it back no longer does.
         .onChange(of: track.state) { if track.state == .ready { trackHint = nil } }
+    }
+
+    /// A stop's bell: the tracked one stops it, any other starts (or moves) the track there.
+    private func trackStop(_ stop: RouteStop) {
+        if stop.label == trackedStop, track.state == .on {
+            Haptics.shared.tick()
+            track.action()
+        } else if let why = onTrackStop(stop) {
+            Haptics.shared.nope()
+            withAnimation(.snappy) { trackHint = why }
+        } else {
+            Haptics.shared.tick()
+        }
     }
 
     private var trackButton: some View {

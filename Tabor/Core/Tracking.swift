@@ -27,11 +27,20 @@ public struct TrackPlan: Sendable {
     /// The plan for a vehicle placed on its route, if that route comes within `near` metres of
     /// you somewhere ahead (as `RouteMatch.motion` decides COMING).
     public static func make(match: RouteMatch, lat: Double, lon: Double, near: Double = 150) -> TrackPlan? {
-        let shape = match.shape
         guard let (yours, fit) = match.yourStop(lat: lat, lon: lon, near: near) else { return nil }
-        let targetAlong = yours?.along ?? fit
-        let target = yours.map { ($0.latitude, $0.longitude) } ?? shape.coordinate(at: fit)
+        return make(match: match, yours: yours, targetAlong: yours?.along ?? fit)
+    }
 
+    /// The plan to a stop picked from its stop list (#96): you may not be there yet, so neither
+    /// where you are nor COMING matters, only that the stop is still ahead of it.
+    public static func make(match: RouteMatch, stop: RouteStop) -> TrackPlan? {
+        guard stop.along > match.along + 20, stop.along <= match.shape.length else { return nil }
+        return make(match: match, yours: stop, targetAlong: stop.along)
+    }
+
+    private static func make(match: RouteMatch, yours: RouteStop?, targetAlong: Double) -> TrackPlan {
+        let shape = match.shape
+        let target = yours.map { ($0.latitude, $0.longitude) } ?? shape.coordinate(at: targetAlong)
         let from = max(0, match.along - margin), to = min(shape.length, targetAlong + margin)
         return TrackPlan(
             // With its platform: the one to wait at.

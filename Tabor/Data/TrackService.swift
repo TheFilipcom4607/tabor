@@ -15,6 +15,11 @@ final class TrackService {
 
     /// "BUS#1998" while that vehicle is tracked.
     private(set) var trackedId: String?
+    /// The stop it counts down to ("Centrum 06"), for the stop list's bell.
+    private(set) var trackedStop: String?
+    /// The activity behind them: picking another stop for the same vehicle replaces it, and the
+    /// old one ending mustn't clear the new one.
+    private var trackedActivity: String?
 
     private var watchers: [String: Task<Void, Never>] = [:]
 
@@ -22,6 +27,8 @@ final class TrackService {
         // Activities outlive the app: pick up one already running after a relaunch.
         for activity in Activity<TrackAttributes>.activities where activity.activityState == .active {
             trackedId = Self.id(activity.attributes)
+            trackedStop = activity.attributes.stop
+            trackedActivity = activity.id
             watch(activity, plan: nil)
         }
     }
@@ -54,6 +61,8 @@ final class TrackService {
                                                 content: .init(state: state, staleDate: .now.addingTimeInterval(120)),
                                                 pushType: .token)
             trackedId = pin.id
+            trackedStop = plan.stop
+            trackedActivity = activity.id
             watch(activity, plan: Request(pin: pin, plan: plan))
         } catch {
             log.error("couldn't start: \(error)")
@@ -109,7 +118,11 @@ final class TrackService {
                     for await state in activity.activityStateUpdates where state == .dismissed || state == .ended {
                         await Self.send(method: "DELETE", body: ["id": activity.id])
                         await MainActor.run {
-                            if self?.trackedId == Self.id(activity.attributes) { self?.trackedId = nil }
+                            if self?.trackedActivity == activity.id {
+                                self?.trackedId = nil
+                                self?.trackedStop = nil
+                                self?.trackedActivity = nil
+                            }
                         }
                         break
                     }

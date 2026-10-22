@@ -1,6 +1,36 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "It's already at that stop or past it.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jest już na tym przystanku albo go minął."
+          }
+        }
+      }
+    },
+    "Stop tracking it": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przestań go obserwować"
+          }
+        }
+      }
+    },
+    "Track it to %@ on the Lock Screen": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obserwuj go na ekranie blokady do przystanku %@"
+          }
+        }
+      }
+    },
     "TABOR costs about 55 zł a month to run: the server behind HUNT's live map and Apple's developer fee. It's free with no ads, so tips are what keep it going.": {
       "localizations": {
         "pl": {
