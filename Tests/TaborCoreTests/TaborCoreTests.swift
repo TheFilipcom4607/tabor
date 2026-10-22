@@ -1319,6 +1319,19 @@ private func drive(from lon0: Double, step: Double, fixes: Int, lat: Double = ro
     #expect(RouteMatch(shape: eastbound, along: 700, speed: 8).yourStop(lat: routeLat, lon: 21.002) == nil)
 }
 
+@Test func routeBookSaysWhenAVehicleIsOffItsRoute() {
+    // #98: a 117 two kilometres from either of its shapes is on a depot run or a detour.
+    let book = RouteBook(shapes: [RouteBook.key(.bus, "117"): [eastbound, westbound]])
+    let at = { (lat: Double) in LiveTrails.Point(latitude: lat, longitude: 21.015, time: fixtureNow) }
+    #expect(book.isOffRoute(line: "117", kind: .bus, position: at(routeLat + 0.018)))
+    // 100 m off is past a match, but could still be the GPS: not called off its route.
+    #expect(book.match(line: "117", kind: .bus, trail: [], position: at(routeLat + 0.0009)) == nil)
+    #expect(!book.isOffRoute(line: "117", kind: .bus, position: at(routeLat + 0.0009)))
+    // A line the routes file doesn't have says nothing either way.
+    #expect(!book.isOffRoute(line: "999", kind: .bus, position: at(routeLat + 0.018)))
+    #expect(!book.isOffRoute(line: "117", kind: .tram, position: at(routeLat + 0.018)))
+}
+
 @Test func routeMatchSaysWhenItTurnsOffBeforeYou() {
     // You stand on the street, 700 m ahead; the bus is heading straight for you.
     let you = (lat: routeLat, lon: 21.025)

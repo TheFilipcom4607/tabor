@@ -1,6 +1,36 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "OFF ITS ROUTE": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "POZA TRASĄ"
+          }
+        }
+      }
+    },
+    "OFF ROUTE": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "POZA TRASĄ"
+          }
+        }
+      }
+    },
+    "It's off its line's route (a depot run or a detour), so there's no stop to count down to.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jest poza trasą swojej linii (zjazd do zajezdni albo objazd), więc nie ma przystanku, do którego można odliczać."
+          }
+        }
+      }
+    },
     "CROP": {
       "localizations": {
         "pl": {

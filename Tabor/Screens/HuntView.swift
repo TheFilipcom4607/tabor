@@ -1479,12 +1479,20 @@ struct HuntView: View {
     }
 
     /// The straight-line guess from its trail, checked against its route when there is one:
-    /// heading for you but turning off first isn't coming your way.
+    /// heading for you but turning off first isn't coming your way, and far off its route it
+    /// could be going anywhere.
     private func motion(of pin: WantedPin) -> Motion? {
         guard let here else { return nil }
         let guess = live.trails.motion(pin.id, lat: here.latitude, lon: here.longitude)
-        guard let match = routeMatch(pin) else { return guess }
+        guard let match = routeMatch(pin) else { return isOffRoute(pin) ? .offRoute : guess }
         return match.motion(fallback: guess, lat: here.latitude, lon: here.longitude)
+    }
+
+    private func isOffRoute(_ pin: WantedPin) -> Bool {
+        let v = pin.vehicle
+        guard !v.line.isEmpty, let book = routes.book else { return false }
+        return book.isOffRoute(line: v.line, kind: v.kind,
+                               position: LiveTrails.Point(latitude: v.latitude, longitude: v.longitude, time: v.time))
     }
 
     private func routeMatch(_ pin: WantedPin) -> RouteMatch? {
@@ -1518,9 +1526,12 @@ struct HuntView: View {
         let motion = motion(of: pin)
         guard motion == .approaching, let m = creeping(pin) ?? routeMatch(pin),
               let plan = TrackPlan.make(match: m, lat: here.latitude, lon: here.longitude) else {
-            return PinCard.Track(state: .off(motion == nil
-                ? String(localized: "Still watching which way it goes. TRACK works once it's coming your way.")
-                : String(localized: "TRACK works once it's coming your way: it counts down to your stop.")))
+            let why = switch motion {
+            case nil: String(localized: "Still watching which way it goes. TRACK works once it's coming your way.")
+            case .offRoute: String(localized: "It's off its line's route (a depot run or a detour), so there's no stop to count down to.")
+            default: String(localized: "TRACK works once it's coming your way: it counts down to your stop.")
+            }
+            return PinCard.Track(state: .off(why))
         }
         return PinCard.Track(state: .ready) { track.start(pin, plan: plan, sightings: sightings) }
     }
@@ -2234,6 +2245,7 @@ private extension Motion {
         case .leaving: String(localized: "MOVING AWAY")
         case .stopped: String(localized: "STOPPED")
         case .turnsOff: String(localized: "TURNS OFF BEFORE YOU")
+        case .offRoute: String(localized: "OFF ITS ROUTE")
         }
     }
 
@@ -2245,6 +2257,7 @@ private extension Motion {
         case .leaving: String(localized: "AWAY", comment: "Short: vehicle moving away from you")
         case .stopped: String(localized: "STOPPED")
         case .turnsOff: String(localized: "TURNS OFF", comment: "Short: vehicle heading your way, but its route turns before reaching you")
+        case .offRoute: String(localized: "OFF ROUTE", comment: "Short: vehicle far from its line's route")
         }
     }
 
@@ -2253,7 +2266,7 @@ private extension Motion {
         case .approaching: Palette.green
         case .passing, .stopped: Palette.yellow
         case .leaving: Palette.sub
-        case .turnsOff: Palette.faint
+        case .turnsOff, .offRoute: Palette.faint
         }
     }
 }

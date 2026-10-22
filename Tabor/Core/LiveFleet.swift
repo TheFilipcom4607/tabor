@@ -725,6 +725,8 @@ public enum Motion: Sendable, Equatable {
     case approaching, leaving, passing, stopped
     /// Heading your way, but its route turns off before it reaches you.
     case turnsOff
+    /// Nowhere near its line's route: a depot run or a detour, so no guess at its way.
+    case offRoute
 }
 
 /// Where each vehicle has been over the last few minutes, built up from successive feed

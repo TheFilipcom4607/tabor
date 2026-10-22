@@ -35,6 +35,9 @@ public struct RouteBook: Sendable {
     /// A vehicle further than this from every shape of its line is off its route (a detour,
     /// a depot run) or the GPS is off: better no future than a wrong one.
     public static let maxOffset = 60.0
+    /// Further than this from every shape of its line, it's left the route for real (a depot
+    /// run, a detour) rather than GPS wandering a little past `maxOffset`.
+    public static let offRoute = 250.0
     /// Two fits this close are the same street: a shared stretch before a fork.
     static let tie = 4.0
     /// Enough travel to trust the trail's direction, as for the arrow on the map.
@@ -98,6 +101,14 @@ public struct RouteBook: Sendable {
         let ends = Set(close.compactMap { $0.shape.stops.last?.name })
         let end = ends.count == 1 ? Self.end(of: pick.shape, among: shapes) : nil
         return RouteMatch(shape: pick.shape, along: pick.along, speed: pick.speed, end: end)
+    }
+
+    /// Its line has shapes, and none comes anywhere near it, so the card shouldn't guess
+    /// which way it's coming from a straight line (#98).
+    public func isOffRoute(line: String, kind: VehicleKind, position: LiveTrails.Point) -> Bool {
+        let shapes = shapes(line: line, kind: kind)
+        let here = (position.latitude, position.longitude)
+        return !shapes.isEmpty && shapes.allSatisfy { $0.fits(here, within: Self.offRoute).isEmpty }
     }
 
     /// A last stop called "Zajezdnia …", or a depot's code ("R4(Z)", which newer routes files
