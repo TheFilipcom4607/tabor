@@ -663,6 +663,9 @@ SPLIT = {
 # Since 2026-09-28 the city's list has most of these, and its rows win, so the entries retire
 # themselves. Keep them anyway: they're how the city's rows of a type ZTM's scrape lacks
 # (the Otokar Kent C) find their model.
+# MZA's new Solaris Urbino 12 electrics (#17xx, 2026): the city files them under a type of
+# their own (idMarki 5956) and listed 4 on 2026-10-22, all at R-4 Stalowa; phototrans had 21
+# that day (issue #104). The depot of the other 17 is assumed from those 4.
 # (make, model, number, operator, year, depot.)
 EXTRA_BUSES = [
     *[("Otokar", "Kent C LF Mild Hybrid", n, "Mobilis", 2026, "Posag 7 Panien MOB") for n in range(9601, 9655)],
@@ -670,6 +673,9 @@ EXTRA_BUSES = [
     *[("Solaris", "Urbino 18E", n, "MZA", 2026, 'R-2 "Kleszczowa" (R-11)')
       for n in (5803, 5804, 5805, 5806, 5807, 5808, 5811, 5814, 5815, 5816, 5817, 5819, 5821,
                 5822, 5823, 5827, 5828, 5829, 5830, 5831, 5833, 5835)],
+    *[("Solaris", "Urbino 12E", n, "MZA", 2026, 'R-4 "Stalowa" (R-13)')
+      for n in (1701, 1702, 1704, 1705, 1711, 1712, 1713, 1714, 1715, 1716, 1718, 1719, 1720,
+                1721, 1722, 1723, 1724, 1725, 1726, 1727, 1728)],
 ]
 # Buses on loan for a trial, not (yet) in the ZTM database. The app tags them ON TEST:
 # catchable and in the book, but, like vintage stock, outside the fleet % and the set

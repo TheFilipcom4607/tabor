@@ -1,5 +1,5 @@
 {
-"fetched": "2026-10-20",
+"fetched": "2026-10-22",
 "source": "https://dane.um.warszawa.pl/api/action/get_ztm_pojazdy",
 "vehicles": [
 {
@@ -1588,6 +1588,42 @@
 },
 {
 "kind": "BUS",
+"number": "1705",
+"idMarki": 5956,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-4 \"Stalowa\" (R-13)",
+"colour": "RAL 1004+3020"
+},
+{
+"kind": "BUS",
+"number": "1716",
+"idMarki": 5956,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-4 \"Stalowa\" (R-13)",
+"colour": "RAL 1004+3020"
+},
+{
+"kind": "BUS",
+"number": "1719",
+"idMarki": 5956,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-4 \"Stalowa\" (R-13)",
+"colour": "RAL 1004+3020"
+},
+{
+"kind": "BUS",
+"number": "1725",
+"idMarki": 5956,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-4 \"Stalowa\" (R-13)",
+"colour": "RAL 1004+3020"
+},
+{
+"kind": "BUS",
 "number": "1851",
 "idMarki": 25,
 "year": 2008,
@@ -2056,6 +2092,15 @@
 },
 {
 "kind": "BUS",
+"number": "1953",
+"idMarki": 5913,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-1 \"Woronicza\" (R-07)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
 "number": "1954",
 "idMarki": 5913,
 "year": 2026,
@@ -2092,6 +2137,15 @@
 },
 {
 "kind": "BUS",
+"number": "1958",
+"idMarki": 5913,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-1 \"Woronicza\" (R-07)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
 "number": "1959",
 "idMarki": 5913,
 "year": 2026,
@@ -2111,6 +2165,33 @@
 {
 "kind": "BUS",
 "number": "1961",
+"idMarki": 5913,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-1 \"Woronicza\" (R-07)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "1962",
+"idMarki": 5913,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-1 \"Woronicza\" (R-07)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "1963",
+"idMarki": 5913,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-1 \"Woronicza\" (R-07)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "1967",
 "idMarki": 5913,
 "year": 2026,
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
@@ -15196,15 +15277,6 @@
 },
 {
 "kind": "BUS",
-"number": "9615",
-"idMarki": 5810,
-"year": 2026,
-"carrier": "Mobilis Sp. z o.o.",
-"depot": "Posag 7 Panien MOB",
-"colour": "RAL 1003+3020"
-},
-{
-"kind": "BUS",
 "number": "9616",
 "idMarki": 5810,
 "year": 2026,
@@ -15998,6 +16070,15 @@
 {
 "kind": "BUS",
 "number": "9853",
+"idMarki": 77,
+"year": 2016,
+"carrier": "Mobilis Sp. z o.o.",
+"depot": "Posag 7 Panien MOB",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "9854",
 "idMarki": 77,
 "year": 2016,
 "carrier": "Mobilis Sp. z o.o.",
