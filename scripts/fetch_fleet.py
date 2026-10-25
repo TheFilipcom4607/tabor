@@ -394,6 +394,7 @@ DISPLAY_NAMES = {
     ("Scania", "M323"): "Scania CityWide",
     ("Otokar", "LA16SR2BX"): "Otokar Vectio C",
     ("Otokar", "Kent C LF Mild Hybrid"): "Otokar Kent C Hybrid",
+    ("Otokar", "Vectio C Mild Hybrid"): "Otokar Vectio C Hybrid",
     ("Güleryüz", "GD272"): "Güleryüz Cobra GD272",
     ("Yutong", "U12-B"): "Yutong U12",
     ("Isuzu", "B120"): "Isuzu Citiport 12",
@@ -666,6 +667,10 @@ SPLIT = {
 # MZA's new Solaris Urbino 12 electrics (#17xx, 2026): the city files them under a type of
 # their own (idMarki 5956) and listed 4 on 2026-10-22, all at R-4 Stalowa; phototrans had 21
 # that day (issue #104). The depot of the other 17 is assumed from those 4.
+# ReloBus's new Otokar Vectio C mild hybrids (#9001-9054, 2026): not the 2018 diesel Vectio Cs
+# (#9061-9094), and the city gives them a type of their own (idMarki 5909, fewer seats). It listed
+# 15 on 2026-10-25, all at Estrady; phototrans has all 54 (checked #9001, #9012, #9026, #9050;
+# issue #108). The depot of the other 39 is assumed from those 15.
 # (make, model, number, operator, year, depot.)
 EXTRA_BUSES = [
     *[("Otokar", "Kent C LF Mild Hybrid", n, "Mobilis", 2026, "Posag 7 Panien MOB") for n in range(9601, 9655)],
@@ -676,6 +681,7 @@ EXTRA_BUSES = [
     *[("Solaris", "Urbino 12E", n, "MZA", 2026, 'R-4 "Stalowa" (R-13)')
       for n in (1701, 1702, 1704, 1705, 1711, 1712, 1713, 1714, 1715, 1716, 1718, 1719, 1720,
                 1721, 1722, 1723, 1724, 1725, 1726, 1727, 1728)],
+    *[("Otokar", "Vectio C Mild Hybrid", n, "ReloBus", 2026, "Estrady RLB") for n in range(9001, 9055)],
 ]
 # Buses on loan for a trial, not (yet) in the ZTM database. The app tags them ON TEST:
 # catchable and in the book, but, like vintage stock, outside the fleet % and the set
