@@ -1,5 +1,5 @@
 {
-"fetched": "2026-10-25",
+"fetched": "2026-10-27",
 "source": "https://dane.um.warszawa.pl/api/action/get_ztm_pojazdy",
 "vehicles": [
 {
@@ -14530,15 +14530,6 @@
 },
 {
 "kind": "BUS",
-"number": "9061",
-"idMarki": 182,
-"year": 2018,
-"carrier": "ReloBus Transport Polska Sp. z o.o.",
-"depot": "Estrady RLB",
-"colour": "RAL 1003+3020"
-},
-{
-"kind": "BUS",
 "number": "9062",
 "idMarki": 182,
 "year": 2018,
@@ -14548,88 +14539,7 @@
 },
 {
 "kind": "BUS",
-"number": "9063",
-"idMarki": 182,
-"year": 2018,
-"carrier": "ReloBus Transport Polska Sp. z o.o.",
-"depot": "Estrady RLB",
-"colour": "RAL 1003+3020"
-},
-{
-"kind": "BUS",
-"number": "9064",
-"idMarki": 182,
-"year": 2018,
-"carrier": "ReloBus Transport Polska Sp. z o.o.",
-"depot": "Estrady RLB",
-"colour": "RAL 1003+3020"
-},
-{
-"kind": "BUS",
-"number": "9065",
-"idMarki": 182,
-"year": 2018,
-"carrier": "ReloBus Transport Polska Sp. z o.o.",
-"depot": "Estrady RLB",
-"colour": "RAL 1003+3020"
-},
-{
-"kind": "BUS",
-"number": "9066",
-"idMarki": 182,
-"year": 2018,
-"carrier": "ReloBus Transport Polska Sp. z o.o.",
-"depot": "Estrady RLB",
-"colour": "RAL 1003+3020"
-},
-{
-"kind": "BUS",
 "number": "9067",
-"idMarki": 182,
-"year": 2018,
-"carrier": "ReloBus Transport Polska Sp. z o.o.",
-"depot": "Estrady RLB",
-"colour": "RAL 1003+3020"
-},
-{
-"kind": "BUS",
-"number": "9068",
-"idMarki": 182,
-"year": 2018,
-"carrier": "ReloBus Transport Polska Sp. z o.o.",
-"depot": "Estrady RLB",
-"colour": "RAL 1003+3020"
-},
-{
-"kind": "BUS",
-"number": "9069",
-"idMarki": 182,
-"year": 2018,
-"carrier": "ReloBus Transport Polska Sp. z o.o.",
-"depot": "Estrady RLB",
-"colour": "RAL 1003+3020"
-},
-{
-"kind": "BUS",
-"number": "9070",
-"idMarki": 182,
-"year": 2018,
-"carrier": "ReloBus Transport Polska Sp. z o.o.",
-"depot": "Estrady RLB",
-"colour": "RAL 1003+3020"
-},
-{
-"kind": "BUS",
-"number": "9071",
-"idMarki": 182,
-"year": 2018,
-"carrier": "ReloBus Transport Polska Sp. z o.o.",
-"depot": "Estrady RLB",
-"colour": "RAL 1003+3020"
-},
-{
-"kind": "BUS",
-"number": "9072",
 "idMarki": 182,
 "year": 2018,
 "carrier": "ReloBus Transport Polska Sp. z o.o.",
