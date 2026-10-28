@@ -142,7 +142,7 @@ struct ModelPageView: View {
                         if let spread = model.spread {
                             specsRow(spread, kind: model.kind)
                                 .padding(.top, Self.softEdge)
-                                .padding(.bottom, onSite ? 12 : 16)
+                                .padding(.bottom, onSite ? 9 : 16)
                         }
                         if onSite {
                             websiteLink(model)
@@ -392,24 +392,36 @@ struct ModelPageView: View {
         .accessibilityLabel("Show on the HUNT map")
     }
 
-    /// The model's page on the site: a photo and the facts in full (#111). It goes by id, so
-    /// the site's own slugs can change.
+    /// The model's page on the site: a photo and the facts in full (#111). A card like the
+    /// spec tiles above it, so it reads as more about the model rather than a stray button.
+    /// It goes by id, so the site's own slugs can change.
     private func websiteLink(_ model: VehicleModel) -> some View {
         Link(destination: URL(string: "https://thefilip.com/tabor/m/\(model.id)")!) {
-            HStack(spacing: 6) {
+            HStack(spacing: 12) {
                 Image(systemName: "photo")
-                    .font(.system(size: 10, weight: .semibold))
-                Mono("PHOTO AND FACTS ON THEFILIP.COM", size: 10.5, weight: 600, spacing: 0.1, color: Palette.sub)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                    .frame(width: 34, height: 34)
+                    .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                VStack(alignment: .leading, spacing: 3) {
+                    Mono(String("THEFILIP.COM"), size: 10, spacing: 0.12)
+                    Text("Photo, facts and every number")
+                        .font(TaborFont.grotesk(14, 600))
+                        .foregroundStyle(Palette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                Spacer(minLength: 0)
                 Image(systemName: "arrow.up.right")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Palette.sub)
             }
-            .foregroundStyle(Palette.sub)
-            .padding(.vertical, 6)
-            .padding(.horizontal, 11)
-            .overlay(Capsule().stroke(Color.white.opacity(0.14)))
-            .hitArea(top: 6, bottom: 6, sides: 0)
+            .padding(.vertical, 10)
+            .padding(.leading, 10)
+            .padding(.trailing, 14)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.hairline))
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Photo and facts on the website")

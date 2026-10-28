@@ -1,12 +1,12 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "PHOTO AND FACTS ON THEFILIP.COM": {
+    "Photo, facts and every number": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "ZDJĘCIE I DANE NA THEFILIP.COM"
+            "value": "Zdjęcie, dane i wszystkie numery"
           }
         }
       }
