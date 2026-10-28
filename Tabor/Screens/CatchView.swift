@@ -873,10 +873,11 @@ struct CatchView: View {
 
 extension View {
     /// Grows the tappable area past what's drawn, without moving anything.
-    func hitArea(top: CGFloat, bottom: CGFloat, sides: CGFloat) -> some View {
-        padding(EdgeInsets(top: top, leading: sides, bottom: bottom, trailing: sides))
+    func hitArea(top: CGFloat, bottom: CGFloat, sides: CGFloat, trailing: CGFloat? = nil) -> some View {
+        let trailing = trailing ?? sides
+        return padding(EdgeInsets(top: top, leading: sides, bottom: bottom, trailing: trailing))
             .contentShape(Rectangle())
-            .padding(EdgeInsets(top: -top, leading: -sides, bottom: -bottom, trailing: -sides))
+            .padding(EdgeInsets(top: -top, leading: -sides, bottom: -bottom, trailing: -trailing))
     }
 
     /// Frosted dark glass for controls floating over the live camera.

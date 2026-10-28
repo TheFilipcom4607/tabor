@@ -802,6 +802,9 @@ struct HuntView: View {
                     .padding(.horizontal, tight ? 10 : 12)
                     .background(on ? Palette.ink : .clear, in: Capsule())
                     .glass(Capsule())
+                    // Taller to tap than they look, so a hurried thumb doesn't zoom the map
+                    // instead (#109): half the gap to the header, all of it to the chips below.
+                    .hitArea(top: 6, bottom: 8, sides: 3)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(f.name.capitalized)
@@ -834,6 +837,9 @@ struct HuntView: View {
             .padding(.horizontal, compact ? 10 : 11)
             .background(on ? Palette.radar : .clear, in: Capsule())
             .glass(Capsule())
+            // As the chips, and out towards the screen's edge too: people open their saved
+            // filter in a hurry (#109).
+            .hitArea(top: 6, bottom: 8, sides: 3, trailing: 14)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(on ? "Filter, \(targets.count) picked" : "Filter")
