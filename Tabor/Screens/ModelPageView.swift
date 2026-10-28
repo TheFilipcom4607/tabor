@@ -63,6 +63,8 @@ struct ModelPageView: View {
         let stats = sightings.stats
         let owned = stats.owned(modelId: model.id)
         let ownedByNumber = Dictionary(uniqueKeysWithValues: owned.map { ($0.number, $0) })
+        // The site leaves out works cars that carry only a code.
+        let onSite = !model.numbers.allSatisfy { FleetNumber.code(of: $0) != nil }
 
         return VStack(alignment: .leading, spacing: 0) {
             TopBar {
@@ -140,6 +142,11 @@ struct ModelPageView: View {
                         if let spread = model.spread {
                             specsRow(spread, kind: model.kind)
                                 .padding(.top, Self.softEdge)
+                                .padding(.bottom, onSite ? 12 : 16)
+                        }
+                        if onSite {
+                            websiteLink(model)
+                                .padding(.top, model.spread == nil ? Self.softEdge : 0)
                                 .padding(.bottom, 16)
                         }
                         ForEach(Array(model.batches.enumerated()), id: \.offset) { i, batch in
@@ -147,7 +154,7 @@ struct ModelPageView: View {
                                         drive: model.drive(of: batch))
                                 // The first one clears the soft top edge itself when there's no specs
                                 // row above it (works cars, older vintage): otherwise it starts faded.
-                                .padding(.top, i == 0 ? (model.spread == nil ? Self.softEdge : 6) : 18)
+                                .padding(.top, i == 0 ? (model.spread == nil && !onSite ? Self.softEdge : 6) : 18)
                                 .padding(.bottom, 10)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .overlay(alignment: .top) { Rectangle().fill(Color.white.opacity(0.08)).frame(height: 1) }
@@ -383,6 +390,29 @@ struct ModelPageView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Show on the HUNT map")
+    }
+
+    /// The model's page on the site: a photo and the facts in full (#111). It goes by id, so
+    /// the site's own slugs can change.
+    private func websiteLink(_ model: VehicleModel) -> some View {
+        Link(destination: URL(string: "https://thefilip.com/tabor/m/\(model.id)")!) {
+            HStack(spacing: 6) {
+                Image(systemName: "photo")
+                    .font(.system(size: 10, weight: .semibold))
+                Mono("PHOTO AND FACTS ON THEFILIP.COM", size: 10.5, weight: 600, spacing: 0.1, color: Palette.sub)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .foregroundStyle(Palette.sub)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 11)
+            .overlay(Capsule().stroke(Color.white.opacity(0.14)))
+            .hitArea(top: 6, bottom: 6, sides: 0)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Photo and facts on the website")
     }
 
     private func ordered(_ numbers: [Int], owned: [Int: OwnedVehicle]) -> [Int] {

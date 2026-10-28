@@ -1,6 +1,26 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "PHOTO AND FACTS ON THEFILIP.COM": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ZDJĘCIE I DANE NA THEFILIP.COM"
+          }
+        }
+      }
+    },
+    "Photo and facts on the website": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zdjęcie i dane na stronie"
+          }
+        }
+      }
+    },
     "It's already at that stop or past it.": {
       "localizations": {
         "pl": {
