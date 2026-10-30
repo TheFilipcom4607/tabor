@@ -1,5 +1,6 @@
 import AVKit
 import CoreLocation
+import LockedCameraCapture
 import PhotosUI
 import SwiftData
 import SwiftUI
@@ -70,12 +71,16 @@ struct BookBefore {
 }
 
 struct CatchView: View {
-    @Query private var sightings: [Sighting]
+    /// The book's size, for the control tip: counted when CATCH appears, not a live query
+    /// of every catch, which slowed the camera's start (#107).
+    @State private var catches = 0
     @Query private var manual: [ManualAssignment]
     @AppStorage("saveToGallery") private var saveToGallery = true
     @AppStorage("geotag") private var geotag = true
     @AppStorage(DebugRecord.enabledKey) private var debugMode = false
     @AppStorage(CatchControlTip.seenKey) private var controlTipSeen = false
+    /// Rapid fire: shots stack up and are dealt out as cards once you finish (#107).
+    @AppStorage("rapidFire") private var rapid = false
     @State private var showControlHowTo = false
 
     private let camera = CameraModel.shared
@@ -88,6 +93,12 @@ struct CatchView: View {
     /// preview carrying on looked like the shutter hadn't fired.
     @State private var frozen: UIImage?
     @State private var pickerItem: PhotosPickerItem?
+    /// Rapid fire picks several photos at once.
+    @State private var pickerItems: [PhotosPickerItem] = []
+    /// A finished burst being dealt out.
+    @State private var cards: BurstCards?
+    @State private var finishing = false
+    @Environment(\.modelContext) private var context
     @State private var focusPoint: CGPoint?
     @State private var shutterDown = false
     /// Sticking a catch jumps to the Book tab while the reveal is still up; the cover's
@@ -107,8 +118,6 @@ struct CatchView: View {
     @Environment(\.wide) private var wide
     @Environment(\.tall) private var tall
     @Environment(Router.self) private var router
-
-    private let catalog = Fleet.catalog
 
     var body: some View {
         ZStack {
@@ -226,6 +235,7 @@ struct CatchView: View {
         }
         .background(Color.black.ignoresSafeArea())
         .onAppear {
+            LaunchTiming.mark("catch")
             visible = true
             Haptics.shared.warmUp()
         }
@@ -233,6 +243,8 @@ struct CatchView: View {
             camera.mode = mode
             live.start("camera")
             await camera.start()
+            LaunchTiming.mark("running")
+            catches = (try? context.fetchCount(FetchDescriptor<Sighting>())) ?? 0
             // Ask for location now, while spotting — never in the middle of a reveal.
             if geotag { LocationService.shared.requestPermission() }
         }
@@ -255,7 +267,12 @@ struct CatchView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active, visible { live.start("camera") }
-            if phase == .active, draft == nil, visible { Task { await camera.start() } }
+            if phase == .active, draft == nil, visible {
+                Task {
+                    await camera.start()
+                    LaunchTiming.mark("running")
+                }
+            }
             if phase == .background {
                 camera.stop()
                 live.stop("camera")
@@ -264,6 +281,8 @@ struct CatchView: View {
         .onChange(of: LocationService.shared.latest) { live.locationMoved() }
         // A photo shared from another app (Photos, Lightroom…): caught like an imported one.
         .onChange(of: router.sharedPhotos, initial: true) { takeShared() }
+        // Shots from the Lock Screen camera: dealt out like a rapid fire burst.
+        .onChange(of: router.lockedShots, initial: true) { takeLocked() }
         .onChange(of: pickerItem) { _, item in
             guard let item else { return }
             // The picker is still sliding away; a reveal presented under it comes out laid out
@@ -282,6 +301,27 @@ struct CatchView: View {
             }
         }
         .sheet(isPresented: $showControlHowTo) { CatchControlHowTo() }
+        .onChange(of: pickerItems) { _, items in
+            guard !items.isEmpty else { return }
+            let pickerGone = ContinuousClock.now + .milliseconds(600)
+            Task {
+                finishing = true
+                for item in items {
+                    if let data = try? await item.loadTransferable(type: Data.self) { addImport(data) }
+                }
+                pickerItems = []
+                try? await Task.sleep(until: pickerGone)
+                finishing = false
+                await finishBurst()
+            }
+        }
+        .fullScreenCover(item: $cards, onDismiss: {
+            if visible { Task { await camera.start() } }
+            takeShared()
+        }) { c in
+            BurstRevealView(cards: c, reread: { old, cropped in await reread(old, cropped: cropped) })
+                .windowControlsClearance()
+        }
         .fullScreenCover(item: $draft, onDismiss: {
             frozen = nil
             if visible { Task { await camera.start() } }
@@ -404,7 +444,7 @@ struct CatchView: View {
     }
 
     @ViewBuilder private var controlTip: some View {
-        if !controlTipSeen, sightings.count >= CatchControlTip.afterCatches {
+        if !controlTipSeen, catches >= CatchControlTip.afterCatches {
             CatchControlTipCard {
                 showControlHowTo = true
                 controlTipSeen = true
@@ -416,7 +456,11 @@ struct CatchView: View {
 
     private var topBar: some View {
         HStack(spacing: 8) {
-            Mono("SPOTTING", size: 12, spacing: 0.16, color: .white.opacity(0.8))
+            // Short, beside the toggle and the modes on a 390 pt phone in Polish.
+            Mono(rapid ? "RAPID" : "SPOTTING", size: 12, spacing: 0.16, color: rapid ? Palette.yellow : .white.opacity(0.8))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .contentTransition(.opacity)
             if debugMode {
                 Mono("DEBUG", size: 9.5, weight: 700, spacing: 0.1, color: .white)
                     .padding(.vertical, 3)
@@ -424,6 +468,7 @@ struct CatchView: View {
                     .background(Palette.red, in: RoundedRectangle(cornerRadius: 4))
             }
             Spacer()
+            rapidToggle
             // One segmented control with a highlight that slides between modes.
             HStack(spacing: 0) {
                 ForEach(CatchMode.allCases, id: \.self) { m in
@@ -449,6 +494,7 @@ struct CatchView: View {
             }
             .padding(3)
             .glass(Capsule())
+            .fixedSize()
         }
     }
 
@@ -494,7 +540,7 @@ struct CatchView: View {
             }
 
             HStack {
-                importButton
+                importOrStack
                 Spacer()
                 shutter
                 Spacer()
@@ -516,7 +562,7 @@ struct CatchView: View {
             }
             shutter
                 .padding(.vertical, 24)
-            importButton
+            importOrStack
             Spacer(minLength: 12)
             galleryToggle
         }
@@ -545,16 +591,96 @@ struct CatchView: View {
     }
 
     private var importButton: some View {
-        PhotosPicker(selection: $pickerItem, matching: .images) {
-            Image(systemName: "photo.on.rectangle.angled")
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.85))
-                .frame(width: 50, height: 50)
-                .glass(Circle())
+        Group {
+            if rapid {
+                PhotosPicker(selection: $pickerItems, maxSelectionCount: 30, selectionBehavior: .ordered, matching: .images) {
+                    importIcon
+                }
+            } else {
+                PhotosPicker(selection: $pickerItem, matching: .images) { importIcon }
+            }
         }
         .buttonStyle(StickerPressStyle())
-        .disabled(capturing)
-        .accessibilityLabel("Import a photo")
+        .disabled(capturing || finishing)
+        .accessibilityLabel(rapid ? "Import photos" : "Import a photo")
+    }
+
+    private var importIcon: some View {
+        Image(systemName: rapid ? "photo.stack" : "photo.on.rectangle.angled")
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.85))
+            .contentTransition(.symbolEffect(.replace))
+            .frame(width: 50, height: 50)
+            .glass(Circle())
+    }
+
+    /// The import button, or once rapid fire has shots waiting, the stack of them: tap it
+    /// to finish and deal them out.
+    @ViewBuilder private var importOrStack: some View {
+        if router.burst.isEmpty { importButton } else { burstStack }
+    }
+
+    private var burstStack: some View {
+        let burst = router.burst
+        let thumbs = Array(burst.shots.suffix(3).enumerated())
+        return Button {
+            Task { await finishBurst() }
+        } label: {
+            VStack(spacing: 5) {
+                ZStack {
+                    ForEach(thumbs, id: \.element.id) { i, shot in
+                        let back = Double(thumbs.count - 1 - i)
+                        Group {
+                            if let img = shot.thumb {
+                                Image(uiImage: img).resizable().scaledToFill()
+                            } else {
+                                Color(hex: 0x1A1D22)
+                            }
+                        }
+                        .frame(width: 44, height: 44)
+                        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).stroke(.white, lineWidth: 2))
+                        .rotationEffect(.degrees(back * -7))
+                        .offset(x: back * -3, y: back * -2)
+                    }
+                }
+                .frame(width: 50, height: 50)
+                .overlay(alignment: .topTrailing) {
+                    Mono("\(burst.count)" as String, size: 11, weight: 700, spacing: 0, color: Palette.bg)
+                        .padding(.vertical, 2)
+                        .padding(.horizontal, 6)
+                        .background(Palette.yellow, in: Capsule())
+                        .offset(x: 8, y: -6)
+                        .contentTransition(.numericText())
+                }
+                Mono("FINISH", size: 9.5, weight: 600, spacing: 0.12, color: .white.opacity(0.85))
+            }
+            .opacity(finishing ? 0.5 : 1)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: burst.count)
+        }
+        .buttonStyle(StickerPressStyle())
+        .disabled(finishing)
+        .accessibilityLabel("Finish")
+        .accessibilityValue("\(burst.count) shots")
+    }
+
+    private var rapidToggle: some View {
+        Button {
+            Haptics.shared.tick()
+            withAnimation(.snappy) { rapid.toggle() }
+            let name = String(localized: "RAPID FIRE")
+            showToast(rapid ? String(localized: "\(name) ON") : String(localized: "\(name) OFF"))
+        } label: {
+            Image(systemName: "square.stack.3d.down.right.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(rapid ? Palette.bg : .white.opacity(0.72))
+                .frame(width: 36, height: 36)
+                .background(Palette.yellow.opacity(rapid ? 1 : 0), in: Circle())
+                .glass(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Rapid fire")
+        .accessibilityValue(rapid ? "On" : "Off")
     }
 
     private var shutter: some View {
@@ -672,22 +798,18 @@ struct CatchView: View {
 
     private var hint: String {
         // The full-res read (and tile pass) can take a second or two on device.
-        if capturing { return String(localized: "READING THE NUMBER…") }
+        if finishing, router.burst.reading > 0 { return String(localized: "READING \(router.burst.reading) MORE…") }
+        if capturing, !rapid { return String(localized: "READING THE NUMBER…") }
         switch camera.status {
         case .running: break
         case .idle: return String(localized: "WAKING THE CAMERA")
         case .interrupted: return String(localized: "WAITING FOR THE CAMERA")
         default: return String(localized: "IMPORT A SHOT TO CATCH IT")
         }
+        if rapid {
+            return router.burst.isEmpty ? String(localized: "SHOOT AWAY, REVEAL THEM AFTER") : String(localized: "TAP FINISH TO REVEAL THEM")
+        }
         return String(localized: "GET THE WHOLE VEHICLE IN FRAME")
-    }
-
-    /// The database match, settled by the live feed when only one kind with that number is
-    /// running nearby. A model you picked by hand for this number always wins.
-    private func lookup(_ n: Int, nearby: [NearbyVehicle]) -> ModelMatch {
-        let m = catalog.match(number: n, preferring: mode.kind, manual: manual.map)
-        guard manual.map[n] == nil else { return m }
-        return LiveHints.resolve(m, number: n, nearby: nearby, catalog: catalog)
     }
 
     // MARK: - Actions
@@ -730,7 +852,74 @@ struct CatchView: View {
                 record?.update { $0.crop = "brackets \(frame.integral) in \(size.width)×\(size.height) viewfinder" }
             }
         }
-        await begin(with: data, fromCamera: true, record: record)
+        guard rapid else { return await begin(with: data, fromCamera: true, record: record) }
+        // Rapid fire: into the stack, read in the background, and the camera carries on.
+        let nearby = live.fresh() != nil ? live.nearby : []
+        router.burst.add(data, fromCamera: true, date: Date(), mode: mode, nearby: nearby,
+                         geotag: geotag ? Task { await LocationService.shared.geotag() } : nil,
+                         record: record, manual: manual.map)
+    }
+
+    /// A photo picked from the library in rapid fire: its own date and place, no feed.
+    private func addImport(_ data: Data) {
+        let meta = PhotoStore.metadata(data)
+        let tag: Task<Geotag?, Never>? = if geotag, let lat = meta.latitude, let lon = meta.longitude {
+            Task { await LocationService.shared.geotag(CLLocation(latitude: lat, longitude: lon)) }
+        } else { nil }
+        router.burst.add(data, fromCamera: false, date: meta.date ?? Date(), mode: mode, nearby: [], geotag: tag,
+                         record: DebugRecord.begin(source: "import", mode: mode), manual: manual.map)
+    }
+
+    /// The Lock Screen camera's shots, read and dealt out as cards. Its folders are only
+    /// cleared once the cards are ready, so a crash before then leaves the shots for next time.
+    private func takeLocked() {
+        let folders = LockedCameraCaptureManager.shared.sessionContentURLs
+        guard !folders.isEmpty, draft == nil, cards == nil, !finishing else { return }
+        Task {
+            finishing = true
+            for folder in folders {
+                for (photo, shot) in LockedShot.all(in: folder) { await addLocked(photo, shot) }
+            }
+            finishing = false
+            await finishBurst()
+            for folder in folders { try? await LockedCameraCaptureManager.shared.invalidateSessionContent(at: folder) }
+        }
+    }
+
+    private func addLocked(_ photo: Data, _ shot: LockedShot) async {
+        var data = photo
+        let record = DebugRecord.begin(source: "locked", mode: .auto)
+        if let crop = shot.crop, let size = shot.viewSize, let cropped = await Task.detached(priority: .userInitiated, operation: {
+            PhotoStore.crop(photo, viewSize: size, frame: crop)
+        }).value {
+            data = cropped
+            record?.attach(original: photo)
+            record?.update { $0.crop = "brackets \(crop.integral) in \(size.width)×\(size.height) viewfinder" }
+        }
+        let age = Date().timeIntervalSince(shot.date)
+        // Taken a moment ago: you're still about where the shot was, and so are the vehicles.
+        let nearby = age < 180 && live.fresh() != nil ? live.nearby : []
+        let tag: Task<Geotag?, Never>? = if !geotag {
+            nil
+        } else if let lat = shot.latitude, let lon = shot.longitude {
+            Task { await LocationService.shared.geotag(CLLocation(latitude: lat, longitude: lon)) }
+        } else if age < 600 {
+            Task { await LocationService.shared.geotag() }
+        } else { nil }
+        router.burst.add(data, fromCamera: true, date: shot.date, mode: .auto, nearby: nearby, geotag: tag,
+                         record: record, manual: manual.map)
+    }
+
+    /// Rapid fire's shots, once they're all read, dealt out as cards.
+    private func finishBurst() async {
+        guard !finishing, !router.burst.isEmpty else { return }
+        finishing = true
+        defer { finishing = false }
+        let book = (try? context.fetch(FetchDescriptor<Sighting>())) ?? []
+        let drafts = await router.burst.finish(book: book)
+        guard !drafts.isEmpty else { return }
+        camera.stop()
+        cards = BurstCards(drafts: drafts)
     }
 
     /// The photo waiting in the share inbox, if any and if nothing else is being caught.
@@ -745,14 +934,12 @@ struct CatchView: View {
 
     private func begin(with data: Data, fromCamera: Bool, record: DebugRecord? = nil,
                        presentAfter: ContinuousClock.Instant? = nil) async {
-        let preview = await Task.detached(priority: .userInitiated) {
-            PhotoStore.downsample(data, maxPixel: 900).map(UIImage.init(cgImage:))
-        }.value
+        let preview = await CatchReader.preview(data)
         withAnimation(.easeOut(duration: 0.2)) { frozen = preview }
         let record = record ?? DebugRecord.begin(source: fromCamera ? "camera" : "import", mode: mode)
         // An imported photo could be from anywhere, any day: only fresh shots use the feed.
         let nearby = fromCamera && self.live.fresh() != nil ? self.live.nearby : []
-        var d = await reading(data, fromCamera: fromCamera, record: record, nearby: nearby, mode: mode)
+        var d = await CatchReader.read(data, fromCamera: fromCamera, record: record, nearby: nearby, mode: mode, manual: manual.map)
         d.preview = preview
         if fromCamera {
             if geotag { d.geotag = Task { await LocationService.shared.geotag() } }
@@ -763,7 +950,8 @@ struct CatchView: View {
                 d.geotag = Task { await LocationService.shared.geotag(CLLocation(latitude: lat, longitude: lon)) }
             }
         }
-        d.book = BookBefore(stats: sightings.stats, streak: Streak.days(sightings.map(\.date) + [d.date]))
+        let book = (try? context.fetch(FetchDescriptor<Sighting>())) ?? []
+        d.book = BookBefore(stats: book.stats, streak: Streak.days(book.map(\.date) + [d.date]))
         camera.stop()
         if let presentAfter { try? await Task.sleep(until: presentAfter) }
         draft = d
@@ -772,101 +960,13 @@ struct CatchView: View {
     /// The same catch, read again from a crop of its photo (#94): where and when it was caught,
     /// and the book it counts from, stay as they were.
     private func reread(_ old: CatchDraft, cropped data: Data) async -> CatchDraft {
-        var d = await reading(data, fromCamera: old.fromCamera, record: old.debug, nearby: old.nearby, mode: old.mode)
-        d.preview = await Task.detached(priority: .userInitiated) {
-            PhotoStore.downsample(data, maxPixel: 900).map(UIImage.init(cgImage:))
-        }.value
+        var d = await CatchReader.read(data, fromCamera: old.fromCamera, record: old.debug, nearby: old.nearby, mode: old.mode,
+                                       manual: manual.map)
+        d.preview = await CatchReader.preview(data)
         d.date = old.date
         d.geotag = old.geotag
         d.book = old.book
         d.line = d.line ?? old.line
-        return d
-    }
-
-    /// Reads the number, matches it and starts the sticker: everything in a draft that comes
-    /// from the photo itself.
-    private func reading(_ data: Data, fromCamera: Bool, record: DebugRecord?, nearby: [NearbyVehicle],
-                         mode: CatchMode) async -> CatchDraft {
-        record?.attach(photo: data)
-        // The read also says where the number is, so the sticker keeps the object it's on.
-        let ocr = Task.detached(priority: .userInitiated) {
-            await TextReader.read(data, mode: mode, nearby: nearby)
-        }
-        // Lift the subjects at once (quicker than OCR), then cut once the number's box is known.
-        let sticker = Task.detached(priority: .userInitiated) { () -> StickerCut? in
-            var spent: TimeInterval = 0
-            var start = Date()
-            let lifted = StickerMaker.lift(data)
-            spent += Date().timeIntervalSince(start)
-            var box: CGRect?
-            var result: Result<StickerCut, StickerMaker.Failure>
-            switch lifted {
-            case .failure(let f):
-                result = .failure(f)
-            case .success(let lift):
-                box = await ocr.value.numberBox
-                start = Date()
-                result = StickerCut.make(lift, numberBox: box)
-                spent += Date().timeIntervalSince(start)
-            }
-            let cut = try? result.get()
-            if let record {
-                let ms = Int(spent * 1000)
-                let failure: String? = if case .failure(let f) = result { f.description } else { nil }
-                record.update {
-                    $0.sticker = .init(ok: cut != nil, durationMs: ms, failure: failure, pickedBy: cut?.reason.rawValue,
-                                       subjects: cut?.order.count, numberBox: box.map(DebugRecord.describe))
-                }
-                if let png = cut?.png { record.attach(sticker: png) }
-            }
-            return cut
-        }
-        var liveInfo = DebugRecord.Live(status: "\(self.live.status)",
-                                        snapshotAge: self.live.snapshot.map { Int(Date().timeIntervalSince($0.fetched)) },
-                                        nearby: nearby.map { "\($0.vehicle.kind.rawValue) \($0.vehicle.number) · line \($0.vehicle.line) · \(Int($0.distance)) m" })
-        let report = await ocr.value
-        let number = report.number
-        let photoNumbers = report.candidates.sorted { $0.score > $1.score }.map(\.number)
-        liveInfo.boosted = report.live.boosted
-        liveInfo.rescued = report.live.rescued
-        liveInfo.partners = report.live.partners
-        record?.update { $0.ocr = DebugRecord.ocr(report) }
-        var d = CatchDraft(photo: data, number: number, fromCamera: fromCamera, sticker: sticker, debug: record)
-        d.nearby = nearby
-        d.mode = mode
-        d.photoNumbers = Task { photoNumbers }
-        d.photoRead = ocr
-        if let n = number {
-            let plain = catalog.match(number: n, preferring: mode.kind, manual: manual.map)
-            let match = lookup(n, nearby: nearby)
-            if match != plain { liveInfo.resolved = "\(DebugRecord.describe(plain)) → \(DebugRecord.describe(match))" }
-            // An import never has the feed to settle bus 2021 vs tram 2021, and a guess showed a
-            // bus as a tram with full confidence (#66).
-            if case .ambiguous(let ms) = match { d.choices = ms }
-            let picked = d.choices.isEmpty ? match.suggested : nil
-            d.modelId = picked?.id
-            if fromCamera, let model = picked {
-                let snapshot = self.live.snapshot
-                d.line = LiveHints.line(for: n, kind: model.kind, snapshot: snapshot, at: d.date, model: model, nearby: nearby,
-                                        catalog: catalog)
-                d.autoLine = d.line
-                // "set": borrowed from the coupled car the feed reports instead.
-                liveInfo.lineSource = d.line == nil ? "none" : snapshot?.vehicle(number: n, kind: model.kind) == nil ? "set" : "live"
-            }
-            if let model = picked {
-                d.partnerSuggestions = CoupledSet.suggestions(for: n, model: model, photoNumbers: photoNumbers, nearby: nearby,
-                                                              catalog: catalog)
-            }
-            let described = DebugRecord.describe(match), suggested = d.modelId
-            record?.update {
-                $0.match = described
-                $0.suggestedModel = suggested
-            }
-        }
-        if fromCamera {
-            let info = liveInfo
-            record?.update { $0.live = info }
-        }
         return d
     }
 }
@@ -899,39 +999,5 @@ private struct ShutterStyle: ButtonStyle {
                 pressed = down
                 if down { Haptics.shared.warmUp() }
             }
-    }
-}
-
-/// Corner brackets + thirds.
-struct ViewfinderBrackets: View {
-    var body: some View {
-        GeometryReader { geo in
-            let w = geo.size.width, h = geo.size.height
-            let color: Color = .white.opacity(0.85)
-            ZStack {
-                ForEach(0..<4, id: \.self) { i in
-                    Corner()
-                        .stroke(color, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                        .frame(width: 22, height: 22)
-                        .rotationEffect(.degrees(Double(i) * 90))
-                        .position(x: i == 0 || i == 3 ? 11 : w - 11, y: i < 2 ? 11 : h - 11)
-                }
-                ForEach([1.0 / 3, 2.0 / 3], id: \.self) { f in
-                    Rectangle().fill(.white.opacity(0.14))
-                        .frame(width: 1, height: h * 0.84)
-                        .position(x: w * f, y: h / 2)
-                }
-            }
-        }
-    }
-
-    private struct Corner: Shape {
-        func path(in r: CGRect) -> Path {
-            var p = Path()
-            p.move(to: CGPoint(x: r.minX, y: r.maxY))
-            p.addLine(to: CGPoint(x: r.minX, y: r.minY))
-            p.addLine(to: CGPoint(x: r.maxX, y: r.minY))
-            return p
-        }
     }
 }

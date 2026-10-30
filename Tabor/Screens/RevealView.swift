@@ -7,6 +7,9 @@ struct RevealView: View {
     @State var draft: CatchDraft
     /// Reads the catch again from a crop of its photo (#94).
     var reread: (CatchDraft, Data) async -> CatchDraft
+    /// One card of a burst (rapid fire, the Lock Screen camera): it waits face down for a tap,
+    /// NEXT sticks it in and SKIP leaves it out, instead of a hold and a trip to the book.
+    var step: BurstStep? = nil
     @Query private var manual: [ManualAssignment]
     @AppStorage("saveToGallery") private var saveToGallery = true
     @Environment(\.modelContext) private var context
@@ -51,6 +54,8 @@ struct RevealView: View {
     @State private var skipEdit = false
     /// The wrap's own sparkle: on when the reveal lands in a wrap, or the chip adds one.
     @State private var foilBurst = 0
+    /// A burst's card has been tapped over.
+    @State private var flipped = false
 
     private let catalog = Fleet.catalog
     private let holdDuration = 0.55
@@ -95,22 +100,26 @@ struct RevealView: View {
         let ready = model != nil && number != nil
         let choices = choices
         let wrap = ready ? draft.wrap : nil
-        let accent = wrap != nil ? Palette.foilInk : tier == .common ? Palette.yellow : tier.color
+        // A burst's card face down gives nothing away, not even its tier's glow.
+        let faceDown = step != nil && !flipped
+        let accent = faceDown ? Palette.yellow : wrap != nil ? Palette.foilInk : tier == .common ? Palette.yellow : tier.color
         // Already in the book, but never in this wrap: a new form of it.
         let newForm = wrap.map { w in existing.map { !$0.wraps.contains(w.id) } ?? false } ?? false
 
         // The pieces, down the screen on a phone and beside the stage on a wide one.
         let header = VStack(alignment: .leading, spacing: 7) {
-            Mono(newForm && landed ? String(localized: "NEW FORM · SIGHTING #\((existing?.timesSeen ?? 0) + 1)")
+            Mono(faceDown ? String(localized: "SHOT \((step?.index ?? 0) + 1) OF \(step?.count ?? 0)")
+                 : newForm && landed ? String(localized: "NEW FORM · SIGHTING #\((existing?.timesSeen ?? 0) + 1)")
                  : kicker(isNewVehicle: isNewVehicle, isNewModel: isNewModel, modelOwned: modelOwned, added: added, existing: existing),
                  size: 12, spacing: 0.16, color: accent)
-            Text(model?.name ?? (number == nil ? String(localized: "What did you catch?")
+            Text(faceDown ? String(localized: "What's this one?")
+                 : model?.name ?? (number == nil ? String(localized: "What did you catch?")
                 : choices.isEmpty ? String(localized: "Which model is it?") : String(localized: "Which one is it?")))
                 .font(TaborFont.grotesk(30, 700))
                 .em(-0.03, size: 30)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
-            if let line = draft.line?.nonEmpty {
+            if !faceDown, let line = draft.line?.nonEmpty {
                 Mono("LINE \(line.uppercased())", size: 11, weight: 600, spacing: 0.12, color: Palette.sub)
             }
             // A wrap taken from the chip shows as the chip itself.
@@ -202,51 +211,51 @@ struct RevealView: View {
             }
         }
         let actions = VStack(spacing: 10) {
-            if ready {
+            if faceDown {
+                bigButton("Reveal", action: flip)
+            } else if ready, let step {
+                bigButton(step.index + 1 == step.count ? "Stick it in and finish" : "Stick it in, next one") {
+                    Task { await stick() }
+                }
+                .opacity(landed ? 1 : 0.4)
+                .allowsHitTesting(landed)
+            } else if ready {
                 holdButton
             } else if !choices.isEmpty {
                 ForEach(choices) { choiceButton($0) }
             } else {
-                Button {
-                    editing = true
-                } label: {
-                    Text(number == nil ? "Type the number" : "Pick the model")
-                        .font(TaborFont.grotesk(16, 700))
-                        .frame(maxWidth: .infinity)
-                        .padding(17)
-                        .foregroundStyle(Palette.bg)
-                        .background(Palette.yellow, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-                .buttonStyle(StickerPressStyle())
+                bigButton(number == nil ? "Type the number" : "Pick the model") { editing = true }
             }
-            HStack(spacing: 10) {
-                Button {
-                    editing = true
-                } label: {
-                    secondaryLabel(ready ? String(localized: "WRONG NUMBER?") : String(localized: "EDIT DETAILS"))
-                }
-                .buttonStyle(.plain)
-                if number == nil, landed {
+            if !faceDown {
+                HStack(spacing: 10) {
                     Button {
-                        Haptics.shared.tick()
-                        cropping = true
+                        editing = true
                     } label: {
-                        secondaryLabel(String(localized: "CROP"))
-                            .opacity(rereading ? 0.5 : 1)
+                        secondaryLabel(ready ? String(localized: "WRONG NUMBER?") : String(localized: "EDIT DETAILS"))
                     }
                     .buttonStyle(.plain)
-                    .disabled(rereading)
-                    .transition(.opacity)
-                }
-                // Only when the photo had something else worth cutting.
-                if ready, landed, stickerImage != nil, cut?.canRecut == true {
-                    Button(action: recut) {
-                        secondaryLabel(String(localized: "WRONG CUTOUT?"))
-                            .opacity(recutting ? 0.5 : 1)
+                    if number == nil, landed {
+                        Button {
+                            Haptics.shared.tick()
+                            cropping = true
+                        } label: {
+                            secondaryLabel(String(localized: "CROP"))
+                                .opacity(rereading ? 0.5 : 1)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(rereading)
+                        .transition(.opacity)
                     }
-                    .buttonStyle(.plain)
-                    .disabled(recutting)
-                    .transition(.opacity)
+                    // Only when the photo had something else worth cutting.
+                    if ready, landed, stickerImage != nil, cut?.canRecut == true {
+                        Button(action: recut) {
+                            secondaryLabel(String(localized: "WRONG CUTOUT?"))
+                                .opacity(recutting ? 0.5 : 1)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(recutting)
+                        .transition(.opacity)
+                    }
                 }
             }
         }
@@ -280,14 +289,15 @@ struct RevealView: View {
                         .opacity(rereading ? 0.4 : 1)
                     }
                     .buttonStyle(.plain)
-                    .disabled(rereading || sticking)
+                    .disabled(rereading || sticking || faceDown)
+                    .opacity(faceDown ? 0 : 1)
                     Spacer()
                     Button {
                         draft.geotag?.cancel()
-                        draft.debug?.log("retake", number: draft.number, modelId: draft.modelId)
-                        dismiss()
+                        draft.debug?.log(step == nil ? "retake" : "skip", number: draft.number, modelId: draft.modelId)
+                        if let step { step.done(nil) } else { dismiss() }
                     } label: {
-                        Mono(draft.fromCamera ? "RETAKE" : "CANCEL", size: 12)
+                        Mono(step != nil ? "SKIP" : draft.fromCamera ? "RETAKE" : "CANCEL", size: 12)
                             .padding(.vertical, 12)
                             .padding(.horizontal, 22)
                             .contentShape(Rectangle())
@@ -303,6 +313,7 @@ struct RevealView: View {
                     // with it in a phone's column on the right.
                     HStack(spacing: 0) {
                         stage(number: number, model: model, tier: tier, isNew: isNewVehicle && ready, foil: wrap != nil)
+                            .onTapGesture { if faceDown { flip() } }
                             .scaleEffect(1.2)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .padding(.leading, 16)
@@ -318,6 +329,7 @@ struct RevealView: View {
                     header
                     // Upright or half folded there's height to spare: a bigger sticker.
                     stage(number: number, model: model, tier: tier, isNew: isNewVehicle && ready, foil: wrap != nil)
+                        .onTapGesture { if faceDown { flip() } }
                         .scaleEffect(tall ? 1.3 : 1)
                         .frame(maxWidth: .infinity)
                         .frame(height: tall ? 340 : 250)
@@ -377,13 +389,14 @@ struct RevealView: View {
         }
         .onChange(of: draft.partner) { _, _ in refreshAlso() }
         .animation(.spring(response: 0.45, dampingFraction: 0.6), value: draft.wrap)
-        .onAppear { router.revealShown() }
+        // A burst tells the router once for all its cards.
+        .onAppear { if step == nil { router.revealShown() } }
         // Only now may the book scroll to the catch: CATCH (and this cover with it) goes as the
         // tab switches, so the cover's own onDismiss never runs.
-        .onDisappear { router.revealGone() }
+        .onDisappear { if step == nil { router.revealGone() } }
         .task {
             Haptics.shared.warmUp()
-            await playReveal(run: 0)
+            if step == nil { await playReveal(run: 0) }
             await loadReads()
         }
     }
@@ -879,6 +892,27 @@ struct RevealView: View {
         .accessibilityAction { Task { await stick() } }
     }
 
+    private func bigButton(_ title: LocalizedStringKey, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(TaborFont.grotesk(16, 700))
+                .frame(maxWidth: .infinity)
+                .padding(17)
+                .foregroundStyle(Palette.bg)
+                .background(Palette.yellow, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(StickerPressStyle())
+    }
+
+    /// A burst's card turned over: the reveal plays as a single catch's does.
+    private func flip() {
+        guard !flipped else { return }
+        Haptics.shared.tick()
+        flipped = true
+        let run = revealRun
+        Task { await playReveal(run: run) }
+    }
+
     private func beginHold() {
         holding = true
         Haptics.shared.beginHold()
@@ -1018,8 +1052,12 @@ struct RevealView: View {
         let owned = ownedBefore.union(cars)
         let batchDone = cars.contains { model.batch(containing: $0)?.numbers.allSatisfy(owned.contains) ?? false }
         let firstTime = !ownedBefore.isSuperset(of: cars)
-        router.openModel(model.id, landing: number)
-        dismiss()
+        if let step {
+            step.done(draft)
+        } else {
+            router.openModel(model.id, landing: number)
+            dismiss()
+        }
         if firstTime, batchDone || model.numbers.allSatisfy(owned.contains) {
             try? await Task.sleep(for: .milliseconds(450))
             Haptics.shared.completed()
@@ -1202,6 +1240,22 @@ enum PluralCaption {
         case "one": String(localized: "caption.days.one", defaultValue: "day")
         case "few": String(localized: "caption.days.few", defaultValue: "days")
         default: String(localized: "caption.days.many", defaultValue: "days")
+        }
+    }
+
+    static func vehicles(_ n: Int) -> String {
+        switch form(n) {
+        case "one": String(localized: "caption.vehicles.one", defaultValue: "vehicle")
+        case "few": String(localized: "caption.vehicles.few", defaultValue: "vehicles")
+        default: String(localized: "caption.vehicles.many", defaultValue: "vehicles")
+        }
+    }
+
+    static func newModels(_ n: Int) -> String {
+        switch form(n) {
+        case "one": String(localized: "caption.newModels.one", defaultValue: "new species")
+        case "few": String(localized: "caption.newModels.few", defaultValue: "new species")
+        default: String(localized: "caption.newModels.many", defaultValue: "new species")
         }
     }
 }

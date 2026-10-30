@@ -10588,6 +10588,315 @@
           }
         }
       }
+    },
+    "RAPID": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SERYJNE"
+          }
+        }
+      }
+    },
+    "RAPID FIRE": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ZDJĘCIA SERYJNE"
+          }
+        }
+      }
+    },
+    "Rapid fire": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zdjęcia seryjne"
+          }
+        }
+      }
+    },
+    "SHOOT AWAY, REVEAL THEM AFTER": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PSTRYKAJ, ODKRYJESZ POTEM"
+          }
+        }
+      }
+    },
+    "TAP FINISH TO REVEAL THEM": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "STUKNIJ GOTOWE, BY JE ODKRYĆ"
+          }
+        }
+      }
+    },
+    "READING %lld MORE…": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CZYTAM JESZCZE %lld…"
+          }
+        }
+      }
+    },
+    "FINISH": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GOTOWE"
+          }
+        }
+      }
+    },
+    "Finish": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gotowe"
+          }
+        }
+      }
+    },
+    "%lld shots": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zdjęcia: %lld"
+          }
+        }
+      }
+    },
+    "Import photos": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wczytaj zdjęcia"
+          }
+        }
+      }
+    },
+    "SHOT %lld OF %lld": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ZDJĘCIE %1$lld Z %2$lld"
+          }
+        }
+      }
+    },
+    "What's this one?": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Co to za jeden?"
+          }
+        }
+      }
+    },
+    "Reveal": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odkryj"
+          }
+        }
+      }
+    },
+    "Stick it in, next one": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wklej i dalej"
+          }
+        }
+      }
+    },
+    "Stick it in and finish": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wklej i zakończ"
+          }
+        }
+      }
+    },
+    "All in the book": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wszystkie w albumie"
+          }
+        }
+      }
+    },
+    "burst.new": {
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "NEW"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOWE"
+          }
+        }
+      }
+    },
+    "caption.vehicles.one": {
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "vehicle"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pojazd"
+          }
+        }
+      }
+    },
+    "caption.vehicles.few": {
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "vehicles"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pojazdy"
+          }
+        }
+      }
+    },
+    "caption.vehicles.many": {
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "vehicles"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pojazdów"
+          }
+        }
+      }
+    },
+    "caption.newModels.one": {
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "new species"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nowy gatunek"
+          }
+        }
+      }
+    },
+    "caption.newModels.few": {
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "new species"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nowe gatunki"
+          }
+        }
+      }
+    },
+    "caption.newModels.many": {
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "new species"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nowych gatunków"
+          }
+        }
+      }
+    },
+    "SEE IT IN THE BOOK": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ZOBACZ W ALBUMIE"
+          }
+        }
+      }
+    },
+    "Open the TABOR camera": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz aparat TABORU"
+          }
+        }
+      }
+    },
+    "Opens TABOR straight to the camera, even on a locked phone.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwiera TABOR od razu na aparacie, nawet na zablokowanym telefonie."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

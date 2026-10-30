@@ -1,8 +1,15 @@
+import LockedCameraCapture
 import SwiftData
 import SwiftUI
 
 @main
 struct TaborApp: App {
+    init() {
+        LaunchTiming.mark("app")
+        // Every launch lands on CATCH: get the camera built while the first screen is.
+        CameraModel.shared.prepare { LaunchTiming.mark("configured") }
+    }
+
     var body: some Scene {
         WindowGroup {
             LaunchGate()
@@ -82,6 +89,18 @@ final class Router {
     var huntModel: String?
     /// A running vehicle ("BUS#1998") HUNT centres on and opens, from a Live Activity tap (#61).
     var huntVehicle: String?
+    /// Rapid fire's shots waiting to be dealt out: kept here, so leaving CATCH keeps them.
+    let burst = BurstQueue()
+    /// Goes up when the Lock Screen camera has left shots: CATCH takes them as a burst.
+    var lockedShots = 0
+
+    /// Shots from the Lock Screen camera (#107), once the phone is unlocked.
+    func catchLocked() {
+        guard !LockedCameraCaptureManager.shared.sessionContentURLs.isEmpty else { return }
+        tab = .catchTab
+        bookPath.removeAll()
+        lockedShots += 1
+    }
 
     /// A photo shared to TABOR: catch it on CATCH, like one picked from the library.
     func catchShared() {
@@ -173,6 +192,8 @@ struct RootView: View {
     /// An opened foldable: see `EnvironmentValues.wide` and `.tall`.
     @State private var wide = false
     @State private var tall = false
+    /// Back from the background, rather than launching: the camera's timing counts from here.
+    @State private var wasAway = false
     @Query private var sightings: [Sighting]
     @Environment(\.modelContext) private var context
     @Environment(\.scenePhase) private var scenePhase
@@ -222,11 +243,15 @@ struct RootView: View {
         .onAppear { LiveFleetService.shared.start(LiveFleetService.appClient) }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                if wasAway { LaunchTiming.warm() }
+                wasAway = false
                 LiveFleetService.shared.start(LiveFleetService.appClient)
                 // Shared while TABOR was closed, or the share sheet couldn't open it.
                 router.catchShared()
+                router.catchLocked()
             }
             if phase == .background {
+                wasAway = true
                 LiveFleetService.shared.stop(LiveFleetService.appClient)
                 undo.finish()
             }
@@ -237,6 +262,8 @@ struct RootView: View {
             // They've found the control on their own: no need to tip them off about it.
             UserDefaults.standard.set(true, forKey: CatchControlTip.seenKey)
         }
+        // REVEAL in the Lock Screen camera, once Face ID lets it through.
+        .onContinueUserActivity(NSUserActivityTypeLockedCameraCapture) { _ in router.catchLocked() }
         .onReceive(NotificationCenter.default.publisher(for: .taborOpenHunt)) { _ in
             router.tab = .hunt
             UserDefaults.standard.set(true, forKey: CatchControlTip.seenKey)
@@ -287,9 +314,16 @@ struct RootView: View {
             router.supportSheet = reason
         }
         .sheet(item: $router.supportSheet) { reason in TipSheet(reason: reason) }
-        .task { await FleetUpdater.checkIfDue() }
-        .task { TipJar.shared.start() }
-        .task { await Task.detached(priority: .background) { StorageUsage.sweep() }.value }
+        // Not while the camera is starting: none of these is in a hurry.
+        .task {
+            try? await Task.sleep(for: .seconds(1.5))
+            TipJar.shared.start()
+            await FleetUpdater.checkIfDue()
+        }
+        .task {
+            try? await Task.sleep(for: .seconds(1.5))
+            await Task.detached(priority: .background) { StorageUsage.sweep() }.value
+        }
         // Stickers from before they were kept as HEIC, or from a restored backup: once the
         // first screen has settled.
         .task {

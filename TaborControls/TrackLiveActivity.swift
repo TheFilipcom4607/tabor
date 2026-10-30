@@ -58,7 +58,8 @@ struct TrackLiveActivity: Widget {
 /// Opens the camera, from the Lock Screen or the Dynamic Island.
 private struct CatchButton: View {
     var body: some View {
-        Button(intent: OpenCatchIntent()) {
+        // On the Lock Screen this opens the Lock Screen camera, without Face ID.
+        Button(intent: CatchCaptureIntent()) {
             Text("CATCH")
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .tracking(0.8)

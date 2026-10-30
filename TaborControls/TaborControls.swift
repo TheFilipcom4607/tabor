@@ -21,7 +21,8 @@ struct TaborControlsBundle: WidgetBundle {
 struct CatchControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: "tabor.catch") {
-            ControlWidgetButton(action: OpenCatchIntent()) {
+            // A capture intent, so a locked phone opens the Lock Screen camera rather than Face ID.
+            ControlWidgetButton(action: CatchCaptureIntent()) {
                 Label("Catch", systemImage: "bus.fill")
             }
             .tint(Color(red: 1, green: 0.808, blue: 0))

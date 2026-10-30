@@ -1,0 +1,116 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "SHOOT AWAY, REVEAL THEM AFTER": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PSTRYKAJ, ODKRYJESZ POTEM"
+          }
+        }
+      }
+    },
+    "UNLOCK TO REVEAL %lld": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ODBLOKUJ, BY ODKRYĆ %lld"
+          }
+        }
+      }
+    },
+    "REVEAL": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ODKRYJ"
+          }
+        }
+      }
+    },
+    "Reveal": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odkryj"
+          }
+        }
+      }
+    },
+    "%lld shots": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zdjęcia: %lld"
+          }
+        }
+      }
+    },
+    "Catch": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Złap"
+          }
+        }
+      }
+    },
+    "Torch": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latarka"
+          }
+        }
+      }
+    },
+    "Zoom": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom"
+          }
+        }
+      }
+    },
+    "Zoom %@ times": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Powiększenie %@ razy"
+          }
+        }
+      }
+    },
+    "Open the TABOR camera": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz aparat TABORU"
+          }
+        }
+      }
+    },
+    "Opens TABOR straight to the camera, even on a locked phone.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwiera TABOR od razu na aparacie, nawet na zablokowanym telefonie."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

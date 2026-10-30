@@ -1519,6 +1519,26 @@
           }
         }
       }
+    },
+    "Open the TABOR camera": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz aparat TABORU"
+          }
+        }
+      }
+    },
+    "Opens TABOR straight to the camera, even on a locked phone.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwiera TABOR od razu na aparacie, nawet na zablokowanym telefonie."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
