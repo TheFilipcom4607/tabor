@@ -231,9 +231,11 @@ def main():
         out += [f"| {k} #{n} | {l} | {t} |" for k, n, l, t in lines]
         out.append("")
     if posts:
-        out += ["**MZA's news** (last 3 weeks" + (", that the model thinks may be about a wrap" if odds else "") + ")", ""]
+        # "typesafe/jev-1.14" → "Jev 1.14"
+        name = MODEL.split("/")[-1].replace("-", " ", 1).capitalize()
+        out += ["**MZA's news** (last 3 weeks" + (f", that {name} thinks may be about a wrap" if odds else "") + ")", ""]
         for d, t, u in posts:
-            notes = [f"{odds[u]:.0%} a wrap"] if u in odds else []
+            notes = [f"{name}: {odds[u]:.0%} a wrap"] if u in odds else []
             try:
                 numbers = mentions(post_text(u)[1]) if u in odds else []
             except Exception:

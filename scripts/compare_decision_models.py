@@ -2,7 +2,7 @@
 """Which of OpenRouter's decision models best tells MZA's wrap posts from the rest.
 
 Asks every decision model the wraps bot's own question (possible_wraps.ask) about each post in
-wrap_posts.json: MZA posts labelled by hand, 13 wraps and the rest timetables, jobs, trials,
+wrap_posts.json: 99 MZA posts labelled by hand, 14 wraps and the rest timetables, jobs, trials,
 deliveries and parades, some of them close calls (a trial bus in its own paint, flags on every
 bus on 1 August). Only the links and labels are in git (the articles are MZA's); the text is
 fetched once into build/wrap-post-texts.json, so a post MZA edits later doesn't change the
@@ -10,15 +10,17 @@ result on this Mac.
 
 A missed wrap costs a sticker nobody can get again and a bad hint one click, so the models are
 ranked by how much noise they drop while keeping every wrap: at a threshold of half their
-lowest odds for a wrap (some margin, as 13 wraps can't show every way of writing one), then by
+lowest odds for a wrap (some margin, as 14 wraps can't show every way of writing one), then by
 AUC. Errors put a model last; the bot lists every post its model can't judge. With the top few
 a post or two apart, look at "Lowest wrap" too: how far the hardest wrap sits above the bot's
 threshold is what keeps a vaguely written wrap from being dropped.
 
-First run, 2026-10-30, 26 models: no model missed a wrap at 0.1. Most of the sharper ones
-(GPT-6 Luna, Mercury, drex-max, Microsoft decision-1) dropped one or two more posts than
-Jev 1.14 but gave the Valentine's bus ("o pięknych pastelowych barwach") only 0.23-0.32,
-where Jev gave it 0.71, so Jev stayed. Every model takes the flags on every bus on 1 August for
+First run, 2026-10-30, 26 models: Jev 1.14 came out on top. The sharper-looking ones (GPT-6
+Luna, Mercury, drex-max, Microsoft decision-1, Perplexity) drop a little more noise but miss
+the hardest wrap: the Misja Autobusiaki post (a kids' game on line Wakacje, run that summer by
+the Autobusiaki-wrapped #5887, though the post never says so) at 0.00-0.04, where Jev gives it
+0.29, and they give the Valentine's bus ("o pięknych pastelowych barwach") 0.23-0.32 to
+Jev's 0.71. Every model takes the flags on every bus on 1 August for
 decorations (0.9+). span-01, span-01-lite and classify-1 failed every call.
 
 Answers are saved in build/decision-models.json, so a rerun only asks what's missing (a new
