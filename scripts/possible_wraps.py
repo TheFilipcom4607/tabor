@@ -51,8 +51,9 @@ TERMS = ["spec", "oklej", "naklej", "ozdob", "świąteczn", "wakacyjn", "walenty
 JEV = "https://openrouter.ai/api/alpha/decisions"
 # Pinned: the threshold was picked against this version.
 JEV_MODEL = "typesafe/jev-1.14"
-# Low on purpose: a missed wrap costs a sticker nobody can get again, a false hint one click.
-WRAP_ODDS = 0.25
+# Low on purpose (the user, 2026-10-30): a bad issue or two beats a missed wrap, which costs a
+# sticker nobody can get again. Only posts Jev is fairly sure about are dropped.
+WRAP_ODDS = 0.1
 # Lines that run every day: suburban L-1/L11, night N01, replacement Z-4/Z12, express E-1,
 # cemetery C01 (around 1 November).
 ROUTINE = re.compile(r"\d+|[LNZEC]-?\d+")
