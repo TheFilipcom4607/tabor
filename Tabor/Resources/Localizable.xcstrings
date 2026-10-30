@@ -10704,7 +10704,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Co to za jeden?"
+            "value": "Co tu mamy?"
           }
         }
       }
@@ -10724,7 +10724,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wklej i dalej"
+            "value": "Wklej i kolejny"
           }
         }
       }
