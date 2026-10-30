@@ -9,7 +9,11 @@ confirms them. This looks for the hints and lists them for a human:
   lettered line (suburban L, night N, replacement Z, express E, cemetery C). The Christmas gift
   bus ran as M, Valentine's as W26, the summer bus as WAKACJE.
 - New posts in MZA's news search for the words its wrap posts use. "spec" also catches
-  timetable posts; that's the price of not missing "specjalnie oklejony".
+  timetable posts; that's the price of not missing "specjalnie oklejony". So each post's text
+  goes to Jev (TypeSafe's decision model, through OpenRouter's Decisions API; it costs about
+  $0.0001 a post), which says how likely it is to be about a dressed-up vehicle, and posts
+  below WRAP_ODDS are dropped. Without OPENROUTER_API_KEY, or when Jev can't be reached, every
+  post is listed, as before.
 
 The city's December "Świąteczne pojazdy" post has no search to poll, so that one stays a habit.
 czynaczas.pl's specialVehicles list is accurate, but it's a third party's private API: the issue
@@ -19,14 +23,19 @@ Writes a Markdown issue body to the given path when there's anything, nothing wh
 Exits 1 if neither the feed nor MZA could be read, so the caller leaves the issue alone.
 
 --skip leaves out hints a human has already dismissed: one per line, a post's URL or a vehicle
-as `BUS #1976 | M`. The Action builds it from the wraps issues closed as not planned, so closing
-one that way sticks; the bot's own close (as completed) dismisses nothing.
+as `BUS #1976 | M`. The Action builds it from the wraps issues a human closed, for any reason;
+the bot's own close dismisses nothing.
+
+--check asks Jev about the given posts and prints its odds, for tuning WRAP_ODDS.
 
 Usage:  python3 scripts/possible_wraps.py <body.md> [--skip <file>]
+        python3 scripts/possible_wraps.py --check <post URL>...
 """
 import argparse
+import functools
 import html
 import json
+import os
 import re
 import sys
 import urllib.parse
@@ -37,7 +46,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 FEED = "https://taborapi.thefilip.com/v1/vehicles?type={}"
 MZA = "https://www.mza.waw.pl/?s={}&post_type=post"
-TERMS = ["spec", "oklej", "świąteczn", "wakacyjn", "walentyn", "halloween"]
+# Jev weeds out the timetable posts, so the net can be wide.
+TERMS = ["spec", "oklej", "naklej", "ozdob", "świąteczn", "wakacyjn", "walentyn", "halloween"]
+JEV = "https://openrouter.ai/api/alpha/decisions"
+# Pinned: the threshold was picked against this version.
+JEV_MODEL = "typesafe/jev-1.14"
+# Low on purpose: a missed wrap costs a sticker nobody can get again, a false hint one click.
+WRAP_ODDS = 0.25
 # Lines that run every day: suburban L-1/L11, night N01, replacement Z-4/Z12, express E-1,
 # cemetery C01 (around 1 November).
 ROUTINE = re.compile(r"\d+|[LNZEC]-?\d+")
@@ -90,11 +105,76 @@ def mza_posts(today):
     return sorted(posts.values(), reverse=True)
 
 
+# Asked twice a post: once for Jev, once for the numbers it names.
+@functools.lru_cache
+def post_text(url):
+    """A post's title and text, without the page around it."""
+    page = get(url).decode("utf-8", "replace")
+    title = re.search(r"<h1>(.*?)</h1>", page, re.S)
+    body = page.split('single-grid-container__content', 1)[-1].split('single-grid-container__navigation', 1)[0]
+    body = re.sub(r"<(script|style)\b.*?</\1>", " ", body, flags=re.S)
+    text = html.unescape(re.sub(r"<[^>]+>", " ", body))
+    text = re.sub(r"\s+", " ", text.split(">", 1)[-1]).strip()
+    return (html.unescape(title.group(1)).strip() if title else ""), text[:8000]
+
+
+def mentions(text):
+    """Fleet numbers a post names: "o numerze bocznym 5887", "nr 1976", "#5919"."""
+    found = re.findall(r"(?:\bnr\.?|\bnumer\w*(?:\s+(?:boczny|taborowy)\w*)?|#)\s*(\d{3,4})\b", text, re.I)
+    return sorted(set(found), key=found.index)
+
+
+def wrap_odds(posts):
+    """{url: probability that the post is about a vehicle in a special wrap}, or {} without Jev."""
+    key = os.environ.get("OPENROUTER_API_KEY")
+    if not key:
+        print("no OPENROUTER_API_KEY: listing every post", file=sys.stderr)
+        return {}
+    odds = {}
+    for url in posts:
+        try:
+            title, text = post_text(url)
+            request = {
+                "model": JEV_MODEL,
+                "state": {"publisher": "MZA, Warsaw's city bus operator", "title": title, "post": text},
+                "questions": {"wrap": {
+                    "type": "noul",
+                    "instructions": "Does this post say that a particular bus or tram is, or will be, "
+                                    "dressed up for an occasion: a themed wrap, special stickers or "
+                                    "decorations that change how the vehicle looks?",
+                    "criteria": {
+                        "true": "A vehicle is wrapped, stickered or decorated for an event, a holiday "
+                                "(Christmas, Valentine's, Halloween, summer) or a campaign, e.g. "
+                                "'specjalnie oklejony autobus', 'świąteczny autobus', 'Świętobus'.",
+                        "false": "Timetables, special or extra lines, route changes, rear-window ads, "
+                                 "new deliveries, jobs, safety advice, or events where the vehicles "
+                                 "look as they always do.",
+                    },
+                }},
+            }
+            reply = json.loads(urllib.request.urlopen(urllib.request.Request(
+                JEV, data=json.dumps(request).encode(), method="POST",
+                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}),
+                timeout=30).read())
+            odds[url] = reply["answers"]["wrap"]["noul"]
+            print(f"{odds[url]:.0%}  {title}  ({reply.get('usage', {}).get('cost', '?')} USD)", file=sys.stderr)
+        except Exception as e:
+            # A post Jev couldn't judge is listed: better a hint too many than a wrap missed.
+            print(f"couldn't ask Jev about {url} ({e})", file=sys.stderr)
+    return odds
+
+
 def main():
     args = argparse.ArgumentParser()
-    args.add_argument("body")
+    args.add_argument("body", nargs="?")
     args.add_argument("--skip", type=Path)
+    args.add_argument("--check", nargs="+", metavar="URL")
     args = args.parse_args()
+    if args.check:
+        wrap_odds(args.check)
+        return
+    if not args.body:
+        sys.exit("give a body file, or --check <post URL>...")
     skip = set()
     if args.skip and args.skip.exists():
         skip = {l.strip() for l in args.skip.read_text().splitlines() if l.strip()}
@@ -115,6 +195,8 @@ def main():
         posts = [p for p in mza_posts(today) if p[2] not in skip]
     except Exception as e:
         failed.append(f"MZA's news ({e})")
+    odds = wrap_odds([u for _, _, u in posts])
+    posts = [p for p in posts if odds.get(p[2], 1) >= WRAP_ODDS]
     for f in failed:
         print(f"couldn't read {f}", file=sys.stderr)
     if len(failed) == 2:
@@ -132,9 +214,18 @@ def main():
         out += [f"| {k} #{n} | {l} | {t} |" for k, n, l, t in lines]
         out.append("")
     if posts:
-        out += ["**MZA's news** (last 3 weeks)", ""]
-        out += [f"- {d:%d.%m.%Y} [{t}]({u})" for d, t, u in posts]
+        out += ["**MZA's news** (last 3 weeks" + (", that Jev thinks may be about a wrap" if odds else "") + ")", ""]
+        for d, t, u in posts:
+            notes = [f"Jev {odds[u]:.0%}"] if u in odds else []
+            try:
+                numbers = mentions(post_text(u)[1]) if u in odds else []
+            except Exception:
+                numbers = []
+            notes += [f"names #{n}" for n in numbers[:5]]
+            out.append(f"- {d:%d.%m.%Y} [{t}]({u})" + (" · " + ", ".join(notes) if notes else ""))
         out.append("")
+    out.append("Closing this issue dismisses everything in it for good, whatever the reason picked.")
+    out.append("")
     out.append("By hand: czynaczas.pl lists the vehicles it knows are special under `specialVehicles` in "
                "<https://czynaczas.pl/api/warsaw/transport> (a third party's API: open it, don't automate it).")
     if failed:

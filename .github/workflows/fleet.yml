@@ -102,17 +102,23 @@ jobs:
           touch trials-checked
 
       # The same for event wraps: nothing read leaves the issue as it is. Hints in an issue a
-      # human closed as not planned stay dismissed (the bot's own close is "completed"), or
-      # the next run would only open a new issue with the same posts.
+      # human closed stay dismissed, or the next run would only open a new issue with the same
+      # posts. It goes by who closed it, not the reason: closing with a comment makes it
+      # "completed" (#112 came back as #113). The bot's own close dismisses nothing.
       - name: Look for signs of event wraps
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          gh issue list --state closed --search "in:title \"$WRAPS_TITLE\"" --limit 100 \
-            --json title,stateReason,body \
-            --jq "map(select(.title == \"$WRAPS_TITLE\" and .stateReason == \"NOT_PLANNED\")) | .[].body" \
+          gh api graphql -f q="repo:$GH_REPO is:issue is:closed in:title \"$WRAPS_TITLE\"" -f query='
+            query($q: String!) { search(query: $q, type: ISSUE, first: 100) { nodes { ... on Issue {
+              title body
+              timelineItems(itemTypes: CLOSED_EVENT, last: 1) { nodes { ... on ClosedEvent { actor { __typename } } } }
+            } } } }' \
+            --jq ".data.search.nodes[] | select(.title == \"$WRAPS_TITLE\"
+                    and .timelineItems.nodes[0].actor.__typename != \"Bot\") | .body" \
             | { grep -oE '\]\(https://[^)]+\)|^\| (BUS|TRAM) #[^|]+\|[^|]+\|' || true; } \
             | sed -E 's/^\]\((.*)\)$/\1/; s/^\| (.*[^ ]) *\|$/\1/; s/ +\| +/ | /' | sort -u > skip.txt
           echo "$(wc -l < skip.txt) dismissed hints"
@@ -384,8 +390,10 @@ jobs:
             --jq "map(select(.title == \"$WRAPS_TITLE\")) | .[0].number // empty")
           if [ -f wraps.md ]; then
             if [ -n "$number" ]; then
-              # A vehicle by its line, not its last-seen time, which changes every night.
-              hints() { grep -E '^(\| (BUS|TRAM) #|- [0-9])' | sed -E 's/^(\| [^|]+\| [^|]+\|).*/\1/' | sort || true; }
+              # A vehicle by its line, not its last-seen time, and a post by its link, not Jev's
+              # odds: both change every night.
+              hints() { grep -E '^(\| (BUS|TRAM) #|- [0-9])' \
+                | sed -E 's/^(\| [^|]+\| [^|]+\|).*/\1/; s/^(- .*\]\([^)]*\)).*/\1/' | sort || true; }
               added=$(comm -13 <(gh issue view "$number" --json body --jq .body | hints) <(hints < wraps.md))
               gh issue edit "$number" --body-file wraps.md
               [ -z "$added" ] || gh issue comment "$number" --body "New since last night:
