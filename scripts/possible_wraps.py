@@ -26,10 +26,11 @@ Exits 1 if neither the feed nor MZA could be read, so the caller leaves the issu
 as `BUS #1976 | M`. The Action builds it from the wraps issues a human closed, for any reason;
 the bot's own close dismisses nothing.
 
---check asks Jev about the given posts and prints its odds, for tuning WRAP_ODDS.
+--check asks Jev about the given posts and prints its odds, for tuning WRAP_ODDS. Without URLs
+it checks LABELLED and fails if a wrap would be dropped (the "Check Jev" Action runs that).
 
 Usage:  python3 scripts/possible_wraps.py <body.md> [--skip <file>]
-        python3 scripts/possible_wraps.py --check <post URL>...
+        python3 scripts/possible_wraps.py --check [<post URL>...]
 """
 import argparse
 import functools
@@ -54,6 +55,17 @@ JEV_MODEL = "typesafe/jev-1.14"
 # Low on purpose (the user, 2026-10-30): a bad issue or two beats a missed wrap, which costs a
 # sticker nobody can get again. Only posts Jev is fairly sure about are dropped.
 WRAP_ODDS = 0.1
+# MZA posts whose answer is known, for --check: True for a wrap.
+LABELLED = {f"https://www.mza.waw.pl/{slug}/": wrap for slug, wrap in [
+    ("kolorowo-halloweenowo", True), ("gwiazdkowy-prezent", True),
+    ("na-ulicach-juz-swiatecznie", True), ("swiateczny-autobus-na-trasie", True),
+    ("wyjatkowe-walentynki-autobusowe", True), ("misja-autobusiaki-juz-w-sobote", True),
+    ("kolorowo-z-radiem-kolor", True), ("autobus-gra-chopina", True),
+    ("komunikacja-na-cmentarze", False), ("komunikacja-miejska-w-okresie-swiatecznym-3", False),
+    ("wakacyjny-rozklad-jazdy", False), ("zielona-flota-rosnie-w-oczach", False),
+    ("chevrolet-gwiazda-targow-w-kielcach", False), ("dzien-bizona", False),
+    ("bedzie-wiecej-autobusow-na-ulicach", False), ("zmiany-komunikacji-w-okresie-swiatecznym", False),
+]}
 # Lines that run every day: suburban L-1/L11, night N01, replacement Z-4/Z12, express E-1,
 # cemetery C01 (around 1 November).
 ROUTINE = re.compile(r"\d+|[LNZEC]-?\d+")
@@ -169,11 +181,22 @@ def main():
     args = argparse.ArgumentParser()
     args.add_argument("body", nargs="?")
     args.add_argument("--skip", type=Path)
-    args.add_argument("--check", nargs="+", metavar="URL")
+    args.add_argument("--check", nargs="*", metavar="URL")
     args = args.parse_args()
     if args.check:
         wrap_odds(args.check)
         return
+    if args.check is not None:
+        odds = wrap_odds(list(LABELLED))
+        if len(odds) < len(LABELLED):
+            sys.exit("Jev didn't answer for every post")
+        missed = [u for u, wrap in LABELLED.items() if wrap and odds[u] < WRAP_ODDS]
+        kept = [u for u, wrap in LABELLED.items() if not wrap and odds[u] >= WRAP_ODDS]
+        print(f"wraps dropped: {len(missed)}, other posts kept: {len(kept)} of "
+              f"{sum(not w for w in LABELLED.values())}", file=sys.stderr)
+        for u in missed:
+            print(f"MISSED {u}", file=sys.stderr)
+        sys.exit(1 if missed else 0)
     if not args.body:
         sys.exit("give a body file, or --check <post URL>...")
     skip = set()
