@@ -10,9 +10,10 @@ confirms them. This looks for the hints and lists them for a human:
   bus ran as M, Valentine's as W26, the summer bus as WAKACJE.
 - New posts in MZA's news search for the words its wrap posts use. "spec" also catches
   timetable posts; that's the price of not missing "specjalnie oklejony". So each post's text
-  goes to Jev (TypeSafe's decision model, through OpenRouter's Decisions API; it costs about
-  $0.0001 a post), which says how likely it is to be about a dressed-up vehicle, and posts
-  below WRAP_ODDS are dropped. Without OPENROUTER_API_KEY, or when Jev can't be reached, every
+  goes to a decision model (MODEL, through OpenRouter's Decisions API; about $0.0001 a post),
+  which says how likely it is to be about a dressed-up vehicle, and posts below WRAP_ODDS are
+  dropped. compare_decision_models.py picks the model. Without a key (OPENROUTER_API_KEY, or
+  the same in Config/Secrets.xcconfig), or when the model can't be reached, every
   post is listed, as before.
 
 The city's December "Świąteczne pojazdy" post has no search to poll, so that one stays a habit.
@@ -26,11 +27,10 @@ Exits 1 if neither the feed nor MZA could be read, so the caller leaves the issu
 as `BUS #1976 | M`. The Action builds it from the wraps issues a human closed, for any reason;
 the bot's own close dismisses nothing.
 
---check asks Jev about the given posts and prints its odds, for tuning WRAP_ODDS. Without URLs
-it checks LABELLED and fails if a wrap would be dropped (the "Check Jev" Action runs that).
+--check asks the model about the given posts and prints its odds.
 
 Usage:  python3 scripts/possible_wraps.py <body.md> [--skip <file>]
-        python3 scripts/possible_wraps.py --check [<post URL>...]
+        python3 scripts/possible_wraps.py --check <post URL>...
 """
 import argparse
 import functools
@@ -47,25 +47,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 FEED = "https://taborapi.thefilip.com/v1/vehicles?type={}"
 MZA = "https://www.mza.waw.pl/?s={}&post_type=post"
-# Jev weeds out the timetable posts, so the net can be wide.
+# The model weeds out the timetable posts, so the net can be wide.
 TERMS = ["spec", "oklej", "naklej", "ozdob", "świąteczn", "wakacyjn", "walentyn", "halloween"]
-JEV = "https://openrouter.ai/api/alpha/decisions"
-# Pinned: the threshold was picked against this version.
-JEV_MODEL = "typesafe/jev-1.14"
+DECISIONS = "https://openrouter.ai/api/alpha/decisions"
+# Picked by compare_decision_models.py over wrap_posts.json (2026-10-30): it gives the hardest
+# wrap the widest margin over WRAP_ODDS. Pinned, as WRAP_ODDS goes with it.
+MODEL = "typesafe/jev-1.14"
 # Low on purpose (the user, 2026-10-30): a bad issue or two beats a missed wrap, which costs a
-# sticker nobody can get again. Only posts Jev is fairly sure about are dropped.
+# sticker nobody can get again. Only posts the model is fairly sure about are dropped.
 WRAP_ODDS = 0.1
-# MZA posts whose answer is known, for --check: True for a wrap.
-LABELLED = {f"https://www.mza.waw.pl/{slug}/": wrap for slug, wrap in [
-    ("kolorowo-halloweenowo", True), ("gwiazdkowy-prezent", True),
-    ("na-ulicach-juz-swiatecznie", True), ("swiateczny-autobus-na-trasie", True),
-    ("wyjatkowe-walentynki-autobusowe", True), ("misja-autobusiaki-juz-w-sobote", True),
-    ("kolorowo-z-radiem-kolor", True), ("autobus-gra-chopina", True),
-    ("komunikacja-na-cmentarze", False), ("komunikacja-miejska-w-okresie-swiatecznym-3", False),
-    ("wakacyjny-rozklad-jazdy", False), ("zielona-flota-rosnie-w-oczach", False),
-    ("chevrolet-gwiazda-targow-w-kielcach", False), ("dzien-bizona", False),
-    ("bedzie-wiecej-autobusow-na-ulicach", False), ("zmiany-komunikacji-w-okresie-swiatecznym", False),
-]}
 # Lines that run every day: suburban L-1/L11, night N01, replacement Z-4/Z12, express E-1,
 # cemetery C01 (around 1 November).
 ROUTINE = re.compile(r"\d+|[LNZEC]-?\d+")
@@ -118,7 +108,7 @@ def mza_posts(today):
     return sorted(posts.values(), reverse=True)
 
 
-# Asked twice a post: once for Jev, once for the numbers it names.
+# Asked twice a post: once for the model, once for the numbers it names.
 @functools.lru_cache
 def post_text(url):
     """A post's title and text, without the page around it."""
@@ -137,43 +127,57 @@ def mentions(text):
     return sorted(set(found), key=found.index)
 
 
-def wrap_odds(posts):
-    """{url: probability that the post is about a vehicle in a special wrap}, or {} without Jev."""
+def openrouter_key():
     key = os.environ.get("OPENROUTER_API_KEY")
+    secrets = ROOT / "Config" / "Secrets.xcconfig"
+    if not key and secrets.exists():
+        m = re.search(r"^(?:TABOR_OPENROUTER_KEY|OPENROUTER_API_KEY)\s*=\s*(\S+)", secrets.read_text(), re.M)
+        key = m and m.group(1)
+    return key
+
+
+def ask(title, text, key, model=MODEL):
+    """(probability that the post is about a vehicle in a special wrap, cost in USD)."""
+    request = {
+        "model": model,
+        "state": {"publisher": "MZA, Warsaw's city bus operator", "title": title, "post": text},
+        "questions": {"wrap": {
+            "type": "noul",
+            "instructions": "Does this post say that a particular bus or tram is, or will be, "
+                            "dressed up for an occasion: a themed wrap, special stickers or "
+                            "decorations that change how the vehicle looks?",
+            "criteria": {
+                "true": "A vehicle is wrapped, stickered or decorated for an event, a holiday "
+                        "(Christmas, Valentine's, Halloween, summer) or a campaign, e.g. "
+                        "'specjalnie oklejony autobus', 'świąteczny autobus', 'Świętobus'.",
+                "false": "Timetables, special or extra lines, route changes, rear-window ads, "
+                         "new deliveries, jobs, safety advice, or events where the vehicles "
+                         "look as they always do.",
+            },
+        }},
+    }
+    reply = json.loads(urllib.request.urlopen(urllib.request.Request(
+        DECISIONS, data=json.dumps(request).encode(), method="POST",
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}),
+        timeout=60).read())
+    return reply["answers"]["wrap"]["noul"], reply.get("usage", {}).get("cost") or 0
+
+
+def wrap_odds(posts):
+    """{url: probability that the post is about a vehicle in a special wrap}, or {} without a key."""
+    key = openrouter_key()
     if not key:
-        print("no OPENROUTER_API_KEY: listing every post", file=sys.stderr)
+        print("no OpenRouter key: listing every post", file=sys.stderr)
         return {}
     odds = {}
     for url in posts:
         try:
             title, text = post_text(url)
-            request = {
-                "model": JEV_MODEL,
-                "state": {"publisher": "MZA, Warsaw's city bus operator", "title": title, "post": text},
-                "questions": {"wrap": {
-                    "type": "noul",
-                    "instructions": "Does this post say that a particular bus or tram is, or will be, "
-                                    "dressed up for an occasion: a themed wrap, special stickers or "
-                                    "decorations that change how the vehicle looks?",
-                    "criteria": {
-                        "true": "A vehicle is wrapped, stickered or decorated for an event, a holiday "
-                                "(Christmas, Valentine's, Halloween, summer) or a campaign, e.g. "
-                                "'specjalnie oklejony autobus', 'świąteczny autobus', 'Świętobus'.",
-                        "false": "Timetables, special or extra lines, route changes, rear-window ads, "
-                                 "new deliveries, jobs, safety advice, or events where the vehicles "
-                                 "look as they always do.",
-                    },
-                }},
-            }
-            reply = json.loads(urllib.request.urlopen(urllib.request.Request(
-                JEV, data=json.dumps(request).encode(), method="POST",
-                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}),
-                timeout=30).read())
-            odds[url] = reply["answers"]["wrap"]["noul"]
-            print(f"{odds[url]:.0%}  {title}  ({reply.get('usage', {}).get('cost', '?')} USD)", file=sys.stderr)
+            odds[url], cost = ask(title, text, key)
+            print(f"{odds[url]:.0%}  {title}  ({cost} USD)", file=sys.stderr)
         except Exception as e:
-            # A post Jev couldn't judge is listed: better a hint too many than a wrap missed.
-            print(f"couldn't ask Jev about {url} ({e})", file=sys.stderr)
+            # A post the model couldn't judge is listed: better a hint too many than a wrap missed.
+            print(f"couldn't ask {MODEL} about {url} ({e})", file=sys.stderr)
     return odds
 
 
@@ -181,22 +185,11 @@ def main():
     args = argparse.ArgumentParser()
     args.add_argument("body", nargs="?")
     args.add_argument("--skip", type=Path)
-    args.add_argument("--check", nargs="*", metavar="URL")
+    args.add_argument("--check", nargs="+", metavar="URL")
     args = args.parse_args()
     if args.check:
         wrap_odds(args.check)
         return
-    if args.check is not None:
-        odds = wrap_odds(list(LABELLED))
-        if len(odds) < len(LABELLED):
-            sys.exit("Jev didn't answer for every post")
-        missed = [u for u, wrap in LABELLED.items() if wrap and odds[u] < WRAP_ODDS]
-        kept = [u for u, wrap in LABELLED.items() if not wrap and odds[u] >= WRAP_ODDS]
-        print(f"wraps dropped: {len(missed)}, other posts kept: {len(kept)} of "
-              f"{sum(not w for w in LABELLED.values())}", file=sys.stderr)
-        for u in missed:
-            print(f"MISSED {u}", file=sys.stderr)
-        sys.exit(1 if missed else 0)
     if not args.body:
         sys.exit("give a body file, or --check <post URL>...")
     skip = set()
@@ -238,9 +231,9 @@ def main():
         out += [f"| {k} #{n} | {l} | {t} |" for k, n, l, t in lines]
         out.append("")
     if posts:
-        out += ["**MZA's news** (last 3 weeks" + (", that Jev thinks may be about a wrap" if odds else "") + ")", ""]
+        out += ["**MZA's news** (last 3 weeks" + (", that the model thinks may be about a wrap" if odds else "") + ")", ""]
         for d, t, u in posts:
-            notes = [f"Jev {odds[u]:.0%}"] if u in odds else []
+            notes = [f"{odds[u]:.0%} a wrap"] if u in odds else []
             try:
                 numbers = mentions(post_text(u)[1]) if u in odds else []
             except Exception:
