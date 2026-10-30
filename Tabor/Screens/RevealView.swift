@@ -345,8 +345,12 @@ struct RevealView: View {
                 Color.clear.onChange(of: geo.safeAreaInsets, initial: true) { _, insets in
                     let window = UIApplication.shared.connectedScenes.lazy.compactMap { $0 as? UIWindowScene }
                         .compactMap(\.keyWindow).first?.safeAreaInsets ?? .zero
-                    missingInsets = EdgeInsets(top: max(0, window.top - insets.top), leading: 0,
-                                               bottom: max(0, window.bottom - insets.bottom), trailing: 0)
+                    // Under a point is rounding, not a missing safe area: the reported insets
+                    // wobble in the 13th decimal, and chasing that re-laid the reveal out forever.
+                    let missing = { (gap: CGFloat) in gap >= 1 ? gap : 0 }
+                    let fixed = EdgeInsets(top: missing(window.top - insets.top), leading: 0,
+                                           bottom: missing(window.bottom - insets.bottom), trailing: 0)
+                    if fixed != missingInsets { missingInsets = fixed }
                 }
             }
         }
