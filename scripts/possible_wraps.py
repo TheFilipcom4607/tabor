@@ -222,34 +222,29 @@ def main():
         print("no signs of an event wrap")
         return
 
-    out = ["Hints that a vehicle may be out in an event wrap that `WRAPS` doesn't have. Nothing here",
-           "goes into the app by itself: add a row to `WRAPS` in `scripts/fetch_fleet.py` once a source",
-           "(Radio Kolor, MZA, the city) names the fleet number and dates. This issue closes itself",
-           "once there's nothing left to look at.", ""]
-    if lines:
-        out += ["**On an event line** (last 3 days)", "", "| Vehicle | Line | Last seen (Warsaw time) |", "|---|---|---|"]
-        out += [f"| {k} #{n} | {l} | {t} |" for k, n, l, t in lines]
-        out.append("")
+    # Only the hints: thefilip.com/tabor/boty#oklejone explains them. A row goes in fetch_fleet.py's
+    # WRAPS once a source (Radio Kolor, MZA, the city) names the fleet number and dates.
+    out = []
     if posts:
         # "typesafe/jev-1.14" → "Jev 1.14"
         name = MODEL.split("/")[-1].replace("-", " ", 1).capitalize()
-        out += ["**MZA's news** (last 3 weeks" + (f", that {name} thinks may be about a wrap" if odds else "") + ")", ""]
+        out += ["**Posty MZA**", ""]
         for d, t, u in posts:
-            notes = [f"{name}: {odds[u]:.0%} a wrap"] if u in odds else []
+            notes = [f"{name}: {odds[u]:.0%}"] if u in odds else []
             try:
                 numbers = mentions(post_text(u)[1]) if u in odds else []
             except Exception:
                 numbers = []
-            notes += [f"names #{n}" for n in numbers[:5]]
+            notes += [f"#{n}" for n in numbers[:5]]
             out.append(f"- {d:%d.%m.%Y} [{t}]({u})" + (" · " + ", ".join(notes) if notes else ""))
         out.append("")
-    out.append("Closing this issue dismisses everything in it for good, whatever the reason picked.")
-    out.append("")
-    out.append("By hand: czynaczas.pl lists the vehicles it knows are special under `specialVehicles` in "
-               "<https://czynaczas.pl/api/warsaw/transport> (a third party's API: open it, don't automate it).")
-    if failed:
+    if lines:
+        out += ["**Na nietypowej linii**", "", "| Pojazd | Linia | Ostatnio |", "|---|---|---|"]
+        out += [f"| {k} #{n} | {l} | {t} |" for k, n, l, t in lines]
         out.append("")
-        out.append("Couldn't read: " + "; ".join(failed) + ".")
+    if failed:
+        out += ["Nie udało się odczytać: " + "; ".join(failed) + ".", ""]
+    out.append("<sub>[Nie wiesz, co to?](https://thefilip.com/tabor/boty#oklejone)</sub>")
     text = "\n".join(out) + "\n"
     print(text)
     Path(args.body).write_text(text)

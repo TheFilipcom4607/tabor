@@ -7,8 +7,8 @@ whichever you like.
 ## Reporting a bug
 
 [New issue](https://github.com/TheFilipcom4607/tabor/issues/new/choose) offers a
-form for each kind of report (a bug, a misread number, a vehicle, an idea), and
-each one asks for what's below.
+form for each kind of report (a bug, a misread number, a vehicle, a vehicle in a
+wrap, an idea), and each one asks for what's below.
 
 Look through the [issues](https://github.com/TheFilipcom4607/tabor/issues) first,
 closed ones too: it may already be fixed in the next build. Then open one issue per

@@ -55,9 +55,13 @@ env:
   BRANCH: fleet-refresh
   FILES: Tabor/Resources/fleet.json data/ztm-pojazdy.json data/fleet-models.csv
   REVIEW_ABOVE: 20
-  ISSUE_TITLE: "Fleet: vehicles waiting for a model"
-  TRIALS_TITLE: "Fleet: buses on trial"
-  WRAPS_TITLE: "Fleet: possible event wraps"
+  # The issues carry only their hints; what they mean is explained on thefilip.com/tabor/boty,
+  # one section per issue, linked at the bottom of each.
+  ISSUE_TITLE: "Pojazdy bez modelu"
+  TRIALS_TITLE: "Autobusy na testach"
+  WRAPS_TITLE: "Możliwe oklejone pojazdy"
+  # The wraps issue's name until 2026-10-30: hints dismissed under it stay dismissed.
+  OLD_WRAPS_TITLE: "Fleet: possible event wraps"
 
 jobs:
   build:
@@ -112,14 +116,14 @@ jobs:
           GH_REPO: ${{ github.repository }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          gh api graphql -f q="repo:$GH_REPO is:issue is:closed in:title \"$WRAPS_TITLE\"" -f query='
+          gh api graphql -f q="repo:$GH_REPO is:issue is:closed author:app/github-actions" -f query='
             query($q: String!) { search(query: $q, type: ISSUE, first: 100) { nodes { ... on Issue {
               title body
               timelineItems(itemTypes: CLOSED_EVENT, last: 1) { nodes { ... on ClosedEvent { actor { __typename } } } }
             } } } }' \
-            --jq ".data.search.nodes[] | select(.title == \"$WRAPS_TITLE\"
+            --jq ".data.search.nodes[] | select((.title == \"$WRAPS_TITLE\" or .title == \"$OLD_WRAPS_TITLE\")
                     and .timelineItems.nodes[0].actor.__typename != \"Bot\") | .body" \
-            | { grep -oE '\]\(https://[^)]+\)|^\| (BUS|TRAM) #[^|]+\|[^|]+\|' || true; } \
+            | { grep -oE '\]\(https://www\.mza\.waw\.pl/[^)]+\)|^\| (BUS|TRAM) #[^|]+\|[^|]+\|' || true; } \
             | sed -E 's/^\]\((.*)\)$/\1/; s/^\| (.*[^ ]) *\|$/\1/; s/ +\| +/ | /' | sort -u > skip.txt
           echo "$(wc -l < skip.txt) dismissed hints"
           python3 scripts/possible_wraps.py wraps.md --skip skip.txt
@@ -190,17 +194,15 @@ jobs:
             echo
             cat changes.md
           } > pr-body.md
+          # To place a type, add one of its numbers to EXTRA_BUSES in fetch_fleet.py under its make
+          # and model; the rest of the type follows.
           {
-            echo "The city lists these under a type no model has yet, so they're left out of the"
-            echo "book. Nothing is broken: the rest of the fleet keeps updating. To place a bus, add"
-            echo "one of its numbers to \`EXTRA_BUSES\` in \`scripts/fetch_fleet.py\` under its make"
-            echo "and model, and the rest of its type follows. This issue closes itself once none"
-            echo "are left."
-            echo
-            echo '```'
             # Most nights there are none, and grep finding nothing would fail the step.
-            { grep '^?' "$RUNNER_TEMP/build.txt" || true; } | sed 's/^? //'
-            echo '```'
+            { grep '^?' "$RUNNER_TEMP/build.txt" || true; } \
+              | sed -E 's/^\? BUS type ([0-9]+) fits no model yet, left out: /- typ \1 (autobusy): /;
+                        s/^\? TRAM type ([0-9]+) fits no model yet, left out: /- typ \1 (tramwaje): /'
+            echo
+            echo "<sub>[Nie wiesz, co to?](https://thefilip.com/tabor/boty#bez-modelu)</sub>"
           } > waiting.md
           grep -q '^?' "$RUNNER_TEMP/build.txt" || rm waiting.md
 
@@ -346,7 +348,7 @@ jobs:
               gh issue create --title "$ISSUE_TITLE" --body-file waiting.md
             fi
           elif [ -n "$number" ]; then
-            gh issue close "$number" --reason completed --comment "All placed now."
+            gh issue close "$number" --reason completed --comment "Wszystkie mają już model."
           fi
       # A trial can be over in a few weeks, so a bus that joins an open issue gets a comment
       # (which notifies) as well as the silent edit.
@@ -366,13 +368,12 @@ jobs:
               buses() { grep -o '^| #9[0-9][0-9]' | sed 's/^| //' | sort || true; }
               added=$(comm -13 <(gh issue view "$number" --json body --jq .body | buses) <(buses < trials.md) | paste -sd ' ' -)
               gh issue edit "$number" --body-file trials.md
-              [ -z "$added" ] || gh issue comment "$number" --body "New on the feed: $added"
+              [ -z "$added" ] || gh issue comment "$number" --body "Nowe: $added"
             else
               gh issue create --title "$TRIALS_TITLE" --body-file trials.md
             fi
           elif [ -n "$number" ]; then
-            gh issue close "$number" --reason completed \
-              --comment "None left: they're all in fleet.json, or none has run for a week."
+            gh issue close "$number" --reason completed --comment "Nic nie zostało."
           fi
 
       # A wrap is out for a few weeks at most, so something new in an open issue gets a comment
@@ -396,11 +397,11 @@ jobs:
                 | sed -E 's/^(\| [^|]+\| [^|]+\|).*/\1/; s/^(- .*\]\([^)]*\)).*/\1/' | sort || true; }
               added=$(comm -13 <(gh issue view "$number" --json body --jq .body | hints) <(hints < wraps.md))
               gh issue edit "$number" --body-file wraps.md
-              [ -z "$added" ] || gh issue comment "$number" --body "New since last night:
+              [ -z "$added" ] || gh issue comment "$number" --body "Nowe:
           $added"
             else
               gh issue create --title "$WRAPS_TITLE" --body-file wraps.md
             fi
           elif [ -n "$number" ]; then
-            gh issue close "$number" --reason completed --comment "Nothing left to look at."
+            gh issue close "$number" --reason completed --comment "Nic nie zostało."
           fi

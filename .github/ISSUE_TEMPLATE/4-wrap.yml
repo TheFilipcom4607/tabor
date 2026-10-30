@@ -1,0 +1,45 @@
+name: 🎨 Oklejony pojazd / Vehicle in a wrap
+description: Autobus albo tramwaj jeździ w specjalnym oklejeniu. / A bus or tram is out in a special wrap.
+labels: [oklejenie]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Oklejony pojazd ma w apce osobną naklejkę, ale tylko póki jeździ oklejony, więc liczy się każdy dzień. Najważniejsze są numer i zdjęcie.
+        A wrapped vehicle gets its own sticker in the app, but only while it's out in the wrap, so every day counts. The number and a photo matter most.
+  - type: input
+    id: numbers
+    attributes:
+      label: Numer(y) taborowe / Fleet number(s)
+      placeholder: "5887"
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Autobus czy tramwaj? / Bus or tram?
+      options:
+        - Autobus / Bus
+        - Tramwaj / Tram
+    validations:
+      required: true
+  - type: textarea
+    id: looks
+    attributes:
+      label: Jak wygląda? / What does it look like?
+      description: I z jakiej okazji, jeśli wiesz. / And what it's for, if you know.
+      placeholder: Różowy, z klawiszami fortepianu, na Konkurs Chopinowski.
+    validations:
+      required: true
+  - type: input
+    id: seen
+    attributes:
+      label: Gdzie i kiedy? / Where and when?
+      placeholder: Linia 180, Krakowskie Przedmieście, 12.12 rano
+    validations:
+      required: true
+  - type: textarea
+    id: photo
+    attributes:
+      label: Zdjęcie / Photo
+      description: Przeciągnij tutaj, najlepiej z widocznym numerem. Albo link do posta, który o nim pisze. / Drag it here, ideally with the number in it. Or a link to a post about it.

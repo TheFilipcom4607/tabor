@@ -52,14 +52,11 @@ if not last:
 
 lines = [f"| #{n} | {r['Lines']} | {r['Time'][:16]} |" for n, r in sorted(last.items())]
 print("\n".join(lines))
+# Only the hints: thefilip.com/tabor/boty#testy explains them. Once a source names a bus's make
+# and model, it goes in TEST_BUSES in fetch_fleet.py.
 Path(sys.argv[1]).write_text(
-    "These 9xx numbers ran in the last week but aren't in `fleet.json`. Warsaw gives 9xx\n"
-    "numbers only to buses on trial, so each is most likely a new trial bus.\n"
-    "\n"
-    "Once a source confirms its make and model, add it to `TEST_BUSES` in\n"
-    "`scripts/fetch_fleet.py`. This issue closes itself once none are left: when they're all\n"
-    "in, or when none has run for a week.\n"
-    "\n"
-    "| Number | Line | Last seen (Warsaw time) |\n"
+    "| Numer | Linia | Ostatnio |\n"
     "|---|---|---|\n" + "\n".join(lines) + "\n"
+    "\n"
+    "<sub>[Nie wiesz, co to?](https://thefilip.com/tabor/boty#testy)</sub>\n"
 )
