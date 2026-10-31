@@ -4,9 +4,9 @@
 <h1>TABOR</h1>
 
 <p>
-  <strong>A Pokédex for Warsaw's buses and trams.<br>
-  Point the camera at one, and its fleet number goes into your book<br>
-  as a die-cut sticker — the rarer the model, the louder it lands.</strong>
+  <strong>A free iPhone app for spotting Warsaw's buses and trams, like a Pokédex:<br>
+  point the camera at one and its fleet number becomes a sticker.<br>
+  Almost 2,700 to catch.</strong>
 </p>
 
 <p>
