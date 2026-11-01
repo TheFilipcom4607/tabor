@@ -1,5 +1,6 @@
 import AVKit
 import CoreLocation
+import ImageIO
 import LockedCameraCapture
 import SwiftUI
 
@@ -214,7 +215,7 @@ struct CaptureView: View {
         withAnimation(.easeOut(duration: 0.35)) { flash = false }
         guard let data else { return }
         var shot = LockedShot(date: Date(), latitude: place.latest?.coordinate.latitude,
-                              longitude: place.latest?.coordinate.longitude)
+                              longitude: place.latest?.coordinate.longitude, angle: Double(camera.captureAngle))
         // Held upright, the app crops to the brackets as CATCH does; sideways it keeps it all.
         if camera.captureAngle == 90, bracketGlobal.width > 0, finderFrame.width > 0 {
             let brackets = bracketGlobal.offsetBy(dx: -finderFrame.minX, dy: -finderFrame.minY)
@@ -226,8 +227,27 @@ struct CaptureView: View {
         } catch {
             return UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
-        let thumb = await Task.detached { UIImage(data: data)?.preparingThumbnail(of: CGSize(width: 120, height: 120)) }.value
+        let crop = shot.crop, size = shot.viewSize
+        let thumb = await Task.detached { Self.thumbnail(data, crop: crop, viewSize: size) }.value
         if let thumb { withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { thumbs.append(thumb) } }
+    }
+
+    /// What the app will read: upright (UIKit's thumbnails ignored the photo's rotation tag)
+    /// and cut to the brackets.
+    nonisolated private static func thumbnail(_ data: Data, crop: CGRect?, viewSize: CGSize?) -> UIImage? {
+        guard let src = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let opts: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 600,
+        ]
+        guard var image = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) else { return nil }
+        let w = CGFloat(image.width), h = CGFloat(image.height)
+        if let crop, let viewSize, let r = Viewfinder.region(of: crop, in: viewSize, imageSize: CGSize(width: w, height: h)),
+           let cut = image.cropping(to: CGRect(x: r.minX * w, y: r.minY * h, width: r.width * w, height: r.height * h).integral) {
+            image = cut
+        }
+        return UIImage(cgImage: image)
     }
 
     /// Unlocks the phone (Face ID) and opens the app, which picks the shots up.

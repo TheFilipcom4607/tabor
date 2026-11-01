@@ -11,6 +11,8 @@ struct LockedShot: Codable {
     var viewSize: CGSize?
     var latitude: Double?
     var longitude: Double?
+    /// The camera's rotation for the shot, in degrees (90 upright), for debug mode.
+    var angle: Double?
 
     func save(_ photo: Data, in folder: URL) throws {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -18,6 +20,11 @@ struct LockedShot: Codable {
         try photo.write(to: folder.appendingPathComponent("\(id).jpg"), options: .atomic)
         // The sidecar last: a photo without one is still taken, just with less known about it.
         try JSONEncoder().encode(self).write(to: folder.appendingPathComponent("\(id).json"), options: .atomic)
+    }
+
+    static func hasShots(in folder: URL) -> Bool {
+        ((try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [])
+            .contains { $0.pathExtension == "jpg" }
     }
 
     /// Every shot in a session's folder, oldest first.

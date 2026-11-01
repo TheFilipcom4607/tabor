@@ -93,10 +93,13 @@ final class Router {
     let burst = BurstQueue()
     /// Goes up when the Lock Screen camera has left shots: CATCH takes them as a burst.
     var lockedShots = 0
+    /// The Lock Screen camera's session folders, kept from the system's updates: on the first
+    /// phone test, checking its list once as the app came up didn't find the shots.
+    var lockedFolders: [URL] = []
 
     /// Shots from the Lock Screen camera (#107), once the phone is unlocked.
     func catchLocked() {
-        guard !LockedCameraCaptureManager.shared.sessionContentURLs.isEmpty else { return }
+        guard lockedFolders.contains(where: LockedShot.hasShots) else { return }
         tab = .catchTab
         bookPath.removeAll()
         lockedShots += 1
@@ -261,6 +264,20 @@ struct RootView: View {
             router.tab = .catchTab
             // They've found the control on their own: no need to tip them off about it.
             UserDefaults.standard.set(true, forKey: CatchControlTip.seenKey)
+        }
+        .task {
+            for await update in LockedCameraCaptureManager.shared.sessionContentUpdates {
+                switch update {
+                case .initial(let urls): router.lockedFolders = urls
+                case .added(let url): router.lockedFolders.append(url)
+                case .removed(let url): router.lockedFolders.removeAll { $0 == url }
+                }
+                // The camera opened and nothing taken: nothing to keep.
+                for url in router.lockedFolders where !LockedShot.hasShots(in: url) {
+                    try? await LockedCameraCaptureManager.shared.invalidateSessionContent(at: url)
+                }
+                router.catchLocked()
+            }
         }
         // REVEAL in the Lock Screen camera, once Face ID lets it through.
         .onContinueUserActivity(NSUserActivityTypeLockedCameraCapture) { _ in router.catchLocked() }

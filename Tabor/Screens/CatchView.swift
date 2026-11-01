@@ -873,7 +873,7 @@ struct CatchView: View {
     /// The Lock Screen camera's shots, read and dealt out as cards. Its folders are only
     /// cleared once the cards are ready, so a crash before then leaves the shots for next time.
     private func takeLocked() {
-        let folders = LockedCameraCaptureManager.shared.sessionContentURLs
+        let folders = router.lockedFolders
         guard !folders.isEmpty, draft == nil, cards == nil, !finishing else { return }
         Task {
             finishing = true
@@ -896,6 +896,7 @@ struct CatchView: View {
             record?.attach(original: photo)
             record?.update { $0.crop = "brackets \(crop.integral) in \(size.width)×\(size.height) viewfinder" }
         }
+        if let angle = shot.angle { record?.update { $0.captureAngle = angle } }
         let age = Date().timeIntervalSince(shot.date)
         // Taken a moment ago: you're still about where the shot was, and so are the vehicles.
         let nearby = age < 180 && live.fresh() != nil ? live.nearby : []

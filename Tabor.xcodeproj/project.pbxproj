@@ -126,6 +126,7 @@
 			membershipExceptions = (
 				Camera/CameraModel.swift,
 				Camera/ViewfinderBrackets.swift,
+				Core/Viewfinder.swift,
 			);
 			target = A10000000000000000000090 /* TaborCapture */;
 		};
