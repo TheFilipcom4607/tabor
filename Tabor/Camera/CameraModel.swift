@@ -1,4 +1,7 @@
 import AVFoundation
+#if CAPTURE_EXTENSION
+import CoreMotion
+#endif
 import os
 import SwiftUI
 
@@ -54,6 +57,9 @@ final class CameraModel: NSObject, @unchecked Sendable {
     @ObservationIgnored private var rotation: AVCaptureDevice.RotationCoordinator?
     @ObservationIgnored private var rotationObservation: NSKeyValueObservation?
     @ObservationIgnored private var _captureAngle: CGFloat = 90
+    #if CAPTURE_EXTENSION
+    @ObservationIgnored private let motion = CMMotionManager()
+    #endif
     @ObservationIgnored private var pressureObservation: NSKeyValueObservation?
     /// The phone is running hot: fewer frames. Guarded by `lock`.
     @ObservationIgnored private var _hot = false
@@ -160,6 +166,25 @@ final class CameraModel: NSObject, @unchecked Sendable {
         photoContinuation = nil
         Task { @MainActor in self.torchOn = false }
     }
+
+    #if CAPTURE_EXTENSION
+    /// On the Lock Screen the rotation coordinator always said 0° (on its side), however the
+    /// phone was held (phone test, 2026-11-01): shots came out sideways and uncropped. Which
+    /// way is down comes from the accelerometer instead, which needs no permission.
+    private func followGravity() {
+        guard motion.isAccelerometerAvailable, !motion.isAccelerometerActive else { return }
+        motion.accelerometerUpdateInterval = 0.2
+        motion.startAccelerometerUpdates(to: OperationQueue()) { [weak self] data, _ in
+            guard let self, let a = data?.acceleration else { return }
+            // Lying flat says nothing about which way up: keep the last angle.
+            guard max(abs(a.x), abs(a.y)) > 0.35 else { return }
+            // The back camera's angles: 90 upright, 0 with the top to the left, 180 to the
+            // right, 270 upside down.
+            let angle: CGFloat = abs(a.y) >= abs(a.x) ? (a.y < 0 ? 90 : 270) : (a.x > 0 ? 0 : 180)
+            lock.withLock { self._captureAngle = angle }
+        }
+    }
+    #endif
 
     // MARK: - Recovery
 
@@ -316,6 +341,9 @@ final class CameraModel: NSObject, @unchecked Sendable {
         }
         addZoomControl(range: minUI...max(minUI, maxUI), stops: sortedStops)
 
+        #if CAPTURE_EXTENSION
+        followGravity()
+        #else
         let coordinator = AVCaptureDevice.RotationCoordinator(device: cam, previewLayer: nil)
         rotationObservation = coordinator.observe(\.videoRotationAngleForHorizonLevelCapture, options: [.initial, .new]) {
             [weak self] c, _ in
@@ -324,6 +352,7 @@ final class CameraModel: NSObject, @unchecked Sendable {
             lock.withLock { self._captureAngle = angle }
         }
         rotation = coordinator
+        #endif
 
         // Apple's advice for a hot camera is fewer frames; the viewfinder stays usable at 15.
         pressureObservation = cam.observe(\.systemPressureState, options: [.initial, .new]) { [weak self] d, _ in
