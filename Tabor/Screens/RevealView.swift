@@ -7,8 +7,8 @@ struct RevealView: View {
     @State var draft: CatchDraft
     /// Reads the catch again from a crop of its photo (#94).
     var reread: (CatchDraft, Data) async -> CatchDraft
-    /// One card of a burst (rapid fire, the Lock Screen camera): it waits face down for a tap,
-    /// NEXT sticks it in and SKIP leaves it out, instead of a hold and a trip to the book.
+    /// One card of a burst (rapid fire, the Lock Screen camera): one tap sticks it in and deals
+    /// the next, SKIP leaves it out, instead of a hold and a trip to the book.
     var step: BurstStep? = nil
     @Query private var manual: [ManualAssignment]
     @AppStorage("saveToGallery") private var saveToGallery = true
@@ -54,8 +54,6 @@ struct RevealView: View {
     @State private var skipEdit = false
     /// The wrap's own sparkle: on when the reveal lands in a wrap, or the chip adds one.
     @State private var foilBurst = 0
-    /// A burst's card has been tapped over.
-    @State private var flipped = false
 
     private let catalog = Fleet.catalog
     private let holdDuration = 0.55
@@ -100,26 +98,22 @@ struct RevealView: View {
         let ready = model != nil && number != nil
         let choices = choices
         let wrap = ready ? draft.wrap : nil
-        // A burst's card face down gives nothing away, not even its tier's glow.
-        let faceDown = step != nil && !flipped
-        let accent = faceDown ? Palette.yellow : wrap != nil ? Palette.foilInk : tier == .common ? Palette.yellow : tier.color
+        let accent = wrap != nil ? Palette.foilInk : tier == .common ? Palette.yellow : tier.color
         // Already in the book, but never in this wrap: a new form of it.
         let newForm = wrap.map { w in existing.map { !$0.wraps.contains(w.id) } ?? false } ?? false
 
         // The pieces, down the screen on a phone and beside the stage on a wide one.
         let header = VStack(alignment: .leading, spacing: 7) {
-            Mono(faceDown ? String(localized: "SHOT \((step?.index ?? 0) + 1) OF \(step?.count ?? 0)")
-                 : newForm && landed ? String(localized: "NEW FORM · SIGHTING #\((existing?.timesSeen ?? 0) + 1)")
+            Mono(newForm && landed ? String(localized: "NEW FORM · SIGHTING #\((existing?.timesSeen ?? 0) + 1)")
                  : kicker(isNewVehicle: isNewVehicle, isNewModel: isNewModel, modelOwned: modelOwned, added: added, existing: existing),
                  size: 12, spacing: 0.16, color: accent)
-            Text(faceDown ? String(localized: "What's this one?")
-                 : model?.name ?? (number == nil ? String(localized: "What did you catch?")
+            Text(model?.name ?? (number == nil ? String(localized: "What did you catch?")
                 : choices.isEmpty ? String(localized: "Which model is it?") : String(localized: "Which one is it?")))
                 .font(TaborFont.grotesk(30, 700))
                 .em(-0.03, size: 30)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
-            if !faceDown, let line = draft.line?.nonEmpty {
+            if let line = draft.line?.nonEmpty {
                 Mono("LINE \(line.uppercased())", size: 11, weight: 600, spacing: 0.12, color: Palette.sub)
             }
             // A wrap taken from the chip shows as the chip itself.
@@ -211,9 +205,7 @@ struct RevealView: View {
             }
         }
         let actions = VStack(spacing: 10) {
-            if faceDown {
-                bigButton("Reveal", action: flip)
-            } else if ready, let step {
+            if ready, let step {
                 bigButton(step.index + 1 == step.count ? "Stick it in and finish" : "Stick it in, next one") {
                     Task { await stick() }
                 }
@@ -226,36 +218,34 @@ struct RevealView: View {
             } else {
                 bigButton(number == nil ? "Type the number" : "Pick the model") { editing = true }
             }
-            if !faceDown {
-                HStack(spacing: 10) {
+            HStack(spacing: 10) {
+                Button {
+                    editing = true
+                } label: {
+                    secondaryLabel(ready ? String(localized: "WRONG NUMBER?") : String(localized: "EDIT DETAILS"))
+                }
+                .buttonStyle(.plain)
+                if number == nil, landed {
                     Button {
-                        editing = true
+                        Haptics.shared.tick()
+                        cropping = true
                     } label: {
-                        secondaryLabel(ready ? String(localized: "WRONG NUMBER?") : String(localized: "EDIT DETAILS"))
+                        secondaryLabel(String(localized: "CROP"))
+                            .opacity(rereading ? 0.5 : 1)
                     }
                     .buttonStyle(.plain)
-                    if number == nil, landed {
-                        Button {
-                            Haptics.shared.tick()
-                            cropping = true
-                        } label: {
-                            secondaryLabel(String(localized: "CROP"))
-                                .opacity(rereading ? 0.5 : 1)
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(rereading)
-                        .transition(.opacity)
+                    .disabled(rereading)
+                    .transition(.opacity)
+                }
+                // Only when the photo had something else worth cutting.
+                if ready, landed, stickerImage != nil, cut?.canRecut == true {
+                    Button(action: recut) {
+                        secondaryLabel(String(localized: "WRONG CUTOUT?"))
+                            .opacity(recutting ? 0.5 : 1)
                     }
-                    // Only when the photo had something else worth cutting.
-                    if ready, landed, stickerImage != nil, cut?.canRecut == true {
-                        Button(action: recut) {
-                            secondaryLabel(String(localized: "WRONG CUTOUT?"))
-                                .opacity(recutting ? 0.5 : 1)
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(recutting)
-                        .transition(.opacity)
-                    }
+                    .buttonStyle(.plain)
+                    .disabled(recutting)
+                    .transition(.opacity)
                 }
             }
         }
@@ -289,9 +279,12 @@ struct RevealView: View {
                         .opacity(rereading ? 0.4 : 1)
                     }
                     .buttonStyle(.plain)
-                    .disabled(rereading || sticking || faceDown)
-                    .opacity(faceDown ? 0 : 1)
+                    .disabled(rereading || sticking)
                     Spacer()
+                    if let step {
+                        Mono("\(step.index + 1) / \(step.count)" as String, size: 12, color: Palette.faint)
+                        Spacer()
+                    }
                     Button {
                         draft.geotag?.cancel()
                         draft.debug?.log(step == nil ? "retake" : "skip", number: draft.number, modelId: draft.modelId)
@@ -313,7 +306,6 @@ struct RevealView: View {
                     // with it in a phone's column on the right.
                     HStack(spacing: 0) {
                         stage(number: number, model: model, tier: tier, isNew: isNewVehicle && ready, foil: wrap != nil)
-                            .onTapGesture { if faceDown { flip() } }
                             .scaleEffect(1.2)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .padding(.leading, 16)
@@ -329,7 +321,6 @@ struct RevealView: View {
                     header
                     // Upright or half folded there's height to spare: a bigger sticker.
                     stage(number: number, model: model, tier: tier, isNew: isNewVehicle && ready, foil: wrap != nil)
-                        .onTapGesture { if faceDown { flip() } }
                         .scaleEffect(tall ? 1.3 : 1)
                         .frame(maxWidth: .infinity)
                         .frame(height: tall ? 340 : 250)
@@ -396,7 +387,7 @@ struct RevealView: View {
         .onDisappear { if step == nil { router.revealGone() } }
         .task {
             Haptics.shared.warmUp()
-            if step == nil { await playReveal(run: 0) }
+            await playReveal(run: 0)
             await loadReads()
         }
     }
@@ -902,15 +893,6 @@ struct RevealView: View {
                 .background(Palette.yellow, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(StickerPressStyle())
-    }
-
-    /// A burst's card turned over: the reveal plays as a single catch's does.
-    private func flip() {
-        guard !flipped else { return }
-        Haptics.shared.tick()
-        flipped = true
-        let run = revealRun
-        Task { await playReveal(run: run) }
     }
 
     private func beginHold() {

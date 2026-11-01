@@ -10689,36 +10689,6 @@
         }
       }
     },
-    "SHOT %lld OF %lld": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ZDJĘCIE %1$lld Z %2$lld"
-          }
-        }
-      }
-    },
-    "What's this one?": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Co tu mamy?"
-          }
-        }
-      }
-    },
-    "Reveal": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odkryj"
-          }
-        }
-      }
-    },
     "Stick it in, next one": {
       "localizations": {
         "pl": {
