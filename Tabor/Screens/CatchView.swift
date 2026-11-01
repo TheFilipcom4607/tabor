@@ -82,6 +82,8 @@ struct CatchView: View {
     /// Rapid fire: shots stack up and are dealt out as cards once you finish (#107).
     @AppStorage("rapidFire") private var rapid = false
     @State private var showControlHowTo = false
+    @AppStorage(RapidTip.seenKey) private var rapidTipSeen = false
+    @State private var showRapidTip = false
 
     private let camera = CameraModel.shared
     private let live = LiveFleetService.shared
@@ -301,6 +303,7 @@ struct CatchView: View {
             }
         }
         .sheet(isPresented: $showControlHowTo) { CatchControlHowTo() }
+        .sheet(isPresented: $showRapidTip) { RapidTipSheet() }
         .onChange(of: pickerItems) { _, items in
             guard !items.isEmpty else { return }
             let pickerGone = ContinuousClock.now + .milliseconds(600)
@@ -444,7 +447,15 @@ struct CatchView: View {
     }
 
     @ViewBuilder private var controlTip: some View {
-        if !controlTipSeen, catches >= CatchControlTip.afterCatches {
+        if !rapidTipSeen, catches > 0 {
+            // Only for people who had TABOR before rapid fire: the intro shows it to the rest.
+            RapidTipCard {
+                showRapidTip = true
+                rapidTipSeen = true
+            } dismiss: {
+                withAnimation(.snappy) { rapidTipSeen = true }
+            }
+        } else if !controlTipSeen, catches >= CatchControlTip.afterCatches {
             CatchControlTipCard {
                 showControlHowTo = true
                 controlTipSeen = true

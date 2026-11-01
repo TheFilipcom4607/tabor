@@ -11,7 +11,7 @@ struct OnboardingView: View {
     @State private var askedLocation = false
     private let location = LocationService.shared
 
-    enum Page: Int, CaseIterable { case welcome, book, rarity, camera, buttons, hunt, specials, wraps }
+    enum Page: Int, CaseIterable { case welcome, book, rarity, camera, buttons, rapid, hunt, specials, wraps }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -34,12 +34,17 @@ struct OnboardingView: View {
                 RarityPage().tag(Page.rarity)
                 CameraPage().tag(Page.camera)
                 ButtonsPage().tag(Page.buttons)
+                RapidPage(active: page == .rapid).tag(Page.rapid)
                 HuntPage().tag(Page.hunt)
                 SpecialsPage(active: page == .specials).tag(Page.specials)
                 WrapsPage(active: page == .wraps).tag(Page.wraps)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .onChange(of: page) { Haptics.shared.tick() }
+            .onChange(of: page) {
+                Haptics.shared.tick()
+                // Seen here, CATCH needn't bring it up again.
+                if page == .rapid { UserDefaults.standard.set(true, forKey: RapidTip.seenKey) }
+            }
 
             dots
                 .padding(.bottom, 22)
@@ -101,7 +106,7 @@ struct OnboardingView: View {
     /// The permission this page is about hasn't been asked for yet.
     private var needsPermission: Bool {
         switch page {
-        case .welcome, .book, .rarity, .specials, .wraps, .buttons: false
+        case .welcome, .book, .rarity, .specials, .wraps, .buttons, .rapid: false
         case .camera: AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined
         case .hunt: location.authorization == .notDetermined
         }
@@ -110,7 +115,7 @@ struct OnboardingView: View {
     private var primaryLabel: String {
         switch page {
         case .welcome: String(localized: "LET'S GO")
-        case .book, .rarity, .buttons, .specials: String(localized: "NEXT")
+        case .book, .rarity, .buttons, .rapid, .specials: String(localized: "NEXT")
         case .camera: needsPermission ? String(localized: "ALLOW CAMERA") : String(localized: "NEXT")
         case .hunt: needsPermission ? String(localized: "ALLOW LOCATION") : String(localized: "NEXT")
         case .wraps: String(localized: "START CATCHING")
@@ -119,7 +124,7 @@ struct OnboardingView: View {
 
     private func primary() {
         switch page {
-        case .welcome, .book, .rarity, .buttons, .specials:
+        case .welcome, .book, .rarity, .buttons, .rapid, .specials:
             advance()
         case .camera:
             guard needsPermission else { return advance() }
@@ -673,6 +678,17 @@ private struct ButtonsPage: View {
             .padding(.horizontal, 8)
             .background(pressed ? Palette.yellow : Color.clear, in: Capsule())
             .position(x: x, y: top ? r.minY - 20 : r.maxY + 20)
+    }
+}
+
+/// Rapid fire and the Lock Screen camera, in the intro.
+private struct RapidPage: View {
+    let active: Bool
+
+    var body: some View {
+        PageLayout(kicker: RapidTip.kicker, title: RapidTip.title, text: RapidTip.text) {
+            RapidArt(active: active)
+        }
     }
 }
 

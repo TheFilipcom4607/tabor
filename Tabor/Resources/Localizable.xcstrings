@@ -10897,6 +10897,76 @@
           }
         }
       }
+    },
+    "Shoot first, look later.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Najpierw pstrykaj, potem oglądaj."
+          }
+        }
+      }
+    },
+    "Turn on RAPID and fire away: the shots pile up while TABOR reads them, then you flip them over like cards, the rarest last. Put the Catch button on your Lock Screen and the camera opens without unlocking; unlock to reveal what you caught.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Włącz SERYJNE i pstrykaj do woli: zdjęcia zbierają się na stosie, a TABOR je czyta. Potem odkrywasz je jak karty, najrzadszą na koniec. Dodaj przycisk Złap do ekranu blokady, a aparat otworzy się bez odblokowania; odblokuj, by je odkryć."
+          }
+        }
+      }
+    },
+    "NEW: RAPID FIRE": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOWOŚĆ: ZDJĘCIA SERYJNE"
+          }
+        }
+      }
+    },
+    "Shoot a bunch, flip them like cards": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pstrykaj seryjnie, odkrywaj jak karty"
+          }
+        }
+      }
+    },
+    "IT'S ON": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WŁĄCZONE"
+          }
+        }
+      }
+    },
+    "TURN ON RAPID FIRE": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WŁĄCZ ZDJĘCIA SERYJNE"
+          }
+        }
+      }
+    },
+    "PUT CATCH ON THE LOCK SCREEN": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DODAJ ZŁAP DO EKRANU BLOKADY"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
