@@ -121,7 +121,10 @@ final class CameraModel: NSObject, @unchecked Sendable {
     private func startSession() -> Status {
         guard configure() else { return Self.hasCamera ? .failed : .unavailable }
         if !session.isRunning { session.startRunning() }
-        if session.isRunning { return .running }
+        if session.isRunning {
+            sessionQueue.async { self.addLenses() }
+            return .running
+        }
         // A call or another app has it; it comes back when that ends.
         if session.isInterrupted { return .interrupted }
         // Configured before and won't start: a session left dead by an error nobody saw.
@@ -230,9 +233,10 @@ final class CameraModel: NSObject, @unchecked Sendable {
     /// Called on sessionQueue.
     private func configure() -> Bool {
         if configured { return true }
-        guard let cam = AVCaptureDevice.default(.builtInTripleCamera, for: .video, position: .back)
-                ?? AVCaptureDevice.default(.builtInDualWideCamera, for: .video, position: .back)
-                ?? AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+        // The main lens on its own: it starts in about half the time the multi-lens camera
+        // takes (0.6 s against 1.05 s on an iPhone 16 Pro, #107), and a bus doesn't wait.
+        // `addLenses` brings in the others once it's running.
+        guard let cam = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
               let input = try? AVCaptureDeviceInput(device: cam)
         else { return false }
 
@@ -247,7 +251,39 @@ final class CameraModel: NSObject, @unchecked Sendable {
         // Every shot asks for .balanced: a .quality pipeline only made the session slower to start.
         photoOutput.maxPhotoQualityPrioritization = .balanced
         session.commitConfiguration()
+        use(cam)
+        configured = true
+        return true
+    }
 
+    /// Called on sessionQueue, once the main lens is running: swaps in the multi-lens camera,
+    /// so 0.5× and 5× are real lenses. A shot asked for meanwhile waits for the swap.
+    private func addLenses() {
+        guard configured, session.isRunning, device?.isVirtualDevice == false,
+              let cam = AVCaptureDevice.default(.builtInTripleCamera, for: .video, position: .back)
+                ?? AVCaptureDevice.default(.builtInDualWideCamera, for: .video, position: .back),
+              let input = try? AVCaptureDeviceInput(device: cam),
+              let old = session.inputs.first
+        else { return }
+        session.beginConfiguration()
+        session.removeInput(old)
+        guard session.canAddInput(input) else {
+            session.addInput(old)
+            session.commitConfiguration()
+            return
+        }
+        session.addInput(input)
+        session.commitConfiguration()
+        // So the new camera's first heat reading is applied, not taken for no change.
+        lock.withLock { _hot = false }
+        use(cam)
+        // The main lens's torch went with it.
+        Task { @MainActor in self.torchOn = false }
+    }
+
+    /// Called on sessionQueue. Everything that follows the camera in use: zoom stops, focus,
+    /// Camera Control's slider, which way up the phone is, and how hot it's running.
+    private func use(_ cam: AVCaptureDevice) {
         // A virtual (multi-lens) device hands off between the physical cameras by itself as
         // the zoom factor crosses each switch-over point, so 0.5× really is the ultra-wide
         // and 5× the telephoto — not a digital crop of the main lens.
@@ -296,8 +332,6 @@ final class CameraModel: NSObject, @unchecked Sendable {
         }
 
         device = cam
-        configured = true
-        return true
     }
 
     /// Called on sessionQueue.
@@ -376,6 +410,8 @@ final class CameraModel: NSObject, @unchecked Sendable {
         }
         zoomDetents = detents
         session.beginConfiguration()
+        // The main lens's slider, when the other lenses come in.
+        session.controls.forEach(session.removeControl)
         if session.canAddControl(slider) { session.addControl(slider) }
         session.commitConfiguration()
         session.setControlsDelegate(self, queue: sessionQueue)
