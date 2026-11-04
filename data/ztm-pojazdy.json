@@ -1,5 +1,5 @@
 {
-"fetched": "2026-10-30",
+"fetched": "2026-11-04",
 "source": "https://dane.um.warszawa.pl/api/action/get_ztm_pojazdy",
 "vehicles": [
 {
@@ -12437,7 +12437,7 @@
 "idMarki": 22,
 "year": 2010,
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-3 \"Ostrobramska\" (R-10)",
+"depot": "R-1 \"Woronicza\" (R-07)",
 "colour": "RAL 1003+3020"
 },
 {
@@ -26827,10 +26827,10 @@
 "marka": "Solaris",
 "typ": "Urbino 18",
 "dlugosc": 18000,
-"rodzajZasilania": "EV",
-"zasilanie": "EV",
-"liczMiejscSiedzacychTab": 43,
-"liczMiejscTab": 109,
+"rodzajZasilania": "Spalinowy",
+"zasilanie": "ON",
+"liczMiejscSiedzacychTab": 39,
+"liczMiejscTab": 133,
 "klimatyzacja": true,
 "podloga": "LF"
 },
