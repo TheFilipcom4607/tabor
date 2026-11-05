@@ -1,5 +1,5 @@
 {
-"fetched": "2026-11-04",
+"fetched": "2026-11-05",
 "source": "https://dane.um.warszawa.pl/api/action/get_ztm_pojazdy",
 "vehicles": [
 {
@@ -15511,6 +15511,15 @@
 },
 {
 "kind": "BUS",
+"number": "9635",
+"idMarki": 5810,
+"year": 2026,
+"carrier": "Mobilis Sp. z o.o.",
+"depot": "Posag 7 Panien MOB",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
 "number": "9636",
 "idMarki": 5810,
 "year": 2026,
@@ -15637,25 +15646,7 @@
 },
 {
 "kind": "BUS",
-"number": "9650",
-"idMarki": 5810,
-"year": 2026,
-"carrier": "Mobilis Sp. z o.o.",
-"depot": "Posag 7 Panien MOB",
-"colour": "RAL 1003+3020"
-},
-{
-"kind": "BUS",
 "number": "9651",
-"idMarki": 5810,
-"year": 2026,
-"carrier": "Mobilis Sp. z o.o.",
-"depot": "Posag 7 Panien MOB",
-"colour": "RAL 1003+3020"
-},
-{
-"kind": "BUS",
-"number": "9652",
 "idMarki": 5810,
 "year": 2026,
 "carrier": "Mobilis Sp. z o.o.",
@@ -15800,15 +15791,6 @@
 {
 "kind": "BUS",
 "number": "9815",
-"idMarki": 77,
-"year": 2016,
-"carrier": "Mobilis Sp. z o.o.",
-"depot": "Posag 7 Panien MOB",
-"colour": "RAL 1003+3020"
-},
-{
-"kind": "BUS",
-"number": "9816",
 "idMarki": 77,
 "year": 2016,
 "carrier": "Mobilis Sp. z o.o.",
