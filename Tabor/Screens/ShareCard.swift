@@ -1,3 +1,4 @@
+import CoreImage.CIFilterBuiltins
 import SwiftUI
 
 /// The App Store link that rides along with every share, so a friend who sees the card can get
@@ -127,7 +128,7 @@ struct ShareCard: View {
                 .padding(.top, 16)
                 .padding(.bottom, 12)
 
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .center) {
                 if let model {
                     (Text("\(owned)").foregroundStyle(Palette.ink)
                         + Text(" / \(model.fleet) IN MY BOOK").foregroundStyle(Palette.faint))
@@ -135,7 +136,7 @@ struct ShareCard: View {
                         .em(0.08, size: 10)
                 }
                 Spacer()
-                Mono("WARSAW ROLLING STOCK", size: 9, spacing: 0.12, color: Palette.faint)
+                ShareQR()
             }
         }
         .padding(24)
@@ -345,14 +346,14 @@ struct BadgeShareCard: View {
 
             Rectangle().fill(Palette.hairline).frame(height: 1)
                 .padding(.bottom, 12)
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .center) {
                 if more > 0 {
                     Mono("+\(more) MORE", size: 10, weight: 600, spacing: 0.08, color: medal.ink)
                 } else if fromBook && !picks.isEmpty {
                     Mono("FROM MY BOOK", size: 9, spacing: 0.12, color: Palette.faint)
                 }
                 Spacer()
-                Mono("WARSAW ROLLING STOCK", size: 9, spacing: 0.12, color: Palette.faint)
+                ShareQR()
             }
         }
         .padding(24)
@@ -398,6 +399,42 @@ struct BadgeShareCard: View {
             }
         }
     }
+}
+
+/// A QR code on every share card, for when the caption gets dropped (Instagram stories, a
+/// forwarded picture). It opens thefilip.com/q, which sends iPhones to the App Store and
+/// everyone else to TABOR's page. The short link keeps the code coarse, so a camera reads it
+/// off a small card on someone else's screen.
+struct ShareQR: View {
+    static let link = "https://thefilip.com/q"
+
+    var body: some View {
+        HStack(spacing: 9) {
+            VStack(alignment: .trailing, spacing: 3) {
+                Mono("GET TABOR", size: 9, weight: 700, spacing: 0.12, color: Palette.sub)
+                Mono("THEFILIP.COM/Q", size: 8.5, spacing: 0.08, color: Palette.faint)
+            }
+            if let code = Self.code {
+                Image(uiImage: code)
+                    .interpolation(.none)
+                    .resizable()
+                    .frame(width: 44, height: 44)
+                    .padding(3)
+                    .background(.white, in: RoundedRectangle(cornerRadius: 5))
+            }
+        }
+        .fixedSize()
+    }
+
+    /// Made once: the link never changes. Scaled up square by square, so the edges stay sharp.
+    private static let code: UIImage? = {
+        let filter = CIFilter.qrCodeGenerator()
+        filter.message = Data(link.utf8)
+        filter.correctionLevel = "M"
+        guard let qr = filter.outputImage?.samplingNearest().transformed(by: CGAffineTransform(scaleX: 12, y: 12)),
+              let image = CIContext().createCGImage(qr, from: qr.extent) else { return nil }
+        return UIImage(cgImage: image)
+    }()
 }
 
 /// Supporters' share cards: a gold edge, and ♥ SUPPORTER by the wordmark, a thank-you that

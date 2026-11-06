@@ -971,22 +971,29 @@ private struct StatsShareCard: View {
                     .font(TaborFont.grotesk(22))
                     .foregroundStyle(Palette.routeInk)
             }
-            .padding(.top, 22)
+            .padding(.top, 16)
 
             pile
                 .frame(height: 230)
-                .padding(.top, 14)
+                .padding(.top, 8)
 
             Spacer(minLength: 12)
 
             grid(rarest: rarest?.1)
 
-            if let rarest {
-                Mono([String(localized: "RAREST: \(rarest.1.name.uppercased(with: .app))"), rarest.0.line.map { String(localized: "LINE \($0)") }]
-                    .compactMap { $0 }.joined(separator: " · "), size: 10, color: Palette.sub)
-                    .lineLimit(1)
-                    .padding(.top, 14)
+            // The rarest catch beside the QR code, wrapping to two lines rather than pushing the
+            // code off the bottom of the story.
+            HStack(alignment: .bottom, spacing: 12) {
+                if let rarest {
+                    Mono([String(localized: "RAREST: \(rarest.1.name.uppercased(with: .app))"), rarest.0.line.map { String(localized: "LINE \($0)") }]
+                        .compactMap { $0 }.joined(separator: " · "), size: 10, color: Palette.sub)
+                        .lineLimit(2)
+                        .lineSpacing(3)
+                }
+                Spacer(minLength: 0)
+                ShareQR()
             }
+            .padding(.top, 14)
         }
         .foregroundStyle(Palette.ink)
         .padding(.horizontal, 24)

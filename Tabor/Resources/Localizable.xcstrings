@@ -3915,6 +3915,16 @@
         }
       }
     },
+    "GET TABOR": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "POBIERZ TABOR"
+          }
+        }
+      }
+    },
     "GET THE WHOLE VEHICLE IN FRAME": {
       "localizations": {
         "pl": {
