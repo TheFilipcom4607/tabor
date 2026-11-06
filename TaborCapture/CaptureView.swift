@@ -4,8 +4,8 @@ import ImageIO
 import LockedCameraCapture
 import SwiftUI
 
-/// CATCH's camera, cut down to what a locked phone allows: shots stack up, and REVEAL unlocks
-/// the phone and opens the app, which deals them out as cards.
+/// CATCH's camera, cut down to what a locked phone allows. One shot unlocks the phone and opens
+/// the app to reveal it; with RAPID on, shots stack up and REVEAL opens them all as cards.
 struct CaptureView: View {
     let session: LockedCameraCaptureSession
     private let camera = CameraModel.shared
@@ -18,6 +18,11 @@ struct CaptureView: View {
     @State private var finderFrame: CGRect = .zero
     @State private var bracketGlobal: CGRect = .zero
     @State private var pinchStart: CGFloat?
+    /// Off every time it opens (#114): most locked catches are one bus. The extension can't
+    /// read the app's own RAPID setting, and nothing it keeps would outlive the session anyway.
+    @State private var rapid = false
+    /// Made and warmed up ahead, so the shutter's tap lands with the press, not after it.
+    @State private var tap = UIImpactFeedbackGenerator(style: .medium)
 
     private static let yellow = Color(red: 1, green: 0.808, blue: 0)
     private static let red = Color(red: 0.894, green: 0, blue: 0.169)
@@ -43,6 +48,7 @@ struct CaptureView: View {
                 HStack {
                     mono("TABOR", size: 12, weight: .semibold, color: Self.yellow)
                     Spacer()
+                    rapidToggle
                     Image(systemName: "lock.fill")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.7))
@@ -50,8 +56,8 @@ struct CaptureView: View {
                 .padding(.top, 6)
                 .padding(.horizontal, 20)
 
-                mono(thumbs.isEmpty ? String(localized: "SHOOT AWAY, REVEAL THEM AFTER")
-                     : String(localized: "UNLOCK TO REVEAL \(thumbs.count)"), size: 10.5, color: .white.opacity(0.85))
+                mono(hint, size: 10.5, color: .white.opacity(0.85))
+                    .contentTransition(.opacity)
                     .padding(.vertical, 6)
                     .padding(.horizontal, 12)
                     .background(.ultraThinMaterial, in: Capsule())
@@ -80,6 +86,7 @@ struct CaptureView: View {
         }
         .preferredColorScheme(.dark)
         .task {
+            tap.prepare()
             await camera.start()
             place.start()
         }
@@ -87,13 +94,44 @@ struct CaptureView: View {
         // The volume buttons and Camera Control fire the shutter, as in CATCH.
         .onCameraCaptureEvent(isEnabled: camera.status == .running) { event in
             switch event.phase {
-            case .began: shutterDown = true
+            case .began:
+                shutterDown = true
+                tap.prepare()
             case .ended:
                 shutterDown = false
                 Task { await shoot() }
             default: shutterDown = false
             }
         }
+    }
+
+    private var hint: String {
+        if !thumbs.isEmpty { return String(localized: "UNLOCK TO REVEAL \(thumbs.count)") }
+        return rapid ? String(localized: "SHOOT AWAY, REVEAL THEM AFTER") : String(localized: "SHOOT, THEN UNLOCK TO REVEAL")
+    }
+
+    /// As CATCH's RAPID toggle. Off, each shot goes straight to the unlock.
+    private var rapidToggle: some View {
+        Button {
+            UISelectionFeedbackGenerator().selectionChanged()
+            withAnimation(.snappy) { rapid.toggle() }
+        } label: {
+            Image(systemName: "square.stack.3d.down.right.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(rapid ? .black : .white.opacity(0.72))
+                .frame(width: 36, height: 36)
+                .background(rapid ? Self.yellow : .clear, in: Circle())
+                .background(.ultraThinMaterial, in: Circle())
+                .environment(\.colorScheme, .dark)
+                // Hit with a thumb in a hurry: a 60 pt target, the lock icon included, without moving anything.
+                .padding(EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 30))
+                .contentShape(Rectangle())
+                .padding(EdgeInsets(top: -12, leading: -12, bottom: -12, trailing: -30))
+        }
+        .buttonStyle(.plain)
+        .padding(.trailing, 6)
+        .accessibilityLabel("Rapid fire")
+        .accessibilityValue(rapid ? "On" : "Off")
     }
 
     private var shutter: some View {
@@ -206,10 +244,11 @@ struct CaptureView: View {
     // MARK: - Actions
 
     private func shoot() async {
-        guard !capturing, camera.status == .running else { return }
+        guard !capturing, !opening, camera.status == .running else { return }
         capturing = true
         defer { capturing = false }
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        tap.impactOccurred()
+        tap.prepare()
         withAnimation(.easeOut(duration: 0.06)) { flash = true }
         let data = await camera.capture()
         withAnimation(.easeOut(duration: 0.35)) { flash = false }
@@ -227,6 +266,8 @@ struct CaptureView: View {
         } catch {
             return UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
+        // One shot: it's saved, so straight to Face ID. Cancel it and the stack's REVEAL is still there.
+        if !rapid { reveal() }
         let crop = shot.crop, size = shot.viewSize
         let thumb = await Task.detached { Self.thumbnail(data, crop: crop, viewSize: size) }.value
         if let thumb { withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { thumbs.append(thumb) } }

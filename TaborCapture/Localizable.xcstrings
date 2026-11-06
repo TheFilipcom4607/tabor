@@ -110,6 +110,46 @@
           }
         }
       }
+    },
+    "SHOOT, THEN UNLOCK TO REVEAL": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PSTRYKNIJ I ODBLOKUJ, BY ODKRYĆ"
+          }
+        }
+      }
+    },
+    "Rapid fire": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zdjęcia seryjne"
+          }
+        }
+      }
+    },
+    "On": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wł."
+          }
+        }
+      }
+    },
+    "Off": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wył."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

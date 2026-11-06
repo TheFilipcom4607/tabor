@@ -881,23 +881,52 @@ struct CatchView: View {
                          record: DebugRecord.begin(source: "import", mode: mode), manual: manual.map)
     }
 
-    /// The Lock Screen camera's shots, read and dealt out as cards. Its folders are only
-    /// cleared once the cards are ready, so a crash before then leaves the shots for next time.
+    /// The Lock Screen camera's shots: one gets the usual reveal, more are dealt out as cards.
+    /// Its folders are only cleared once the reveal or the cards are ready, so a crash before
+    /// then leaves the shots for next time.
     private func takeLocked() {
         let folders = router.lockedFolders
         guard !folders.isEmpty, draft == nil, cards == nil, !finishing else { return }
         Task {
             finishing = true
-            for folder in folders {
-                for (photo, shot) in LockedShot.all(in: folder) { await addLocked(photo, shot) }
+            let shots = folders.flatMap { LockedShot.all(in: $0) }
+            if shots.count == 1, let one = shots.first {
+                await revealLocked(one.photo, one.shot)
+                finishing = false
+            } else {
+                for (photo, shot) in shots { await addLocked(photo, shot) }
+                finishing = false
+                await finishBurst()
             }
-            finishing = false
-            await finishBurst()
             for folder in folders { try? await LockedCameraCaptureManager.shared.invalidateSessionContent(at: folder) }
         }
     }
 
+    /// A single locked shot, caught like one from CATCH (#114): no card deck, and no waiting
+    /// for the sticker before the reveal starts.
+    private func revealLocked(_ photo: Data, _ shot: LockedShot) async {
+        let p = await prepareLocked(photo, shot)
+        let preview = await CatchReader.preview(p.data)
+        withAnimation(.easeOut(duration: 0.2)) { frozen = preview }
+        var d = await CatchReader.read(p.data, fromCamera: true, record: p.record, nearby: p.nearby, mode: .auto, manual: manual.map)
+        d.preview = preview
+        d.date = shot.date
+        d.geotag = p.geotag
+        let book = (try? context.fetch(FetchDescriptor<Sighting>())) ?? []
+        d.book = BookBefore(stats: book.stats, streak: Streak.days(book.map(\.date) + [d.date]))
+        camera.stop()
+        draft = d
+    }
+
     private func addLocked(_ photo: Data, _ shot: LockedShot) async {
+        let p = await prepareLocked(photo, shot)
+        router.burst.add(p.data, fromCamera: true, date: shot.date, mode: .auto, nearby: p.nearby, geotag: p.geotag,
+                         record: p.record, manual: manual.map)
+    }
+
+    /// A locked shot's crop, debug record, the vehicles around and where it was taken.
+    private func prepareLocked(_ photo: Data, _ shot: LockedShot) async
+        -> (data: Data, record: DebugRecord?, nearby: [NearbyVehicle], geotag: Task<Geotag?, Never>?) {
         var data = photo
         let record = DebugRecord.begin(source: "locked", mode: .auto)
         if let crop = shot.crop, let size = shot.viewSize, let cropped = await Task.detached(priority: .userInitiated, operation: {
@@ -918,8 +947,7 @@ struct CatchView: View {
         } else if age < 600 {
             Task { await LocationService.shared.geotag() }
         } else { nil }
-        router.burst.add(data, fromCamera: true, date: shot.date, mode: .auto, nearby: nearby, geotag: tag,
-                         record: record, manual: manual.map)
+        return (data, record, nearby, tag)
     }
 
     /// Rapid fire's shots, once they're all read, dealt out as cards.
