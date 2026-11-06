@@ -1,5 +1,24 @@
 import SwiftUI
 
+/// The App Store link that rides along with every share, so a friend who sees the card can get
+/// the app in one tap. Each kind of card has its own campaign label, so App Store Connect's
+/// Campaigns report shows which shares bring installs.
+enum ShareInvite {
+    case catchCard, badge, stats
+
+    var link: String {
+        let label = switch self {
+        case .catchCard: "share-catch"
+        case .badge: "share-badge"
+        case .stats: "share-stats"
+        }
+        return "https://apps.apple.com/app/tabor/id6816408610?pt=129517810&ct=\(label)&mt=8"
+    }
+
+    /// The share's sentence with the link on a line of its own.
+    func message(_ text: String) -> String { "\(text)\n\(link)" }
+}
+
 /// What goes out when you share a catch: a styled 4:5 card plus a one-line brag.
 struct CatchShare {
     let image: UIImage
@@ -31,7 +50,7 @@ struct CatchShare {
         case (nil, false): String(localized: "I caught \(name) #\(n) on \(day)!")
         }
         let wrap = sighting.wrap.flatMap(Fleet.catalog.wrap(id:)).map { " " + String(localized: "In its \($0.nameDisplay) wrap ✨") } ?? ""
-        return CatchShare(image: image, title: "\(name) #\(n)", message: "\(caught)\(wrap) \(emoji) — TABOR")
+        return CatchShare(image: image, title: "\(name) #\(n)", message: ShareInvite.catchCard.message("\(caught)\(wrap) \(emoji) — TABOR"))
     }
 }
 
@@ -244,7 +263,7 @@ struct BadgeShare {
         let text = badge.tiered
             ? String(localized: "I got \(badge.medal.name) in the \(badge.title) badge!")
             : String(localized: "I got the \(badge.title) badge!")
-        return BadgeShare(image: image, title: badge.title, message: "\(text) 🏅 — TABOR")
+        return BadgeShare(image: image, title: badge.title, message: ShareInvite.badge.message("\(text) 🏅 — TABOR"))
     }
 
     /// The badge's own vehicles, rarest first, then newest. Badges that don't list any (counts

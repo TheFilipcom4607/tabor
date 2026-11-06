@@ -912,7 +912,7 @@ struct StatsShare {
         guard let image = renderer.uiImage else { return nil }
         let title = StatsShareCard.heading(period)
         let message = String(localized: "\(stats.catches) buses and trams caught, \(fleetShareText(stats.fleetShare, signed: period != .all)) of Warsaw's fleet 🚌 — TABOR")
-        return StatsShare(image: image, title: title, message: message)
+        return StatsShare(image: image, title: title, message: ShareInvite.stats.message(message))
     }
 
     /// Up to five stickers from the period, rarest model first.
