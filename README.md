@@ -17,7 +17,7 @@
 </p>
 
 <p>
-  <a href="https://apps.apple.com/app/tabor/id6816408610"><img src="https://toolbox.marketingtools.apple.com/api/v2/badges/download-on-the-app-store/black/en-us" height="48" alt="Download on the App Store"></a>
+  <a href="https://apps.apple.com/app/tabor/id6816408610?pt=129517810&ct=readme&mt=8"><img src="https://toolbox.marketingtools.apple.com/api/v2/badges/download-on-the-app-store/black/en-us" height="48" alt="Download on the App Store"></a>
 </p>
 
 <img src="docs/reveal.png" width="330" alt="The reveal after catching Ursus City Smile #1996: NEW BUS · YOUR 3rd, the bus cut out of its photo as a die-cut sticker with a thick white border, a 1996 number tag, R-1 WORONICZA · 2017, LEGENDARY · 12, and the line: 7 left in the 2017 batch, 9 Ursus City Smile to find overall. Below it, Hold to stick it in the book.">
@@ -50,7 +50,7 @@ your stop on the Lock Screen. **ME** keeps the score.
 
 ## Install
 
-**Get it on the App Store:** [apps.apple.com/app/tabor/id6816408610](https://apps.apple.com/app/tabor/id6816408610)
+**Get it on the App Store:** [apps.apple.com/app/tabor/id6816408610](https://apps.apple.com/app/tabor/id6816408610?pt=129517810&ct=readme&mt=8)
 (iPhone, iOS 18 or later, free). Bug reports and ideas go in
 [issues](https://github.com/TheFilipcom4607/tabor/issues), and questions in
 [discussions](https://github.com/TheFilipcom4607/tabor/discussions).
