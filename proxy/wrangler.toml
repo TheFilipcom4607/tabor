@@ -4,6 +4,7 @@
 #   npx wrangler secret put UM_KEY     # the old api.um.warszawa.pl key, until the city switches it off
 #   npx wrangler secret put ROUTES_UPLOAD_TOKEN  # what the routes Action sends to PUT /v1/routes
 #   npx wrangler secret put APNS_KEY   # the .p8 APNs auth key, for Live Activity pushes (track.js)
+#   npx wrangler secret put STATS_SECRET  # any long random string, kept nowhere else (stats.js)
 #   npx wrangler deploy
 name = "tabor-live"
 main = "src/index.js"
@@ -44,6 +45,12 @@ invocation_logs = true
 [[durable_objects.bindings]]
 name = "TRACKER"
 class_name = "Tracker"
+
+# Phones a day and their builds (src/stats.js), with a tag that changes daily and keeps no IP.
+# Free plan: 100,000 rows written and 10,000 queries a day. Read it with scripts/app_stats.sh.
+[[analytics_engine_datasets]]
+binding = "STATS"
+dataset = "tabor_stats"
 
 [[migrations]]
 tag = "v1"

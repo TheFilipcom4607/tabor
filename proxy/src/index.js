@@ -17,6 +17,7 @@
 import { fetchDane, fetchOld } from './city.js';
 import { lookup } from './lookup.js';
 import { getGtfs, getPojazdy, getRoutes, putRoutes } from './routes.js';
+import { count } from './stats.js';
 import { handleTrack } from './track.js';
 
 export { Tracker } from './track.js';
@@ -65,6 +66,10 @@ async function handle(request, env, ctx, url) {
   const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
   const { success } = await env.PER_IP.limit({ key: ip });
   if (!success) return json({ result: 'Too many requests' }, 429);
+
+  if (request.method === 'GET' && url.pathname === '/v1/vehicles' && url.searchParams.get('type') === '1') count(request, env, ctx, 'feed');
+  else if (request.method === 'GET' && url.pathname === '/v1/routes') count(request, env, ctx, 'routes');
+  else if (request.method === 'POST' && url.pathname === '/v1/track') count(request, env, ctx, 'track');
 
   if (url.pathname === '/v1/track') return handleTrack(request, env);
   if (url.pathname === '/v1/gtfs') return request.method === 'GET' ? getGtfs(request, env) : json({ result: 'GET only' }, 405);
