@@ -254,7 +254,9 @@ private func sampleModel() -> VehicleModel {
     // The Irizar ie tram on trial with MZA isn't in the ZTM database.
     let m = catalog.match(number: 959, kind: .bus).suggested
     #expect(m?.name == "Irizar ie tram 12" && m?.tier == .onTest)
-    #expect(m?.regular == false && m?.whereToFind?.contains("LINE 106") == true)
+    #expect(m?.regular == false)
+    // Its trial ended on 23 Oct 2026: still in the book, but it says it's no longer running.
+    #expect(m?.trialOver == true && m?.whereToFind?.contains("NO LONGER RUNNING") == true)
     // A single bus, but not a Unicorn or a LEGENDARY: it's only passing through.
     #expect(!catalog.models.filter { $0.tier == .legendary }.contains { $0.id == m?.id })
     #expect(Wanted.huntRank(.onTest) == Tier.legendary.rank)

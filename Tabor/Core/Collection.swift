@@ -165,6 +165,9 @@ public enum RevealHint {
             let more = left == 0 ? String(localized: "That's all of them.") : String(localized: "\(left) more to find.")
             return "\(intro) \(more)"
         }
+        if model.trialOver {
+            return String(localized: "Caught from its trial run — it was only in Warsaw for a few weeks. A keepsake now.")
+        }
         if model.onTest {
             return String(localized: "Caught on its trial run — it's only in Warsaw for a few weeks. Nice timing.")
         }

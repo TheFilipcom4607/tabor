@@ -76,6 +76,9 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
     /// `runs` and `trial` in Polish. Hand-written in fetch_fleet.py; older fleet files lack them.
     public let runsPl: String?
     public let trialPl: String?
+    /// The day a test vehicle's trial ended (ISO date), once it has: the vehicle is no longer running,
+    /// but stays in the book for the people who caught it. Older fleet files lack it.
+    public let trialEnded: String?
     /// From the city's open data; older fleet files and vehicles it doesn't list have none.
     public let specs: ModelSpecs?
     /// Vehicles the city lists under another type with other specs (the 2019–20 Lion's City Gs
@@ -104,7 +107,8 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
     public init(id: String, name: String, namePl: String? = nil, make: String, code: String? = nil, kind: VehicleKind,
                 operators: [String], fleet: Int, firstYear: Int?, lastYear: Int?, batches: [Batch],
                 vintage: Bool = false, onTest: Bool = false, works: Bool = false, runs: String? = nil,
-                trial: String? = nil, runsPl: String? = nil, trialPl: String? = nil, specs: ModelSpecs? = nil,
+                trial: String? = nil, runsPl: String? = nil, trialPl: String? = nil, trialEnded: String? = nil,
+                specs: ModelSpecs? = nil,
                 variants: [SpecVariant] = [],
                 liveries: [String: String]? = nil, coupled: Bool = false, sets: [[Int]] = [], pairs: [[Int]] = [],
                 trailers: [Int] = [], tows: Bool = false, formerly: [String] = []) {
@@ -126,6 +130,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
         self.trial = trial
         self.runsPl = runsPl
         self.trialPl = trialPl
+        self.trialEnded = trialEnded
         self.specs = specs
         self.variants = variants
         self.liveries = liveries
@@ -139,7 +144,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
 
     private enum CodingKeys: String, CodingKey {
         case id, name, namePl, make, code, kind, operators, fleet, firstYear, lastYear, batches, vintage, onTest, works, runs, trial,
-             runsPl, trialPl, specs, variants, liveries, coupled, sets, pairs, trailers, tows, formerly
+             runsPl, trialPl, trialEnded, specs, variants, liveries, coupled, sets, pairs, trailers, tows, formerly
     }
 
     public init(from decoder: Decoder) throws {
@@ -163,6 +168,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
         trial = try c.decodeIfPresent(String.self, forKey: .trial)
         runsPl = try c.decodeIfPresent(String.self, forKey: .runsPl)
         trialPl = try c.decodeIfPresent(String.self, forKey: .trialPl)
+        trialEnded = try c.decodeIfPresent(String.self, forKey: .trialEnded)
         // Optional extras: a malformed one is dropped rather than failing the whole file.
         specs = try? c.decodeIfPresent(ModelSpecs.self, forKey: .specs)
         variants = (try? c.decodeIfPresent([SpecVariant].self, forKey: .variants)) ?? []
@@ -193,7 +199,8 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
                      firstYear: [firstYear, more.firstYear].compactMap { $0 }.min(),
                      lastYear: [lastYear, more.lastYear].compactMap { $0 }.max(),
                      batches: batches + more.batches, vintage: vintage, onTest: onTest, works: works,
-                     runs: runs, trial: trial, runsPl: runsPl, trialPl: trialPl, specs: specs, variants: variants,
+                     runs: runs, trial: trial, runsPl: runsPl, trialPl: trialPl, trialEnded: trialEnded,
+                     specs: specs, variants: variants,
                      liveries: liveries, coupled: coupled, sets: sets, pairs: pairs, trailers: trailers, tows: tows, formerly: formerly)
     }
 
@@ -204,6 +211,9 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
     }
 
     public var rangeDisplay: String { NumberSpan.display(numbers) }
+
+    /// A test vehicle whose trial is over: no longer running.
+    public var trialOver: Bool { onTest && trialEnded != nil }
 
     /// Regular service stock: what the fleet %, the set badges and the rarity tiers are
     /// about. Vintage, test and works vehicles are extras on the side.

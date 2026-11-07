@@ -692,13 +692,17 @@ EXTRA_BUSES = [
 # book, and the book only shows models fleet.json still has.
 # Irizar ie tram 12 #959: MZA's trial from R-4 Stalowa, mid to end of September 2026 (TransInfo, Polskie Radio 24), seen live on line 106 on
 # 2026-09-25 (api.um.warszawa.pl). MZA's press office (email, 2026-10-02): extended to 23 October, mainly
-# on 106 until 7 October (122 on 3 Oct, 166 on 4 Oct).
+# on 106 until 7 October (122 on 3 Oct, 166 on 4 Oct). Trial over on 23 Oct (2026-11-07: still showed as running).
 TEST_BUSES = [
     ("Irizar", "ie tram 12", 959, "MZA", 'R-4 "Stalowa" (R-13)',
-     "LINE 106 · ALSO 122, 123, 157, 166 · TRIAL UNTIL 23 OCT 2026", "ON TRIAL SEP–OCT 2026",
-     "LINIA 106 · TAKŻE 122, 123, 157, 166 · TESTY DO 23 PAŹ 2026", "TESTY WRZ–PAŹ 2026"),
+     "TRIAL ENDED 23 OCT 2026 · NO LONGER RUNNING", "TRIAL ENDED OCT 2026",
+     "TESTY ZAKOŃCZONE 23 PAŹ 2026 · JUŻ NIE JEŹDZI",
+     "TESTY ZAKOŃCZONE PAŹ 2026"),
 ]
 TRIALS = {(make, model): t for make, model, _, _, _, *t in TEST_BUSES}
+# Trials that are over, by (make, model): the day each ended. The row stays (see above), but the
+# app and the API say it's no longer running. Add the day here when MZA's trial ends.
+TRIAL_ENDED = {("Irizar", "ie tram 12"): "2026-10-23"}
 
 RETIRED = {
     ("BUS", "MAN", "A37", "Mobilis"): set(range(9501, 9562)),
@@ -892,6 +896,7 @@ def build(vehicles, city=None):
             **({"works": True} if works else {}),
             **(dict(zip(("runs", "trial", "runsPl", "trialPl"), TRIALS[(make, model)]))
                if (make, model) in TRIALS else {}),
+            **({"trialEnded": TRIAL_ENDED[(make, model)]} if (make, model) in TRIAL_ENDED else {}),
             **({"specs": model_specs} if model_specs else {}),
             **({"variants": variants} if variants else {}),
             **({"liveries": dict(sorted(liveries.items(), key=lambda kv: int(kv[0])))} if liveries else {}),

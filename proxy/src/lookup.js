@@ -127,6 +127,9 @@ function describe(m, b, number) {
     trial: m.onTest === true,
     // When it's on trial, until when, e.g. "ON TRIAL SEP–OCT 2026".
     trialLabel: m.onTest ? (m.trial ?? null) : null,
+    // The day the trial ended (ISO date), or null while it's still running. Once set, the
+    // vehicle is no longer on the road: it stays listed for the people who caught it.
+    trialEnded: m.onTest ? (m.trialEnded ?? null) : null,
     fleetSize: m.fleet,
   };
 }

@@ -91,7 +91,9 @@ struct BookIndexView: View {
                     // passing through, seasonal or not for passengers, not rare.
                     let onTest = sorted.filter(\.onTest)
                     if !onTest.isEmpty {
-                        sectionHeader(.onTest, note: String(localized: "BUSES ON TRIAL · NOT PART OF THE FLEET %"))
+                        sectionHeader(.onTest, note: onTest.allSatisfy(\.trialOver)
+                            ? String(localized: "PAST TRIALS · NOT PART OF THE FLEET %")
+                            : String(localized: "BUSES ON TRIAL · NOT PART OF THE FLEET %"))
                         ForEach(onTest) { m in row(m, stats: stats) }
                     }
                     let vintage = sorted.filter(\.vintage)

@@ -2604,6 +2604,16 @@
         }
       }
     },
+    "PAST TRIALS · NOT PART OF THE FLEET %": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ZAKOŃCZONE TESTY · NIE LICZĄ SIĘ DO % TABORU"
+          }
+        }
+      }
+    },
     "BUSES ONLY": {
       "localizations": {
         "pl": {
@@ -2912,6 +2922,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Na %lld różnych liniach"
+          }
+        }
+      }
+    },
+    "Caught from its trial run — it was only in Warsaw for a few weeks. A keepsake now.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Złapany z jazd testowych — był w Warszawie tylko przez kilka tygodni. Teraz pamiątka."
           }
         }
       }
