@@ -14,7 +14,7 @@
 // The vehicles body is the old service's shape, {"result": [...]}, whichever service
 // answered, so the app parses it exactly as before.
 
-import { fetchDane, fetchOld } from './city.js';
+import { fetchFeed } from './city.js';
 import { lookup } from './lookup.js';
 import { getGtfs, getPojazdy, getRoutes, putRoutes } from './routes.js';
 import { count } from './stats.js';
@@ -92,17 +92,9 @@ async function handle(request, env, ctx, url) {
   if (hit) return reply(await hit.text(), 'HIT');
 
   const down = await cache.match(downKey);
-  let list = null;
-  let source = 'dane';
-  if (!down) {
-    list = await fetchDane(type, env.DANE_TOKEN);
-    if (!list) {
-      source = 'old';
-      list = await fetchOld(type, env.UM_KEY);
-    }
-  }
-  if (list) {
-    const body = JSON.stringify({ result: list });
+  const feed = down ? null : await fetchFeed(type, env);
+  if (feed) {
+    const { body, source } = feed;
     ctx.waitUntil(Promise.all([
       cache.put(freshKey, cached(body, FRESH_SECONDS)),
       cache.put(goodKey, cached(body, FALLBACK_SECONDS)),
