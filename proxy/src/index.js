@@ -89,7 +89,7 @@ async function handle(request, env, ctx, url) {
   const downKey = new Request(`https://cache.tabor/down/${type}`);
 
   const hit = await cache.match(freshKey);
-  if (hit) return reply(await hit.text(), 'HIT');
+  if (hit) return reply(hit.body, 'HIT');
 
   const down = await cache.match(downKey);
   const feed = down ? null : await fetchFeed(type, env);
@@ -108,7 +108,7 @@ async function handle(request, env, ctx, url) {
     ctx.waitUntil(cache.put(downKey, cached('{}', DOWN_SECONDS)));
   }
   const stale = await cache.match(goodKey);
-  if (stale) return reply(await stale.text(), 'STALE');
+  if (stale) return reply(stale.body, 'STALE');
   return json({ result: "The city's feed didn't answer" }, 502);
 }
 
@@ -123,7 +123,8 @@ function cached(body, seconds) {
   return new Response(body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': `max-age=${seconds}` } });
 }
 
-// Cloudflare gzips JSON on the way out; the city's own responses aren't compressed.
+// Cloudflare gzips JSON on the way out; the city's own responses aren't compressed. A cached
+// copy goes out as a stream, so the Worker never reads its ~140 KB into a string.
 function reply(body, cache) {
   return new Response(body, {
     headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Tabor-Cache': cache },
