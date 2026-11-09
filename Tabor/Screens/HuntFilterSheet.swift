@@ -205,7 +205,7 @@ struct HuntFilterSheet: View {
     }
 
     /// Length, drive, floor, paint and Solaris generation. Only what this type has: trams have
-    /// no drive, paint or generation in the fleet file, and no bus is 30 m long.
+    /// no drive or generation in the fleet file (and one painted set), and no bus is 30 m long.
     @ViewBuilder
     private func specs(picked: HuntTargets, running: [WantedPin]) -> some View {
         let models = catalog.models.filter { picked.kind == nil || $0.kind == picked.kind }
@@ -256,7 +256,10 @@ struct HuntFilterSheet: View {
             HStack(alignment: .firstTextBaseline) {
                 SectionLabel(text: String(localized: "PAINT"))
                 Spacer()
-                if picked.kind == nil { Mono(String(localized: "BUSES"), size: 9.5, color: Palette.faint) }
+                // Buses only, until a tram has a paint of its own (#1388+1389 since 2026-11-09).
+                if picked.kind == nil, !models.contains(where: { $0.kind == .tram && !($0.liveries ?? [:]).isEmpty }) {
+                    Mono(String(localized: "BUSES"), size: 9.5, color: Palette.faint)
+                }
             }
             .padding(.top, 24)
             .padding(.bottom, 9)

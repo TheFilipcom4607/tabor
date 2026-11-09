@@ -425,17 +425,25 @@ public enum Livery: String, Sendable, CaseIterable {
     /// The old yellow and red with a red band over the windows, on the oldest Urbinos (#95).
     /// Fifty-odd still wear it, too many for a badge.
     case oldYellowRed
+    /// Autosan's own prototype Sancity 18LF LNG (#7890), in its maker's stickers over the
+    /// Warsaw colours.
+    case autosanPrototype
+    /// The last 105N set in regular service still in the old red and yellow (#1388+1389).
+    /// Not the buses' old yellow and red, which has a red band over the windows.
+    case lastRedYellow
 
     public var name: String {
         switch self {
         case .greyRed: String(localized: "GREY & RED")
         case .suburbanBlue: String(localized: "SUBURBAN BLUE")
         case .oldYellowRed: String(localized: "OLD YELLOW & RED")
+        case .autosanPrototype: String(localized: "AUTOSAN PROTOTYPE")
+        case .lastRedYellow: String(localized: "LAST RED & YELLOW")
         }
     }
 
     /// One vehicle standing out from its fleet, rather than a whole model's colours.
-    public var special: Bool { self == .greyRed }
+    public var special: Bool { self == .greyRed || self == .autosanPrototype || self == .lastRedYellow }
 }
 
 /// A Solaris Urbino's generation, from the body phototrans.eu gives each batch. III and IV

@@ -308,6 +308,14 @@ LIVERIES = {
     ("BUS", 8396): "greyRed",  # Urbino 18 hybrid: grey with a red skirt, Wawelska, March 2026
     ("BUS", 8397): "greyRed",  # the same, 2023 (no newer photo)
     ("BUS", 8399): "greyRed",  # the same, 16 July 2026
+    # Autosan's own prototype Sancity 18LF LNG (owned by Autosan, plate R0 LNG), running for MZA
+    # since 2022: Warsaw yellow and red with the maker's stickers (a stork on the front corner, a
+    # bridge and skyline down the sides, "HALO WARSZAWO!"). phototrans, 7 Nov 2022, line E-1.
+    ("BUS", 7890): "autosanPrototype",
+    # The last set in regular service still in the old red and yellow, kept on purpose through
+    # its NG III overhaul: phototrans, 12 Oct 2025 (al. Solidarności) and 19 Dec 2025 (Okopowa).
+    ("TRAM", 1388): "lastRedYellow",
+    ("TRAM", 1389): "lastRedYellow",
 }
 # The colour codes the city's list gets right, by bus. Suburban (L) buses are blue, whole
 # models of them (confirmed on the street, 2026-09-28). RAL 1004+3003 is the old yellow and red

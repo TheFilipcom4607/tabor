@@ -1081,7 +1081,7 @@ private func nearby(_ vehicles: [LiveVehicle]) -> [NearbyVehicle] {
     let both = HuntTargets(paints: [.oldYellowRed, .greyRed])
     #expect(both.matches(hybrid, number: 8396, line: "1") && both.isCityWide)
     // Only the grey hybrids earn the badge; 50-odd old Urbinos and whole blue models don't.
-    #expect(Livery.allCases.filter(\.special) == [.greyRed])
+    #expect(Livery.allCases.filter(\.special) == [.greyRed, .autosanPrototype, .lastRedYellow])
     // Round-trips; a paint an older build doesn't know is skipped.
     #expect(both.rawValue == "paint:greyRed,paint:oldYellowRed" && HuntTargets(rawValue: both.rawValue) == both)
     #expect(HuntTargets(rawValue: "paint:tartan") == HuntTargets())
@@ -1458,6 +1458,12 @@ private func drive(from lon0: Double, step: Double, fixes: Int, lat: Double = ro
     // #5869 was silver once and the city still says so, but it's red and yellow now.
     #expect(e18.livery(of: 5869) == nil)
     #expect(catalog.model(id: "bus-solaris-urbino-18h")?.livery(of: 8396) == .greyRed)
+    #expect(catalog.model(id: "bus-autosan-m18lf")?.livery(of: 7890) == .autosanPrototype)
+    #expect(catalog.model(id: "bus-autosan-m18lf")?.livery(of: 7800) == nil)
+    // Both cars of the set, and only them: the tram's livery isn't the buses' old yellow and red.
+    let tram105 = catalog.model(id: "tram-konstal-105n")
+    #expect(tram105?.livery(of: 1388) == .lastRedYellow && tram105?.livery(of: 1389) == .lastRedYellow)
+    #expect(tram105?.liveries?.count == 2)
     #expect(catalog.model(id: "bus-mercus-syn2z")?.liveries?.values.allSatisfy { $0 == "suburbanBlue" } == true)
     // Trams are all electric: the city gives no drive for them.
     #expect(catalog.model(id: "tram-hrc-140n")?.specs?.drive == nil)

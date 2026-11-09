@@ -11137,6 +11137,26 @@
           }
         }
       }
+    },
+    "AUTOSAN PROTOTYPE": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PROTOTYP AUTOSANA"
+          }
+        }
+      }
+    },
+    "LAST RED & YELLOW": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OSTATNI CZERWONO-ŻÓŁTY"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
