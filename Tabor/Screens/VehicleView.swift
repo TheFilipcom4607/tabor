@@ -1,5 +1,6 @@
 import SwiftData
 import SwiftUI
+import Translation
 
 struct VehicleView: View {
     let modelId: String
@@ -14,6 +15,8 @@ struct VehicleView: View {
     @AppStorage("shareStyle") private var shareStyle: ShareCard.Style = .sticker
     @State private var editing: Sighting?
     @Environment(SightingUndo.self) private var undo
+    /// czynaczas.pl's note on this vehicle, when it has one.
+    @State private var remark: VehicleRemark?
 
     /// The depot, or the owner when there's none. A works car adds how rare it is: most are
     /// the only one of their kind, which a WORKS tier alone doesn't say.
@@ -155,6 +158,13 @@ struct VehicleView: View {
                 .padding(.top, 9)
                 .padding(.horizontal, 22)
 
+                if let remark {
+                    RemarkCard(remark: remark)
+                        .id(remark)
+                        .padding(.top, 18)
+                        .padding(.horizontal, 22)
+                }
+
                 let lines = orderedLines(mine)
                 if !lines.isEmpty {
                     SectionLabel(text: String(localized: "SEEN ON LINES"))
@@ -258,6 +268,10 @@ struct VehicleView: View {
         .environment(\.defaultMinListRowHeight, 0)
         .scrollIndicators(.hidden)
         .taborScreen()
+        .task(id: number) {
+            guard let model = Fleet.catalog.model(id: modelId) else { return }
+            remark = await RemarkService.remark(kind: model.kind, number: number, model: model)
+        }
         .sheet(item: $editing) { s in
             EditSightingSheet(sighting: s) { moved in
                 // The sighting now belongs to another vehicle: follow it there.
@@ -407,6 +421,89 @@ struct VehicleView: View {
 
 extension String {
     var nonEmpty: String? { isEmpty ? nil : self }
+}
+
+/// czynaczas.pl's remark, set apart from TABOR's own facts as a signed quote, as agreed with
+/// them: it's their note, not ours, and it always links back.
+private struct RemarkCard: View {
+    let remark: VehicleRemark
+    /// The remarks are Polish: only a phone in another language gets TRANSLATE.
+    private let inPolish = Bundle.main.preferredLocalizations.first == "pl"
+    @State private var request: TranslationSession.Configuration?
+    @State private var translated: String?
+    @State private var showTranslation = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            SectionLabel(text: String(localized: "NOTE"))
+            VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: "\u{201C}")
+                    .font(TaborFont.grotesk(44, 700))
+                    .foregroundStyle(Palette.yellow)
+                    .frame(height: 22, alignment: .top)
+                    .accessibilityHidden(true)
+                if let car = remark.fromCar {
+                    Mono("ABOUT ITS SET WITH #\(String(car))", size: 9.5, weight: 700, spacing: 0.1, color: Palette.faint)
+                        .padding(.top, 8)
+                }
+                Text(showTranslation ? translated ?? remark.text : remark.text)
+                    .font(TaborFont.grotesk(15.5, 500))
+                    .foregroundStyle(Palette.ink)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                    .padding(.top, 8)
+                    .contentTransition(.opacity)
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    Link(destination: URL(string: "https://czynaczas.pl")!) {
+                        HStack(spacing: 5) {
+                            Mono("— czynaczas.pl" as String, size: 11, weight: 700, spacing: 0.04, color: Palette.yellow)
+                            Image(systemName: "arrow.up.right").font(.system(size: 9, weight: .bold))
+                        }
+                        .foregroundStyle(Palette.yellow)
+                        .contentShape(Rectangle())
+                    }
+                    // Plain, or a List row fires every button in it on any tap.
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("Open czynaczas.pl"))
+                    Spacer(minLength: 0)
+                    if !inPolish {
+                        Button(action: toggle) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "translate").font(.system(size: 10, weight: .semibold))
+                                Mono(showTranslation ? "ORIGINAL" : "TRANSLATE", size: 10, weight: 700, spacing: 0.1, color: Palette.sub)
+                            }
+                            .foregroundStyle(Palette.sub)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.top, 14)
+            }
+            .padding(.top, 14)
+            .padding(.bottom, 15)
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.yellow.opacity(0.18)))
+        }
+        // On the phone, in place: Apple's translation, asked for the first time TRANSLATE is tapped.
+        .translationTask(request) { session in
+            guard let reply = try? await session.translate(remark.text) else { return }
+            translated = reply.targetText
+            withAnimation(.easeOut(duration: 0.2)) { showTranslation = true }
+        }
+    }
+
+    private func toggle() {
+        Haptics.shared.tick()
+        if translated == nil {
+            request = .init(source: Locale.Language(identifier: "pl"), target: nil)
+        } else {
+            withAnimation(.easeOut(duration: 0.2)) { showTranslation.toggle() }
+        }
+    }
 }
 
 /// One sighting's own sticker, or its photo, small: for choosing which the book shows.

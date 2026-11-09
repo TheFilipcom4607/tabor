@@ -11077,6 +11077,66 @@
           }
         }
       }
+    },
+    "ABOUT ITS SET WITH #%@": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O JEGO SKŁADZIE Z #%@"
+          }
+        }
+      }
+    },
+    "TRANSLATE": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PRZETŁUMACZ"
+          }
+        }
+      }
+    },
+    "Open czynaczas.pl": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz czynaczas.pl"
+          }
+        }
+      }
+    },
+    "Notes on vehicles: [czynaczas.pl](https://czynaczas.pl), with thanks.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uwagi przy pojazdach: [czynaczas.pl](https://czynaczas.pl), z podziękowaniami."
+          }
+        }
+      }
+    },
+    "NOTE": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOTATKA"
+          }
+        }
+      }
+    },
+    "ORIGINAL": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ORYGINAŁ"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

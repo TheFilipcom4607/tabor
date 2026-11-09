@@ -339,6 +339,11 @@ phototrans.eu) or were seen live on the feed. None are filled in from an order
 size. As soon as ZTM lists a number itself, ZTM's row wins and the hand-added one
 drops out. Every source is credited at the bottom of the book.
 
+The notes on some vehicles' pages ("the demonstrator Solaris bought back in 2024",
+"a set in 1980s red and white") are [czynaczas.pl](https://czynaczas.pl)'s,
+shared with TABOR by kind permission. They aren't in this repo: the app asks for
+one vehicle's note when its page opens, and every note links back to czynaczas.pl.
+
 > [!NOTE]
 > The live feed and the database don't always agree. The feed keeps some
 > vehicles' last positions for years, so anything older than three minutes is

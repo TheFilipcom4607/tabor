@@ -747,6 +747,7 @@ struct SettingsSheet: View {
                         Text(Fleet.catalog.sourceDisplay)
                         Text("New deliveries show up without an app update: TABOR checks GitHub for a fresher ZTM snapshot once a day.")
                         Text("District outlines for the badges: © OpenStreetMap contributors.")
+                        Text("Notes on vehicles: [czynaczas.pl](https://czynaczas.pl), with thanks.")
                     }
                 }
                 Section {
