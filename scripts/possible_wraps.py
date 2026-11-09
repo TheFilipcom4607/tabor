@@ -16,20 +16,22 @@ confirms them. This looks for the hints and lists them for a human:
   the same in Config/Secrets.xcconfig), or when the model can't be reached, every
   post is listed, as before.
 
+- czynaczas.pl's special vehicles (--special, written by czynaczas.py sync), now or coming up.
+  His list is accurate, but his terms keep it out of anything public, so the issue shows each
+  entry only as a code; `python3 scripts/czynaczas.py show` on your Mac says which is which.
+
 The city's December "Świąteczne pojazdy" post has no search to poll, so that one stays a habit.
-czynaczas.pl's specialVehicles list is accurate, but it's a third party's private API: the issue
-only links it, for a human to open.
 
 Writes a Markdown issue body to the given path when there's anything, nothing when there isn't.
 Exits 1 if neither the feed nor MZA could be read, so the caller leaves the issue alone.
 
---skip leaves out hints a human has already dismissed: one per line, a post's URL or a vehicle
-as `BUS #1976 | M`. The Action builds it from the wraps issues a human closed, for any reason;
+--skip leaves out hints a human has already dismissed: one per line, a post's URL, a vehicle
+as `BUS #1976 | M`, or a special vehicle's `kod ab12cd`. The Action builds it from the wraps issues a human closed, for any reason;
 the bot's own close dismisses nothing.
 
 --check asks the model about the given posts and prints its odds.
 
-Usage:  python3 scripts/possible_wraps.py <body.md> [--skip <file>]
+Usage:  python3 scripts/possible_wraps.py <body.md> [--skip <file>] [--special <file>]
         python3 scripts/possible_wraps.py --check <post URL>...
 """
 import argparse
@@ -181,10 +183,31 @@ def wrap_odds(posts):
     return odds
 
 
+def special_vehicles(path, fleet, today, skip):
+    """Codes of czynaczas's special vehicles that are out now or coming, and not in already."""
+    from czynaczas import code
+    kinds = {"3": "BUS", "0": "TRAM"}
+    on_test = {(m["kind"], n) for m in fleet["models"] if m.get("onTest") for b in m["batches"] for n in b["numbers"]}
+    out = []
+    for s in json.loads(Path(path).read_text()):
+        kind, _, number = s["id"].partition("/")
+        kind, start, end = kinds.get(kind), s["start_date"][:10], s["expiration_date"][:10]
+        if not number.isdigit() or end < today.isoformat() or f"kod {code(s)}" in skip:
+            continue
+        # A wrap row or a trial bus already in fleet.json: nothing left to do about it.
+        if (kind, int(number)) in on_test or any(
+                (w["kind"], str(w["number"])) == (kind, number) and w["from"] <= end and start <= w["to"]
+                for w in fleet.get("wraps", [])):
+            continue
+        out.append(code(s))
+    return out
+
+
 def main():
     args = argparse.ArgumentParser()
     args.add_argument("body", nargs="?")
     args.add_argument("--skip", type=Path)
+    args.add_argument("--special", type=Path)
     args.add_argument("--check", nargs="+", metavar="URL")
     args = args.parse_args()
     if args.check:
@@ -202,7 +225,9 @@ def main():
     known = {(w["kind"], str(w["number"])) for w in fleet.get("wraps", [])
              if w["from"] <= today.isoformat() <= w["to"]}
 
-    lines, posts, failed = [], [], []
+    lines, posts, special, failed = [], [], [], []
+    if args.special and args.special.exists():
+        special = special_vehicles(args.special, fleet, today, skip)
     try:
         lines = [x for x in event_lines()
                  if (x[0], x[1]) not in known and f"{x[0]} #{x[1]} | {x[2]}" not in skip]
@@ -218,7 +243,7 @@ def main():
         print(f"couldn't read {f}", file=sys.stderr)
     if len(failed) == 2:
         sys.exit(1)
-    if not lines and not posts:
+    if not lines and not posts and not special:
         print("no signs of an event wrap")
         return
 
@@ -241,6 +266,10 @@ def main():
     if lines:
         out += ["**Na nietypowej linii**", "", "| Pojazd | Linia | Ostatnio |", "|---|---|---|"]
         out += [f"| {k} #{n} | {l} | {t} |" for k, n, l, t in lines]
+        out.append("")
+    if special:
+        out += ["**Pojazdy specjalne w [czynaczas.pl](https://czynaczas.pl)**", ""]
+        out += [f"- kod {c}" for c in special]
         out.append("")
     if failed:
         out += ["Nie udało się odczytać: " + "; ".join(failed) + ".", ""]

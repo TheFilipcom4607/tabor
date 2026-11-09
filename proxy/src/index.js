@@ -10,6 +10,8 @@
 //   GET /v1/pojazdy           the city's vehicle list, passed through for the fleet Action
 //   GET /v1/fleet/5221        what a vehicle is (model, year, specs), for other projects (lookup.js)
 //   POST/DELETE /v1/track     a phone following a vehicle on its Lock Screen (track.js)
+//   GET /v1/remarks/bus/5869  czynaczas.pl's remark on one vehicle (czynaczas.js)
+//   PUT /v1/czynaczas         the nightly upload of those remarks, from the fleet Action
 //
 // The vehicles body is the old service's shape, {"result": [...]}, whichever service
 // answered, so the app parses it exactly as before.
@@ -17,6 +19,7 @@
 import { fetchFeed } from './city.js';
 import { lookup } from './lookup.js';
 import { getGtfs, getPojazdy, getRoutes, putRoutes } from './routes.js';
+import { getCzynaczasMeta, getRemark, putCzynaczas } from './czynaczas.js';
 import { count } from './stats.js';
 import { handleTrack } from './track.js';
 
@@ -59,7 +62,8 @@ export default {
 };
 
 async function handle(request, env, ctx, url) {
-  if (!['/v1/vehicles', '/v1/routes', '/v1/gtfs', '/v1/pojazdy', '/v1/track'].includes(url.pathname)) return json({ result: 'Not found' }, 404);
+  const remarks = url.pathname.startsWith('/v1/remarks/');
+  if (!remarks && !['/v1/vehicles', '/v1/routes', '/v1/gtfs', '/v1/pojazdy', '/v1/track', '/v1/czynaczas', '/v1/czynaczas/meta'].includes(url.pathname)) return json({ result: 'Not found' }, 404);
 
   // A phone polls twice (buses, trams) every 10 s, 12 calls a minute. The limit leaves room
   // for several phones behind one carrier NAT, and stops a script hammering the key.
@@ -72,6 +76,9 @@ async function handle(request, env, ctx, url) {
   else if (request.method === 'POST' && url.pathname === '/v1/track') count(request, env, ctx, 'track');
 
   if (url.pathname === '/v1/track') return handleTrack(request, env);
+  if (remarks) return getRemark(request, env, url);
+  if (url.pathname === '/v1/czynaczas') return request.method === 'PUT' ? putCzynaczas(request, env) : json({ result: 'PUT only' }, 405);
+  if (url.pathname === '/v1/czynaczas/meta') return request.method === 'GET' ? getCzynaczasMeta(request, env) : json({ result: 'GET only' }, 405);
   if (url.pathname === '/v1/gtfs') return request.method === 'GET' ? getGtfs(request, env) : json({ result: 'GET only' }, 405);
   if (url.pathname === '/v1/pojazdy') return request.method === 'GET' ? getPojazdy(request, env) : json({ result: 'GET only' }, 405);
   if (url.pathname === '/v1/routes') {

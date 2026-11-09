@@ -18,14 +18,15 @@ name: Refresh fleet data
 #   the live feed has seen in the last week that fleet.json lacks goes in a second issue
 #   ("Fleet: buses on trial"), for a human to add to TEST_BUSES once a source names them.
 # - Event wraps (a Christmas bus, a Valentine's bus) aren't in any list either. Vehicles on an
-#   event line in the live feed and fresh MZA posts about them go in a third issue ("Fleet:
-#   possible event wraps"), for a human to add to WRAPS once a source names the bus. Closing
-#   that issue as not planned dismisses its hints for good.
+#   event line in the live feed, fresh MZA posts about them and czynaczas.pl's special vehicles
+#   (as codes only: his terms) go in a third issue ("Fleet: possible event wraps"), for a human
+#   to add to WRAPS once a source names the bus. Closing that issue as not planned dismisses its
+#   hints for good.
 # The tests run here because a push or PR made with the workflow's own token starts no
 # other workflow.
 #
-# Needs the ROUTES_UPLOAD_TOKEN repo secret, and "Allow GitHub Actions to create and approve
-# pull requests" on in the repo's Settings → Actions → General. The city's list comes through
+# Needs the ROUTES_UPLOAD_TOKEN and CZYNACZAS_API_KEY repo secrets, and "Allow GitHub Actions to
+# create and approve pull requests" on in the repo's Settings → Actions → General. The city's list comes through
 # the tabor-live Worker (/v1/pojazdy, gated by that token): dane.um.warszawa.pl lets calls from
 # GitHub's US runners time out (6–7 Oct 2026) but answers from Warsaw, as with the GTFS in
 # routes.yml. The ZTM scrape (--scrape) can't run here either: ztm.waw.pl answers GitHub's
@@ -102,6 +103,17 @@ jobs:
           python3 scripts/trial_buses.py trials.md
           touch trials-checked
 
+      # czynaczas.pl's partner data (czynaczas.py): remarks for the app go to the Worker, and the
+      # special vehicles to the wraps step below. His terms keep all of it out of the repo, these
+      # logs and the artifacts, so the file stays in RUNNER_TEMP and the script prints counts only.
+      # Without it, the wraps issue just goes without his list.
+      - name: Bring czynaczas.pl's data to the Worker
+        continue-on-error: true
+        env:
+          CZYNACZAS_API_KEY: ${{ secrets.CZYNACZAS_API_KEY }}
+          ROUTES_UPLOAD_TOKEN: ${{ secrets.ROUTES_UPLOAD_TOKEN }}
+        run: python3 scripts/czynaczas.py sync "$RUNNER_TEMP/czynaczas-special.json"
+
       # The same for event wraps: nothing read leaves the issue as it is. Hints in an issue a
       # human closed stay dismissed, or the next run would only open a new issue with the same
       # posts. It goes by who closed it, not the reason: closing with a comment makes it
@@ -120,10 +132,10 @@ jobs:
             } } } }' \
             --jq ".data.search.nodes[] | select((.title == \"$WRAPS_TITLE\" or .title == \"$OLD_WRAPS_TITLE\")
                     and .timelineItems.nodes[0].actor.__typename != \"Bot\") | .body" \
-            | { grep -oE '\]\(https://www\.mza\.waw\.pl/[^)]+\)|^\| (BUS|TRAM) #[^|]+\|[^|]+\|' || true; } \
-            | sed -E 's/^\]\((.*)\)$/\1/; s/^\| (.*[^ ]) *\|$/\1/; s/ +\| +/ | /' | sort -u > skip.txt
+            | { grep -oE '\]\(https://www\.mza\.waw\.pl/[^)]+\)|^\| (BUS|TRAM) #[^|]+\|[^|]+\||^- kod [0-9a-f]{6}' || true; } \
+            | sed -E 's/^\]\((.*)\)$/\1/; s/^\| (.*[^ ]) *\|$/\1/; s/ +\| +/ | /; s/^- (kod .*)$/\1/' | sort -u > skip.txt
           echo "$(wc -l < skip.txt) dismissed hints"
-          python3 scripts/possible_wraps.py wraps.md --skip skip.txt
+          python3 scripts/possible_wraps.py wraps.md --skip skip.txt --special "$RUNNER_TEMP/czynaczas-special.json"
           touch wraps-checked
 
       # apply: commit to main. review: open or update the PR. close: the fleet is main's again,
@@ -386,7 +398,7 @@ jobs:
             if [ -n "$number" ]; then
               # A vehicle by its line, not its last-seen time, and a post by its link, not Jev's
               # odds: both change every night.
-              hints() { grep -E '^(\| (BUS|TRAM) #|- [0-9])' \
+              hints() { grep -E '^(\| (BUS|TRAM) #|- [0-9]|- kod )' \
                 | sed -E 's/^(\| [^|]+\| [^|]+\|).*/\1/; s/^(- .*\]\([^)]*\)).*/\1/' | sort || true; }
               added=$(comm -13 <(gh issue view "$number" --json body --jq .body | hints) <(hints < wraps.md))
               gh issue edit "$number" --body-file wraps.md

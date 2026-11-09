@@ -30,7 +30,15 @@ name = "LOOKUP_PER_IP"
 namespace_id = "1002"
 simple = { limit = 30, period = 60 }
 
-# routes.json for HUNT's future trails (src/routes.js). KV, not R2: one small write a day.
+# czynaczas.pl remarks (src/czynaczas.js): one vehicle at a time, so a script can't take them
+# all in a few minutes. Opening vehicle pages one after another stays well under it.
+[[ratelimits]]
+name = "REMARKS_PER_IP"
+namespace_id = "1003"
+simple = { limit = 20, period = 60 }
+
+# routes.json for HUNT's future trails (src/routes.js), and czynaczas.pl's remarks
+# (src/czynaczas.js). KV, not R2: a few small writes a day.
 [[kv_namespaces]]
 binding = "ROUTES"
 id = "197432fc70f44a5692736b7762d8eb60"
