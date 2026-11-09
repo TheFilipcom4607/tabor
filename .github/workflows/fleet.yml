@@ -170,8 +170,12 @@ jobs:
       - name: Write the description
         run: |
           grep -E '^  [+?-] ' "$RUNNER_TEMP/build.log" | sed 's/^  //' | sort > "$RUNNER_TEMP/build.txt" || true
-          # Vehicle by vehicle against main's fleet.json, in plain words.
-          python3 scripts/fleet_commit_message.py HEAD > changes.md
+          # Vehicle by vehicle against main's fleet.json, in plain words. A bug in it mustn't
+          # hold back the fleet update, so it falls back to the bare counts.
+          if ! python3 scripts/fleet_commit_message.py HEAD > changes.md; then
+            echo "::warning::fleet_commit_message.py failed; the commit says only the counts."
+            python3 scripts/fleet_changed.py HEAD > changes.md || true
+          fi
           {
             echo "More than $REVIEW_ABOVE vehicles would leave the book in one go, so this waits for"
             echo "a look instead of going in by itself. If they really are gone, merge. If the city's"
