@@ -1,5 +1,5 @@
 {
-"fetched": "2026-11-05",
+"fetched": "2026-11-09",
 "source": "https://dane.um.warszawa.pl/api/action/get_ztm_pojazdy",
 "vehicles": [
 {
@@ -1286,7 +1286,7 @@
 "idMarki": 37,
 "year": 2011,
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-4 \"Stalowa\" (R-13)",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
 "colour": "RAL 1003+3020"
 },
 {
@@ -1295,7 +1295,7 @@
 "idMarki": 37,
 "year": 2011,
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-4 \"Stalowa\" (R-13)",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
 "colour": "RAL 1003+3020"
 },
 {
@@ -1304,7 +1304,7 @@
 "idMarki": 37,
 "year": 2011,
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-4 \"Stalowa\" (R-13)",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
 "colour": "RAL 1003+3020"
 },
 {
@@ -1313,7 +1313,7 @@
 "idMarki": 37,
 "year": 2011,
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-4 \"Stalowa\" (R-13)",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
 "colour": "RAL 1003+3020"
 },
 {
@@ -1322,7 +1322,7 @@
 "idMarki": 37,
 "year": 2011,
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-4 \"Stalowa\" (R-13)",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
 "colour": "RAL 1003+3020"
 },
 {
@@ -4356,15 +4356,6 @@
 "year": 2026,
 "carrier": "ABUS Sp. z o.o.",
 "depot": "Radzymin",
-"colour": "RAL 5010 (L)"
-},
-{
-"kind": "BUS",
-"number": "39532",
-"idMarki": 4848,
-"year": 2014,
-"carrier": "PKS Polonus Sp. z o.o.",
-"depot": "Piaseczno",
 "colour": "RAL 5010 (L)"
 },
 {
@@ -15845,6 +15836,15 @@
 {
 "kind": "BUS",
 "number": "9822",
+"idMarki": 77,
+"year": 2016,
+"carrier": "Mobilis Sp. z o.o.",
+"depot": "Posag 7 Panien MOB",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "9823",
 "idMarki": 77,
 "year": 2016,
 "carrier": "Mobilis Sp. z o.o.",
