@@ -2216,3 +2216,37 @@ private let shelfStats = CollectionStats(sightings: (1...100).map {
     // Three times ever.
     #expect(!SupportAsk.due(asks: 3, lastAsked: now - 400 * 86400, now: now, tipped: false))
 }
+
+@Test func tierBadgesTakeAnyOneOfTheirTier() {
+    let regular = catalog.models.first { $0.regular }!
+    #expect(eval([any(regular.id)]).values.filter { ["vintage", "on-test", "works"].contains($0.id) }.allSatisfy { !$0.earned })
+    for (tier, id) in [(Tier.vintage, "vintage"), (.onTest, "on-test"), (.works, "works")] {
+        let m = catalog.models.first { $0.tier == tier }!
+        let badge = eval([any(m.id)])[id]!
+        #expect(badge.earned && !badge.secret)
+        #expect(badge.proof == [Achievement.Proof(modelId: m.id, number: m.numbers[0])])
+    }
+}
+
+@Test func faceliftNeedsOneModelInTwoGenerations() {
+    let u12 = catalog.model(id: "bus-solaris-urbino-12")!, u12e = catalog.model(id: "bus-solaris-urbino-12e")!
+    let iii = u12.generations["3"]![0], iv = u12.generations["4"]![0]
+    // A III and a IV of different models isn't it.
+    let apart = eval([any(u12.id, number: iii), any(u12e.id, number: u12e.generations["4"]![0])])["facelift"]!
+    #expect(!apart.earned && apart.progress == 1)
+    let both = eval([any(u12.id, number: iv, date: day(2026, 6, 2)), any(u12.id, number: iii, date: day(2026, 6, 1))])["facelift"]!
+    #expect(both.earned)
+    #expect(both.proof == [Achievement.Proof(modelId: u12.id, number: iii, note: "URBINO III"),
+                           Achievement.Proof(modelId: u12.id, number: iv, note: "URBINO IV")])
+    // Models built as one generation only can't earn it, however many you catch.
+    let u18 = catalog.model(id: "bus-solaris-urbino-18")!
+    #expect(!eval(u18.numbers.prefix(5).map { any(u18.id, number: $0) })["facelift"]!.earned)
+}
+
+@Test func urbinoOneIsASecret() {
+    let u15 = catalog.model(id: "bus-solaris-urbino-15")!
+    let locked = eval([any("bus-solaris-urbino-18")])["urbino-one"]!
+    #expect(locked.secret && !locked.earned)
+    let found = eval([any(u15.id, number: 6962)])["urbino-one"]!
+    #expect(found.earned && found.proof == [Achievement.Proof(modelId: u15.id, number: 6962, note: "URBINO I")])
+}

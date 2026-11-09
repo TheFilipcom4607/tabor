@@ -10977,6 +10977,106 @@
           }
         }
       }
+    },
+    "Museum piece": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eksponat"
+          }
+        }
+      }
+    },
+    "A VINTAGE vehicle": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pojazd ZABYTKOWY"
+          }
+        }
+      }
+    },
+    "Trial run": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jazda próbna"
+          }
+        }
+      }
+    },
+    "A vehicle ON TEST": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pojazd NA TESTACH"
+          }
+        }
+      }
+    },
+    "Behind the scenes": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Za kulisami"
+          }
+        }
+      }
+    },
+    "A WORKS car": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wagon TECHNICZNY"
+          }
+        }
+      }
+    },
+    "Facelift": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lifting"
+          }
+        }
+      }
+    },
+    "One Urbino model as both a III and a IV": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeden model Urbino jako III i jako IV"
+          }
+        }
+      }
+    },
+    "Where it all began": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Od tego się zaczęło"
+          }
+        }
+      }
+    },
+    "A first-generation Solaris Urbino": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solaris Urbino pierwszej generacji"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

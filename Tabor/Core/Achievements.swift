@@ -119,6 +119,13 @@ public enum Achievements {
             tierSet(c, .gold, id: "gold-set", symbol: "star.circle.fill"),
             tierSet(c, .rare, id: "rare-set", symbol: "diamond.fill"),
             fullBatch(c), modelComplete(c), rainbowDay(c),
+            firstOf(c, .vintage, id: "vintage", title: String(localized: "Museum piece"),
+                    detail: String(localized: "A VINTAGE vehicle"), symbol: "building.columns.fill"),
+            firstOf(c, .onTest, id: "on-test", title: String(localized: "Trial run"),
+                    detail: String(localized: "A vehicle ON TEST"), symbol: "flask.fill"),
+            firstOf(c, .works, id: "works", title: String(localized: "Behind the scenes"),
+                    detail: String(localized: "A WORKS car"), symbol: "wrench.and.screwdriver.fill"),
+            facelift(c),
             // Days out
             tramDay(c), fourSeasons(c), oldFriend(c), freshOffTheLine(c), veteran(c), allOperators(c),
             // Places
@@ -142,7 +149,7 @@ public enum Achievements {
             // Secrets
             onDate(c, id: "christmas", title: String(localized: "Christmas spirit"), detail: String(localized: "A catch on Christmas Day"), symbol: "gift.fill", month: 12, day: 25),
             onDate(c, id: "new-year", title: String(localized: "Happy New Year"), detail: String(localized: "A catch on New Year's Day"), symbol: "sparkles", month: 1, day: 1),
-            anniversary(c), twins(c), roundNumber(c), palindrome(c), doubleLife(c), dejaVu(c),
+            anniversary(c), twins(c), roundNumber(c), palindrome(c), doubleLife(c), dejaVu(c), urbinoOne(c),
         ]
         return all.compactMap { $0 } + depots(c)
     }
@@ -298,6 +305,35 @@ public enum Achievements {
             .map { Achievement.Missing($0.name, modelId: $0.id) }
         return Achievement(id: id, title: title, detail: detail,
                            symbol: symbol, progress: models.filter(c.has).count, goal: n, proof: proof, missing: missing)
+    }
+
+    /// Any one vehicle of a tier that doesn't go by size. Hidden while the fleet has none (no
+    /// trial running, say).
+    static func firstOf(_ c: Context, _ tier: Tier, id: String, title: String, detail: String, symbol: String) -> Achievement? {
+        guard c.catalog.models.contains(where: { $0.tier == tier }) else { return nil }
+        let hits = c.sightings.filter { c.model($0)?.tier == tier }.sorted { $0.date < $1.date }
+        return Achievement(id: id, title: title, detail: detail, symbol: symbol,
+                           progress: hits.isEmpty ? 0 : 1, goal: 1, proof: c.proof(hits))
+    }
+
+    /// One Urbino model caught in two generations. Only the Urbino 12 and 12 electric were
+    /// built as both a III and a IV, and each has just 10 of one, so it's a real hunt.
+    static func facelift(_ c: Context) -> Achievement? {
+        let models = c.catalog.models.filter { $0.regular && $0.generations.count >= 2 }
+        guard !models.isEmpty else { return nil }
+        // Per model, your first catch of each generation; the model with the most is the closest.
+        let firsts = { (m: VehicleModel) -> [(UrbinoGeneration, SightingRecord)] in
+            var first: [UrbinoGeneration: SightingRecord] = [:]
+            for s in c.sightings.sorted(by: { $0.date < $1.date }) where s.modelId == m.id {
+                if let g = m.generation(of: s.number), first[g] == nil { first[g] = s }
+            }
+            return first.sorted { $0.key < $1.key }.map { ($0.key, $0.value) }
+        }
+        let best = models.map(firsts).max { $0.count < $1.count } ?? []
+        return Achievement(id: "facelift", title: String(localized: "Facelift"),
+                           detail: String(localized: "One Urbino model as both a III and a IV"),
+                           symbol: "rectangle.2.swap", progress: best.count, goal: 2,
+                           proof: best.map { Achievement.Proof(modelId: $0.1.modelId, number: $0.1.number, note: $0.0.name) })
     }
 
     /// Closest delivery batch to completion (at least two vehicles, so it's a real batch).
@@ -569,6 +605,16 @@ public enum Achievements {
         return Achievement(id: "deja-vu", title: String(localized: "Déjà vu"), detail: String(localized: "The same vehicle twice in one day"),
                            symbol: "arrow.triangle.2.circlepath", progress: twice.isEmpty ? 0 : 1, goal: 1, secret: true,
                            proof: c.proof(twice.sorted { $0.date < $1.date }))
+    }
+
+    /// A first-generation Urbino: the Urbino 15s #6962 and #8731, both preserved.
+    static func urbinoOne(_ c: Context) -> Achievement? {
+        guard c.catalog.models.contains(where: { !($0.generations["1"] ?? []).isEmpty }) else { return nil }
+        let hits = c.sightings.filter { c.model($0)?.generation(of: $0.number) == .first }.sorted { $0.date < $1.date }
+        return Achievement(id: "urbino-one", title: String(localized: "Where it all began"),
+                           detail: String(localized: "A first-generation Solaris Urbino"), symbol: "clock.arrow.circlepath",
+                           progress: hits.isEmpty ? 0 : 1, goal: 1, secret: true,
+                           proof: c.proof(hits) { _ in UrbinoGeneration.first.name })
     }
 
     // MARK: Depots
