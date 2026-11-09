@@ -26,9 +26,11 @@ CITY = "data/ztm-pojazdy.json"
 SECTIONS = ("models", "worksModels", "codedWorksModels")
 # Worked out from the vehicles, or shown per vehicle, so the model-level check skips them.
 PER_VEHICLE = {"batches", "fleet", "firstYear", "lastYear", "operators", "specs", "variants",
-               "liveries", "name"}
+               "liveries", "generations", "name"}
 LIVERIES = {"suburbanBlue": "suburban blue", "oldYellowRed": "old yellow and red",
             "greyRed": "grey and red", None: "everyday paint"}
+# Solaris Urbino generations, as the app shows them.
+ROMAN = {"1": "I", "2": "II", "3": "III", "4": "IV"}
 SPECS = {"length": "length", "drive": "drive", "seats": "seats", "places": "places",
          "airCon": "air-con", "floor": "floor"}
 KEYS = {"namePl": "Polish name", "coupled": "coupling", "sets": "fixed sets", "pairs": "usual sets",
@@ -74,6 +76,7 @@ def vehicles(d):
         works = bool(m.get("works"))
         liveries = m.get("liveries", {})
         variants = {n: v["specs"] for v in m.get("variants", []) for n in v["numbers"]}
+        generations = {n: ROMAN.get(g, g) for g, ns in m.get("generations", {}).items() for n in ns}
         for b in m["batches"]:
             for n in b["numbers"]:
                 out[(m["kind"], n, works)] = {
@@ -82,6 +85,8 @@ def vehicles(d):
                     "depot": " ".join(x for x in (b.get("depotCode"), b.get("depotName")) if x) or "none",
                     "paint": LIVERIES.get(liveries.get(str(n)), liveries.get(str(n))),
                     "specs": variants.get(n, m.get("specs") or {}),
+                    "generation": generations.get(n, "none"),
+                    "solaris": m["kind"] == "BUS" and m.get("make") == "Solaris",
                 }
     return out
 
@@ -139,6 +144,7 @@ def spec_changes(a, b):
 VERBS = {"depot": ("{} moves depot", "{} move depot"), "operator": ("{} changes operator", "{} change operator"),
          "model": ("{} changes model", "{} change model"), "paint": ("new paint for {}",) * 2,
          "specs": ("new specs for {}",) * 2, "year built": ("new build year for {}",) * 2,
+         "generation": ("new Solaris generation for {}",) * 2,
          None: ("changes to {}",) * 2}
 SUBJECT_MAX = 72
 
@@ -174,7 +180,8 @@ def message(old, new, old_city=None, new_city=None):
     for key in nv.keys() - ov.keys():
         new_keys.append(key[:2])
         v = nv[key]
-        about = ", ".join(str(x) for x in (v["operator"], v["year built"], v["depot"]) if x and x != "none")
+        gen = f"gen {v['generation']}" if v["generation"] != "none" else "no generation yet" if v["solaris"] else None
+        about = ", ".join(str(x) for x in (v["operator"], v["year built"], v["depot"], gen) if x and x != "none")
         added[(key[0], v["name"] + (f" ({about})" if about else ""), "")].append(key[1])
     for key in ov.keys() - nv.keys():
         gone_keys.append(key[:2])
@@ -188,8 +195,10 @@ def message(old, new, old_city=None, new_city=None):
             changed[(key[0], "", f"model {was} → {now}")].append(key[1])
             changed_how[key[:2]] = {"model"}
             continue
-        fields = [f for f in ("depot", "operator", "year built", "paint") if a[f] != b[f]]
-        what = [f"{f} {a[f]} → {b[f]}" for f in fields]
+        fields = [f for f in ("depot", "operator", "year built", "paint", "generation") if a[f] != b[f]]
+        what = [f"generation {b[f]}" if f == "generation" and a[f] == "none" else
+                "generation dropped" if f == "generation" and b[f] == "none" else
+                f"{f} {a[f]} → {b[f]}" for f in fields]
         if a["specs"] != b["specs"]:
             what.append(spec_changes(a["specs"], b["specs"]))
             fields.append("specs")

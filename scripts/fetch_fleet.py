@@ -317,6 +317,58 @@ LIVERIES = {
 # code but wear their own era's paint, so they're left to their tier.
 CITY_PAINTS = {"RAL 5010 (L)": "suburbanBlue", "RAL 1004+3003": "oldYellowRed"}
 
+# Solaris Urbino generations, by bus: emitted as fleet.json's "generations" ({"3": [numbers]}),
+# which older builds ignore. From the body phototrans.eu gives each batch ("Solaris Urbino III",
+# "IV"; checked 2026-11-09), never from the build year: III and IV were built side by side,
+# so MZA's 2015-16 Urbino 18s are still IIIs and Łomianki's 2016 #761 a III next to its 2016
+# #774-775 IVs. A spot check of 52 buses' own pages agreed, and photos of #761, #774, #775,
+# #1430, #1910, #1911, #5460 and #701 show the right front (IV: one dark panel from the
+# windscreen up over the display; III: an upright windscreen under a separate display band). Every number here must be a Solaris; a Solaris missing from it gets no
+# generation, and the build prints it. Ranges may cover numbers the book doesn't have.
+def _span(a, b=None):
+    return range(a, (b or a) + 1)
+
+
+SOLARIS_GENERATIONS = {
+    1: [
+        # Urbino 15s built in 1999 and 2000 (phototrans; #8731's VIN says 2000 too). phototrans
+        # files them under a plain "Solaris Urbino" body, but the II only came in 2002 (Polish
+        # Wikipedia, "Solaris Urbino 15"), and #6962's photo shows the I's twin round lamps.
+        6962, 8731,
+    ],
+    3: [
+        *_span(1000, 1014), *_span(1040, 1059),                    # MZA Urbino 10, 2010-12
+        *_span(1100, 1119), *_span(1400, 1409), *_span(1500, 1519),  # MZA Urbino 12, 2007
+        6900,                                                       # ... #1400, now heritage
+        *_span(1411, 1430), *_span(1520, 1555), *_span(1850, 1869),  # MZA Urbino 12, 2008-15
+        *_span(1901, 1910),                                         # MZA Urbino 12 electric, 2015
+        *_span(5201, 5260), *_span(5401, 5460),                     # MZA Urbino 18, 2015-16
+        *_span(8100, 8199), 8240, *_span(8800, 8879),               # MZA Urbino 18, 2006-08
+        *_span(8201, 8239), *_span(8401, 8440),                     # MZA Urbino 18, 2005
+        # MZA's heritage Urbino 18 of 2005: phototrans doesn't list #6923, but Warsaw's first
+        # Urbino 18s came in September 2005 (#8401-8403, Warszawikia), and every one of that
+        # year's 82xx/84xx is a III there. No photo of #6923 itself.
+        6923,
+        *_span(8300, 8369), *_span(8500, 8579), *_span(8880, 8899),  # MZA Urbino 18, 2009-11
+        *_span(8396, 8399),                                         # MZA Urbino 18 hybrid, 2011
+        *_span(8441, 8465), *_span(8580, 8595),                     # MZA Urbino 18, 2013-14
+        *_span(738, 753), *_span(754, 761),                         # Łomianki Urbino 12, 2010-16
+        781, 782,                                                   # Łomianki Urbino 18, 2015
+        701,                                                        # Łomianki Urbino 8.9 LE
+        *_span(9311, 9359),                                         # Grodzisk Urbino 12, 2017
+    ],
+    4: [
+        *_span(1700, 1728), *_span(1911, 1932),                     # MZA Urbino 12 electric
+        *_span(4300, 4339),                                         # MZA Urbino 12 CNG
+        *_span(5800, 5999), 7100,                                   # MZA Urbino 18 electric
+        *_span(7700, 7759),                                         # MZA Urbino 18 CNG
+        *_span(721, 728), *_span(772, 779),                         # Łomianki Urbino 12 (electric)
+        *_span(9901, 9955),                                         # ReloBus Urbino 18 CNG
+    ],
+}
+GENERATION = {n: g for g, ns in SOLARIS_GENERATIONS.items() for n in ns}
+assert len(GENERATION) == sum(len(ns) for ns in SOLARIS_GENERATIONS.values()), "a bus in two generations"
+
 # Event wraps: a vehicle dressed for an event between two dates, emitted as fleet.json's
 # "wraps" (older builds ignore the key). A row says only that the vehicle *may* be dressed:
 # the app awards the wrap on the photo's evidence (Tabor/Core/Wraps.swift), so a wrap that
@@ -877,6 +929,11 @@ def build(vehicles, city=None):
                     if c.get("colour") in CITY_PAINTS and (CITY_PAINTS[c["colour"]] != "oldYellowRed" or old_paint_ok)}
         liveries |= {v["number"]: LIVERIES[(kind, int(v["number"]))] for v in vs if (kind, int(v["number"])) in LIVERIES}
         liveries = {n: l for n, l in liveries.items() if l}
+        generations = defaultdict(list)
+        if kind == "BUS" and make == "Solaris":
+            for v in vs:
+                if (g := GENERATION.get(int(v["number"]))) is not None:
+                    generations[str(g)].append(int(v["number"]))
         models.append({
             "id": model_id,
             "name": f"{model} {WORKS_JOBS[works][0]}" if works else display_name(make, model),
@@ -900,11 +957,20 @@ def build(vehicles, city=None):
             **({"specs": model_specs} if model_specs else {}),
             **({"variants": variants} if variants else {}),
             **({"liveries": dict(sorted(liveries.items(), key=lambda kv: int(kv[0])))} if liveries else {}),
+            **({"generations": {g: sorted(ns) for g, ns in sorted(generations.items())}} if generations else {}),
             # Ids this model's numbers were filed under before a SPLIT. Older apps ignore it.
             **({"formerly": formerly} if formerly else {}),
         })
     ids = Counter(m["id"] for m in models)
     assert all(c == 1 for c in ids.values()), f"duplicate model ids: {[i for i, c in ids.items() if c > 1]}"
+    for m in models:
+        if m["kind"] != "BUS":
+            continue
+        nums = {n for b in m["batches"] for n in b["numbers"]}
+        if m["make"] != "Solaris":
+            assert not nums & GENERATION.keys(), f"{m['name']} has Solaris generations: {sorted(nums & GENERATION.keys())}"
+        elif missing := sorted(nums - GENERATION.keys()):
+            print(f"  {m['name']}: no Solaris generation for {missing} (SOLARIS_GENERATIONS)")
     numbers = {m["id"]: {n for b in m["batches"] for n in b["numbers"]} for m in models}
     for m in models:
         # Trams only: 1000 and 1001 are bus numbers too.
