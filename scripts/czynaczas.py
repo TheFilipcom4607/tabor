@@ -68,7 +68,11 @@ def fetch(etag=None):
         if e.code == 304:
             return 304, None, etag
         retry = e.headers.get("Retry-After")
-        raise SystemExit(f"czynaczas answered {e.code}" + (f" (retry after {retry} s)" if retry else ""))
+        # Who refused, for the log: an error page is no partner data, but the key never shows.
+        seen = {h: e.headers.get(h) for h in ("Server", "CF-Mitigated", "Content-Type") if e.headers.get(h)}
+        page = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", e.read()[:400].decode("utf-8", "replace"))).strip()[:160]
+        raise SystemExit(f"czynaczas answered {e.code}" + (f" (retry after {retry} s)" if retry else "")
+                         + f" {seen} {page!r}".replace(secret("CZYNACZAS_API_KEY", "CZYNACZAS_API_KEY"), "***"))
     except urllib.error.URLError as e:
         raise SystemExit(f"couldn't reach czynaczas ({type(e.reason).__name__})")
 
