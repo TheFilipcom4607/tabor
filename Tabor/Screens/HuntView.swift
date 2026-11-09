@@ -456,7 +456,7 @@ struct HuntView: View {
             // Rarest on top: SwiftUI draws later annotations above earlier ones.
             ForEach(groups(shown).reversed()) { g in
                 if g.pins.count == 1 {
-                    Annotation(g.lead.model.name, coordinate: mapCoordinate(g.lead, selected: now), anchor: .bottom) {
+                    Annotation(g.lead.model.name(of: g.lead.vehicle.number), coordinate: mapCoordinate(g.lead, selected: now), anchor: .bottom) {
                         WantedPinView(pin: g.lead, selected: g.id == selectedId, starred: starred.contains(g.lead.model.id),
                                       travel: live.trails.heading(g.lead.id), turn: turn)
                     }
@@ -874,6 +874,9 @@ struct HuntView: View {
                 ForEach(Livery.allCases.filter { picked.paints.contains($0) }, id: \.self) { l in
                     targetChip(l.name, color: Palette.ink) { targets.paints.remove(l) }
                 }
+                ForEach(picked.generations.sorted(by: >), id: \.self) { g in
+                    targetChip(g.name, color: Palette.ink) { targets.generations.remove(g) }
+                }
             }
             .padding(.horizontal, 20)
         }
@@ -1166,7 +1169,7 @@ struct HuntView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 7) {
                         Mono("#\(v.number)" as String, size: 12, weight: 700, spacing: 0.04, color: Palette.ink)
                             .fixedSize()
-                        Text(v.model.name)
+                        Text(v.model.name(of: v.number))
                             .font(TaborFont.grotesk(14.5, 600))
                             .lineLimit(1)
                     }
@@ -1317,7 +1320,7 @@ struct HuntView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 7) {
                         Mono(pin.model.tier.name, size: 9.5, weight: 700, spacing: 0.12, color: pin.accent)
                             .fixedSize()
-                        Text(pin.model.name)
+                        Text(pin.model.name(of: pin.vehicle.number))
                             .font(TaborFont.grotesk(14.5, 600))
                             .lineLimit(1)
                     }
@@ -2244,7 +2247,7 @@ private struct PinCard: View {
                 StarButton(modelId: pin.model.id)
                 CloseButton(action: onClose)
             }
-            Text(pin.model.name)
+            Text(pin.model.name(of: pin.vehicle.number))
                 .font(TaborFont.grotesk(24, 700))
                 .em(-0.03, size: 24)
                 .lineLimit(1)

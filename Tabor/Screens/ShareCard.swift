@@ -37,7 +37,7 @@ struct CatchShare {
         renderer.scale = 3 // 360×450 pt → 1080×1350 px, Instagram's portrait size.
         guard let image = renderer.uiImage else { return nil }
 
-        let name = model?.name ?? String(localized: "vehicle")
+        let name = model?.name(of: number) ?? String(localized: "vehicle")
         let n = partner.map { "\(number)+\($0)" } ?? FleetNumber.label(number)
         let emoji = model?.kind == .tram ? "🚋" : "🚌"
         let place = sighting.district ?? sighting.street
@@ -112,7 +112,7 @@ struct ShareCard: View {
                         }
                     }
                 }
-                Text(model?.name ?? String(localized: "Unknown model"))
+                Text(model?.name(of: number) ?? String(localized: "Unknown model"))
                     .font(TaborFont.grotesk(28, 700))
                     .em(-0.03, size: 28)
                     .foregroundStyle(Palette.ink)

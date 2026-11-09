@@ -428,10 +428,12 @@ public struct HuntTargets: Equatable, Sendable, RawRepresentable {
     public var floors: Set<ModelSpecs.Floor>
     /// Paint other than today's (#95), from the fleet file's liveries. Buses only, like drive.
     public var paints: Set<Livery>
+    /// Solaris Urbino generations: URBINO IV or the older ones. Buses only, like paint.
+    public var generations: Set<UrbinoGeneration>
 
     public init(tiers: Set<Tier> = [], models: Set<String> = [], kind: VehicleKind? = nil, line: String? = nil,
                 lengths: Set<LengthBand> = [], drives: Set<ModelSpecs.Drive> = [], floors: Set<ModelSpecs.Floor> = [],
-                paints: Set<Livery> = []) {
+                paints: Set<Livery> = [], generations: Set<UrbinoGeneration> = []) {
         self.tiers = tiers
         self.models = models
         self.kind = kind
@@ -440,18 +442,19 @@ public struct HuntTargets: Equatable, Sendable, RawRepresentable {
         self.drives = drives
         self.floors = floors
         self.paints = paints
+        self.generations = generations
     }
 
     public var isEmpty: Bool { !isCityWide && kind == nil }
     /// Rarities or models picked: these add to each other.
     public var hasPicks: Bool { !tiers.isEmpty || !models.isEmpty }
-    public var hasSpecs: Bool { !lengths.isEmpty || !drives.isEmpty || !floors.isEmpty || !paints.isEmpty }
+    public var hasSpecs: Bool { !lengths.isEmpty || !drives.isEmpty || !floors.isEmpty || !paints.isEmpty || !generations.isEmpty }
     /// You're after something specific, so HUNT looks across the whole city. Buses or trams
     /// alone keep the usual view around you.
     public var isCityWide: Bool { hasPicks || hasSpecs || line != nil }
     public var count: Int {
         tiers.count + models.count + (kind == nil ? 0 : 1) + (line == nil ? 0 : 1)
-            + lengths.count + drives.count + floors.count + paints.count
+            + lengths.count + drives.count + floors.count + paints.count + generations.count
     }
 
     /// Whether a model can match at all, whatever vehicle and line: for counting picks.
@@ -472,6 +475,7 @@ public struct HuntTargets: Equatable, Sendable, RawRepresentable {
         if !drives.isEmpty, !(specs?.drive.map(drives.contains) ?? false) { return false }
         if !floors.isEmpty, !(specs?.floor.map(floors.contains) ?? false) { return false }
         if !paints.isEmpty, !(model.livery(of: number).map(paints.contains) ?? false) { return false }
+        if !generations.isEmpty, !(model.generation(of: number).map(generations.contains) ?? false) { return false }
         return true
     }
 
@@ -491,6 +495,9 @@ public struct HuntTargets: Equatable, Sendable, RawRepresentable {
         if !drives.isEmpty, !specs.contains(where: { $0?.drive.map(drives.contains) ?? false }) { t.drives = [] }
         if !floors.isEmpty, !specs.contains(where: { $0?.floor.map(floors.contains) ?? false }) { t.floors = [] }
         if !paints.isEmpty, !model.numbers.contains(where: { model.livery(of: $0).map(paints.contains) ?? false }) { t.paints = [] }
+        if !generations.isEmpty, !model.numbers.contains(where: { model.generation(of: $0).map(generations.contains) ?? false }) {
+            t.generations = []
+        }
         return t
     }
 
@@ -531,7 +538,8 @@ public struct HuntTargets: Equatable, Sendable, RawRepresentable {
         ((kind.map { ["kind:\($0.rawValue)"] } ?? []) + tiers.map { "tier:\($0.rawValue)" }.sorted()
             + models.map { "model:\($0)" }.sorted() + (line.map { ["line:\($0)"] } ?? [])
             + lengths.sorted().map { "length:\($0.rawValue)" } + drives.map { "drive:\($0.rawValue)" }.sorted()
-            + floors.map { "floor:\($0.rawValue)" }.sorted() + paints.map { "paint:\($0.rawValue)" }.sorted())
+            + floors.map { "floor:\($0.rawValue)" }.sorted() + paints.map { "paint:\($0.rawValue)" }.sorted()
+            + generations.sorted().map { "gen:\($0.rawValue)" })
             .joined(separator: ",")
     }
 
@@ -550,6 +558,7 @@ public struct HuntTargets: Equatable, Sendable, RawRepresentable {
             case "drive": if let d = ModelSpecs.Drive(rawValue: value) { t.drives.insert(d) }
             case "floor": if let f = ModelSpecs.Floor(rawValue: value) { t.floors.insert(f) }
             case "paint": if let l = Livery(rawValue: value) { t.paints.insert(l) }
+            case "gen": if let g = Int(value).flatMap(UrbinoGeneration.init) { t.generations.insert(g) }
             default: break
             }
         }
@@ -572,6 +581,7 @@ extension HuntTargets {
         parts += ModelSpecs.Drive.allCases.filter(drives.contains).map(\.name)
         parts += ModelSpecs.Floor.allCases.filter(floors.contains).map { $0.name.uppercased() }
         parts += Livery.allCases.filter(paints.contains).map(\.name)
+        parts += generations.sorted(by: >).map(\.name)
         return parts.joined(separator: " · ")
     }
 }

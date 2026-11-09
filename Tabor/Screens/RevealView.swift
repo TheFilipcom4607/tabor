@@ -107,7 +107,7 @@ struct RevealView: View {
             Mono(newForm && landed ? String(localized: "NEW FORM · SIGHTING #\((existing?.timesSeen ?? 0) + 1)")
                  : kicker(isNewVehicle: isNewVehicle, isNewModel: isNewModel, modelOwned: modelOwned, added: added, existing: existing),
                  size: 12, spacing: 0.16, color: accent)
-            Text(model?.name ?? (number == nil ? String(localized: "What did you catch?")
+            Text(model.map { m in number.map(m.name(of:)) ?? m.name } ?? (number == nil ? String(localized: "What did you catch?")
                 : choices.isEmpty ? String(localized: "Which model is it?") : String(localized: "Which one is it?")))
                 .font(TaborFont.grotesk(30, 700))
                 .em(-0.03, size: 30)
@@ -675,7 +675,7 @@ struct RevealView: View {
             HStack(spacing: 12) {
                 KindTag(kind: m.kind)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(m.name).font(TaborFont.grotesk(17, 700)).lineLimit(1).minimumScaleFactor(0.8)
+                    Text(draft.number.map(m.name(of:)) ?? m.name).font(TaborFont.grotesk(17, 700)).lineLimit(1).minimumScaleFactor(0.8)
                     // Years first: on a narrow phone it's "TRAMWAJE WARSZAWSKIE" that should get cut.
                     Mono([m.yearsDisplay, m.operators.first?.uppercased()].compactMap { $0 }.joined(separator: " · "),
                          size: 10, color: Palette.sub)

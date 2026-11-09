@@ -204,8 +204,8 @@ struct HuntFilterSheet: View {
         .accessibilityAddTraits(on ? .isSelected : [])
     }
 
-    /// Length, drive, floor and paint. Only what this type has: trams have no drive or paint
-    /// in the fleet file, and no bus is 30 m long.
+    /// Length, drive, floor, paint and Solaris generation. Only what this type has: trams have
+    /// no drive, paint or generation in the fleet file, and no bus is 30 m long.
     @ViewBuilder
     private func specs(picked: HuntTargets, running: [WantedPin]) -> some View {
         let models = catalog.models.filter { picked.kind == nil || $0.kind == picked.kind }
@@ -216,6 +216,8 @@ struct HuntFilterSheet: View {
         let specsOut = running.map { $0.model.specs(of: $0.vehicle.number) }
         let paints = Livery.allCases.filter { l in models.contains { ($0.liveries ?? [:]).values.contains(l.rawValue) } }
         let paintsOut = running.map { $0.model.livery(of: $0.vehicle.number) }
+        let generations = UrbinoGeneration.allCases.reversed().filter { g in models.contains { $0.generations[String(g.rawValue)] != nil } }
+        let generationsOut = running.map { $0.model.generation(of: $0.vehicle.number) }
 
         SectionLabel(text: String(localized: "LENGTH"))
             .padding(.top, 24)
@@ -265,6 +267,21 @@ struct HuntFilterSheet: View {
                 }
             }
         }
+        if !generations.isEmpty {
+            HStack(alignment: .firstTextBaseline) {
+                SectionLabel(text: String(localized: "SOLARIS GENERATION"))
+                Spacer()
+                if picked.kind == nil { Mono(String(localized: "BUSES"), size: 9.5, color: Palette.faint) }
+            }
+            .padding(.top, 24)
+            .padding(.bottom, 9)
+            FlowRow(spacing: 7) {
+                ForEach(generations, id: \.self) { g in
+                    specChip(g.name, count: generationsOut.filter { $0 == g }.count,
+                             on: picked.generations.contains(g)) { targets.generations.formSymmetricDifference([g]) }
+                }
+            }
+        }
     }
 
     private func specChip(_ text: String, count: Int, on: Bool, toggle: @escaping () -> Void) -> some View {
@@ -294,8 +311,8 @@ struct HuntFilterSheet: View {
                 targets.kind = on ? nil : k
                 // A model of the other kind could never match any more: drop it.
                 if !on { targets.models = targets.models.filter { catalog.model(id: $0)?.kind == k } }
-                // Trams have no drive or paint in the fleet file, so either would match nothing.
-                if !on, k == .tram { targets.drives = []; targets.paints = [] }
+                // Trams have no drive, paint or generation in the fleet file: they'd match nothing.
+                if !on, k == .tram { targets.drives = []; targets.paints = []; targets.generations = [] }
             }
         } label: {
             HStack(spacing: 6) {

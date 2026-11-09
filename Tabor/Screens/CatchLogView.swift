@@ -144,7 +144,7 @@ private struct CatchLogRow: View {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Mono(time(s.date), size: 11, weight: 600, color: Palette.sub)
-                        Text(model?.name ?? s.modelId)
+                        Text(model?.name(of: s.number) ?? s.modelId)
                             .font(TaborFont.grotesk(14.5, 600))
                             .lineLimit(1)
                     }

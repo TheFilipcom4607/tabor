@@ -313,7 +313,7 @@ private struct TrophyShelf: View {
             // The shelf ledge, with the model name engraved underneath.
             Capsule().fill(Palette.track).frame(height: 3)
             if big {
-                Mono((model?.name ?? "").uppercased(), size: 9, color: Palette.faint).lineLimit(1)
+                Mono((model?.name(of: v.number) ?? "").uppercased(), size: 9, color: Palette.faint).lineLimit(1)
             }
         }
     }
@@ -557,7 +557,7 @@ private struct SpotCard: View {
                        height: 92, tagSize: 11, maxPixel: 420, foil: s.wrap != nil) { EmptyView() }
                     .frame(width: 128)
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(model?.name ?? s.modelId)
+                    Text(model?.name(of: s.number) ?? s.modelId)
                         .font(TaborFont.grotesk(19, 700))
                         .em(-0.03, size: 19)
                         .lineLimit(2)

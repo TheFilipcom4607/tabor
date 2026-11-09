@@ -87,6 +87,9 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
     /// Vehicles not in ZTM's usual paint, by fleet number (JSON keys are strings), from a
     /// hand-checked list in fetch_fleet.py; see `Livery`.
     public let liveries: [String: String]?
+    /// Solaris Urbino generations, buses by generation ("3": [8300, …]), from a hand-checked
+    /// list in fetch_fleet.py. Older fleet files lack it; a bus missing from it has none.
+    public let generations: [String: [Int]]
     /// Its trams run as two coupled cars, each with its own fleet number.
     public let coupled: Bool
     /// Cars that always run together, e.g. [[1000, 1001]]. In a model that isn't `coupled`,
@@ -110,7 +113,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
                 trial: String? = nil, runsPl: String? = nil, trialPl: String? = nil, trialEnded: String? = nil,
                 specs: ModelSpecs? = nil,
                 variants: [SpecVariant] = [],
-                liveries: [String: String]? = nil, coupled: Bool = false, sets: [[Int]] = [], pairs: [[Int]] = [],
+                liveries: [String: String]? = nil, generations: [String: [Int]] = [:], coupled: Bool = false, sets: [[Int]] = [], pairs: [[Int]] = [],
                 trailers: [Int] = [], tows: Bool = false, formerly: [String] = []) {
         self.id = id
         self.name = name
@@ -134,6 +137,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
         self.specs = specs
         self.variants = variants
         self.liveries = liveries
+        self.generations = generations
         self.coupled = coupled
         self.sets = sets
         self.pairs = pairs
@@ -144,7 +148,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
 
     private enum CodingKeys: String, CodingKey {
         case id, name, namePl, make, code, kind, operators, fleet, firstYear, lastYear, batches, vintage, onTest, works, runs, trial,
-             runsPl, trialPl, trialEnded, specs, variants, liveries, coupled, sets, pairs, trailers, tows, formerly
+             runsPl, trialPl, trialEnded, specs, variants, liveries, generations, coupled, sets, pairs, trailers, tows, formerly
     }
 
     public init(from decoder: Decoder) throws {
@@ -173,6 +177,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
         specs = try? c.decodeIfPresent(ModelSpecs.self, forKey: .specs)
         variants = (try? c.decodeIfPresent([SpecVariant].self, forKey: .variants)) ?? []
         liveries = try? c.decodeIfPresent([String: String].self, forKey: .liveries)
+        generations = (try? c.decodeIfPresent([String: [Int]].self, forKey: .generations)) ?? [:]
         coupled = try c.decodeIfPresent(Bool.self, forKey: .coupled) ?? false
         sets = (try? c.decodeIfPresent([[Int]].self, forKey: .sets)) ?? []
         pairs = (try? c.decodeIfPresent([[Int]].self, forKey: .pairs)) ?? []
@@ -183,6 +188,21 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
 
     /// A special paint job, if this vehicle has one.
     public func livery(of number: Int) -> Livery? { liveries?[String(number)].flatMap { Livery(rawValue: $0) } }
+
+    /// Which Solaris Urbino generation this bus is, if the fleet file knows.
+    public func generation(of number: Int) -> UrbinoGeneration? {
+        generations.first { $0.value.contains(number) }.flatMap { Int($0.key).flatMap(UrbinoGeneration.init) }
+    }
+
+    /// The name with this vehicle's generation in it, spotter-style, right after the length:
+    /// "Solaris Urbino 18 IV electric", "Solaris Urbino 8.9 LE III". Just `name` without one.
+    public func name(of number: Int) -> String {
+        guard let g = generation(of: number) else { return name }
+        guard let r = name.range(of: #"Urbino \d+(?:[.,]\d+)?(?: LE)?"#, options: .regularExpression) else {
+            return "\(name) \(g.roman)"
+        }
+        return name.replacingCharacters(in: r, with: "\(name[r]) \(g.roman)")
+    }
 
     /// `trial` in the app's language.
     public var trialDisplay: String? { AppLanguage.polish ? trialPl ?? trial : trial }
@@ -201,7 +221,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
                      batches: batches + more.batches, vintage: vintage, onTest: onTest, works: works,
                      runs: runs, trial: trial, runsPl: runsPl, trialPl: trialPl, trialEnded: trialEnded,
                      specs: specs, variants: variants,
-                     liveries: liveries, coupled: coupled, sets: sets, pairs: pairs, trailers: trailers, tows: tows, formerly: formerly)
+                     liveries: liveries, generations: generations, coupled: coupled, sets: sets, pairs: pairs, trailers: trailers, tows: tows, formerly: formerly)
     }
 
     public var yearsDisplay: String? {
@@ -416,6 +436,18 @@ public enum Livery: String, Sendable, CaseIterable {
 
     /// One vehicle standing out from its fleet, rather than a whole model's colours.
     public var special: Bool { self == .greyRed }
+}
+
+/// A Solaris Urbino's generation, from the body phototrans.eu gives each batch. III and IV
+/// were built side by side for years, so it's never worked out from the build year.
+public enum UrbinoGeneration: Int, CaseIterable, Sendable, Comparable {
+    case first = 1, second, third, fourth
+
+    public var roman: String { ["I", "II", "III", "IV"][rawValue - 1] }
+    /// "URBINO IV": the same in Polish.
+    public var name: String { "URBINO \(roman)" }
+
+    public static func < (a: Self, b: Self) -> Bool { a.rawValue < b.rawValue }
 }
 
 public struct Depot: Codable, Hashable, Sendable {

@@ -102,7 +102,7 @@ enum WidgetBridge {
                   let source = e.v.sticker ?? e.v.photo, PhotoStore.exists(source) else { continue }
             let name = WidgetSnapshot.cardPrefix + (source as NSString).deletingPathExtension + ".png"
             files[name] = source
-            all.append((WidgetSnapshot.Card(number: e.number, modelId: e.modelId, model: model.name,
+            all.append((WidgetSnapshot.Card(number: e.number, modelId: e.modelId, model: model.name(of: e.number),
                                             tier: model.tier.rawValue, image: name, cutout: e.v.sticker != nil,
                                             firstSeen: e.v.first, times: e.v.times, fleet: model.fleet,
                                             owned: stats.ownedCount(modelId: model.id), lastSeen: e.v.last,

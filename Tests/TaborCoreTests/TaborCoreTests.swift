@@ -1089,6 +1089,34 @@ private func nearby(_ vehicles: [LiveVehicle]) -> [NearbyVehicle] {
     #expect(old.adding(hybrid).paints.isEmpty && old.adding(urbino18).paints == [.oldYellowRed])
 }
 
+@Test func solarisGenerationsGoByTheBus() {
+    let urbino12 = catalog.model(id: "bus-solaris-urbino-12")!
+    let electric18 = catalog.model(id: "bus-solaris-urbino-18e")!
+    let lomianki89 = catalog.model(id: "bus-solaris-alpino-8-x")!
+    // Łomianki's 2016 #761 is a III, its 2016 #774 a IV (phototrans.eu): not by year.
+    #expect(urbino12.generation(of: 761) == .third && urbino12.generation(of: 774) == .fourth)
+    // The generation goes after the length, before what drives it.
+    #expect(urbino12.name(of: 774) == "Solaris Urbino 12 IV")
+    #expect(electric18.name(of: 5887) == "Solaris Urbino 18 IV electric")
+    #expect(lomianki89.name(of: 701) == "Solaris Urbino 8.9 LE III")
+    // Nothing known, nothing added.
+    #expect(urbino12.name(of: 99_999) == urbino12.name)
+    #expect(catalog.model(id: "bus-man-a23")!.name(of: 7200) == catalog.model(id: "bus-man-a23")!.name)
+    // Every Solaris bus has one.
+    for m in catalog.models where m.make == "Solaris" && m.kind == .bus {
+        #expect(m.numbers.allSatisfy { m.generation(of: $0) != nil }, "\(m.id)")
+    }
+    // HUNT: the bus's own generation, round-tripping, unknown ones skipped.
+    let iv = HuntTargets(generations: [.fourth])
+    #expect(iv.matches(urbino12, number: 774, line: "750") && !iv.matches(urbino12, number: 761, line: "750"))
+    #expect(iv.isCityWide && iv.count == 1)
+    let both = HuntTargets(generations: [.fourth, .third])
+    #expect(both.rawValue == "gen:3,gen:4" && HuntTargets(rawValue: both.rawValue) == both)
+    #expect(HuntTargets(rawValue: "gen:9,gen:x") == HuntTargets())
+    #expect(iv.adding(catalog.model(id: "bus-solaris-urbino-10")!).generations.isEmpty)
+    #expect(iv.adding(electric18).generations == [.fourth])
+}
+
 @Test func huntTargetsAddingAModelKeepsItInView() {
     let lionG = catalog.model(id: "bus-man-a23")!
     let swing = catalog.model(id: "tram-pesa-120n")!

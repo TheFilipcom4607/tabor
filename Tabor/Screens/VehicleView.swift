@@ -58,7 +58,7 @@ struct VehicleView: View {
                         .lineLimit(1)
                         .fixedSize()
                     VStack(alignment: .leading, spacing: 0) {
-                        Text(model?.name ?? String(localized: "Unknown model"))
+                        Text(model?.name(of: number) ?? String(localized: "Unknown model"))
                             .font(TaborFont.grotesk(14, 600))
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)

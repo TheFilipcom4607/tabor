@@ -361,6 +361,16 @@
         }
       }
     },
+    "SOLARIS GENERATION": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GENERACJA SOLARISA"
+          }
+        }
+      }
+    },
     "PAINT": {
       "localizations": {
         "pl": {

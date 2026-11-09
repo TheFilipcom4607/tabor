@@ -50,7 +50,7 @@ final class TrackService {
         let caught = sightings.contains { $0.number == number && $0.modelId == modelId }
         let sticker = caught ? Self.writeSticker(sightings, number: number, modelId: modelId) : nil
         let attributes = TrackAttributes(
-            number: number, modelId: modelId, model: pin.model.name, tier: pin.model.tier.rawValue,
+            number: number, modelId: modelId, model: pin.model.name(of: number), tier: pin.model.tier.rawValue,
             line: pin.vehicle.line, tram: pin.vehicle.kind == .tram, stop: plan.stop,
             image: sticker, cutout: sticker != nil, newModel: pin.kind == .newModel,
             caught: caught, started: .now)
