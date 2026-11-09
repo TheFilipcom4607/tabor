@@ -90,10 +90,7 @@ jobs:
         env:
           DANE_URL: https://taborapi.thefilip.com/v1/pojazdy
           ROUTES_UPLOAD_TOKEN: ${{ secrets.ROUTES_UPLOAD_TOKEN }}
-        # main's own build first (offline, so it's main's fleet.json again), to show in the PR
-        # only what tonight's build reports differently.
         run: |
-          python3 scripts/fetch_fleet.py --offline > "$RUNNER_TEMP/main.log"
           python3 scripts/fetch_fleet.py | tee "$RUNNER_TEMP/build.log"
           python3 scripts/export_models_csv.py
 
@@ -137,7 +134,7 @@ jobs:
           # Against main, a broken-looking build (exit 2) fails the run; against the PR branch
           # only "same fleet or not" matters.
           set +e
-          python3 scripts/fleet_changed.py HEAD > "$RUNNER_TEMP/summary.txt"
+          python3 scripts/fleet_changed.py HEAD
           status=$?
           set -e
           [ "$status" -le 1 ] || exit "$status"
@@ -172,21 +169,9 @@ jobs:
 
       - name: Write the description
         run: |
-          lines() { grep -E '^  [+?-] ' "$1" | sed 's/^  //' | sort || true; }
-          block() { echo '```'; if [ -n "$1" ]; then echo "$1"; else echo "(nothing)"; fi; echo '```'; }
-          lines "$RUNNER_TEMP/main.log" > "$RUNNER_TEMP/main.txt"
-          lines "$RUNNER_TEMP/build.log" > "$RUNNER_TEMP/build.txt"
-          {
-            echo "$(cat "$RUNNER_TEMP/summary.txt") (against main)."
-            echo
-            echo "Lines from the build's report that changed. \`+\`: vehicles only the city lists,"
-            echo "put in the model most of their type belongs to. \`-\`: vehicles the city dropped."
-            echo
-            echo "Now:"
-            block "$(comm -13 "$RUNNER_TEMP/main.txt" "$RUNNER_TEMP/build.txt" | grep -v '^?' || true)"
-            echo "Was:"
-            block "$(comm -23 "$RUNNER_TEMP/main.txt" "$RUNNER_TEMP/build.txt" | grep -v '^?' || true)"
-          } > changes.md
+          grep -E '^  [+?-] ' "$RUNNER_TEMP/build.log" | sed 's/^  //' | sort > "$RUNNER_TEMP/build.txt" || true
+          # Vehicle by vehicle against main's fleet.json, in plain words.
+          python3 scripts/fleet_commit_message.py HEAD > changes.md
           {
             echo "More than $REVIEW_ABOVE vehicles would leave the book in one go, so this waits for"
             echo "a look instead of going in by itself. If they really are gone, merge. If the city's"
