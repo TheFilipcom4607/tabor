@@ -176,6 +176,9 @@ jobs:
             echo "::warning::fleet_commit_message.py failed; the commit says only the counts."
             python3 scripts/fleet_changed.py HEAD > changes.md || true
           fi
+          # The gist for the subject line ("bus 9816 gone"), so git log says what happened.
+          python3 scripts/fleet_commit_message.py --subject HEAD > subject.txt \
+            || echo "refresh from the city's list" > subject.txt
           {
             echo "More than $REVIEW_ABOVE vehicles would leave the book in one go, so this waits for"
             echo "a look instead of going in by itself. If they really are gone, merge. If the city's"
@@ -203,6 +206,7 @@ jobs:
             data/ztm-pojazdy.json
             data/fleet-models.csv
             changes.md
+            subject.txt
             pr-body.md
             waiting.md
             trials.md
@@ -252,7 +256,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add $FILES
           git commit -q -F - <<EOF
-          Refresh fleet data from the city's list ($(date -u +%F))
+          Fleet: $(cat subject.txt) ($(date -u +%F))
 
           $(cat changes.md)
           EOF
@@ -286,7 +290,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "$BRANCH"
           git add $FILES
-          git commit -m "Refresh fleet data from the city's list ($(date -u +%F))"
+          git commit -m "Fleet: $(cat subject.txt) ($(date -u +%F))"
           git push --force origin "$BRANCH"
           title="Fleet: many vehicles leaving ($(date -u +%F))"
           if [ "$(gh pr view "$BRANCH" --json state --jq .state 2>/dev/null)" = "OPEN" ]; then
