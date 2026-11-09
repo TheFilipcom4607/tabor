@@ -12,14 +12,24 @@ on your own Mac.
                         a change PUTs the remarks and the special-vehicles list to the Worker.
                         Either way, writes the special vehicles to <special.json> for
                         possible_wraps.py. Keep that file out of artifacts: those are public.
+                        With data/czynaczas-en.json (your Mac only, see below) it also sends
+                        the English, so it fetches the whole reply instead of asking for a 304.
+  todo                  On your Mac: the remarks with no English yet, or whose Polish changed
+                        since it was translated, for whoever adds them to the file.
   show                  On your Mac: the special vehicles, each with the code the wraps issue
-                        uses for it, and the remarks.
+                        uses for it, and the remarks with their English.
+
+The English is written by hand, not by a model, and kept in data/czynaczas-en.json as
+{"3/5869": {"pl": "…", "en": "…"}}. It's his text, so the file stays out of git
+(.git/info/exclude). The Worker keeps an English text through uploads without it (the Action's)
+for as long as the Polish stays the same; a remark without one shows in Polish.
 
 The API key is CZYNACZAS_API_KEY (a repo secret; locally, the same in Config/Secrets.xcconfig).
 The Worker's token is ROUTES_UPLOAD_TOKEN, as for routes.json. His limits: 5 calls a minute,
 30 an hour, then a 429 with Retry-After. Once a night is far below that; never retry on a 429.
 
 Usage:  python3 scripts/czynaczas.py sync <special.json>
+        python3 scripts/czynaczas.py todo
         python3 scripts/czynaczas.py show
 """
 import hashlib
@@ -37,6 +47,19 @@ WORKER = os.environ.get("CZYNACZAS_WORKER", "https://taborapi.thefilip.com/v1/cz
 HEADERS = {"User-Agent": "tabor-fleet-action"}
 # A normal reply has about 3100 vehicles. Far fewer means a broken one: keep the last upload.
 MIN_VEHICLES = 1000
+TRANSLATIONS = ROOT / "data" / "czynaczas-en.json"
+
+
+def english():
+    """{"3/5869": {"pl", "en"}} from the hand-kept file, or {} where there's none (the Action)."""
+    return json.loads(TRANSLATIONS.read_text()) if TRANSLATIONS.exists() else {}
+
+
+def by_vehicle(key):
+    """Buses, then trams, by number ("3/403-1" sorts by 403)."""
+    kind, _, number = key[0].partition("/")
+    digits = re.match(r"\d+", number)
+    return kind != "3", int(digits.group()) if digits else 0, number
 
 
 def secret(env, xcconfig):
@@ -106,16 +129,39 @@ def trimmed(reply):
 
 def sync(out):
     meta = worker("GET", "/meta")
-    status, reply, etag = fetch(meta and meta.get("etag"))
+    hand = english()
+    # With English to send, the body is needed even when nothing of his changed.
+    status, reply, etag = fetch(None if hand else meta and meta.get("etag"))
     if status == 304:
-        print(f"czynaczas: unchanged since {meta['updated'][:16]} "
-              f"({meta['remarks']} remarks, {len(meta['special'])} special vehicles)")
+        print(f"czynaczas: unchanged since {meta['updated'][:16]} ({meta['remarks']} remarks, "
+              f"{meta.get('english', 0)} in English, {len(meta['special'])} special vehicles)")
         special = meta["special"]
     else:
         remarks, special = trimmed(reply)
-        result = worker("PUT", body={"etag": etag or "", "remarks": remarks, "special": special})
-        print(f"czynaczas: uploaded {result['remarks']} remarks, {result['special']} special vehicles")
+        # Only a translation of the Polish as it is now; a stale one would say something else.
+        body = {k: {"pl": pl, "en": hand[k]["en"]} if hand.get(k, {}).get("pl") == pl else pl
+                for k, pl in remarks.items()}
+        result = worker("PUT", body={"etag": etag or "", "remarks": body, "special": special})
+        print(f"czynaczas: uploaded {result['remarks']} remarks ({result['english']} in English), "
+              f"{result['special']} special vehicles")
+        if result["english"] < result["remarks"]:
+            print(f"{result['remarks'] - result['english']} remarks have no English yet: "
+                  "python3 scripts/czynaczas.py todo, on the Mac")
     Path(out).write_text(json.dumps(special, ensure_ascii=False))
+
+
+def todo():
+    _, reply, _ = fetch()
+    remarks, _ = trimmed(reply)
+    hand = english()
+    vehicles = reply["vehicles"]
+    missing = [k for k in sorted(remarks, key=lambda k: by_vehicle((k,))) if hand.get(k, {}).get("pl") != remarks[k]]
+    for k in missing:
+        v = vehicles[k]
+        old = f"\n    was: {hand[k]['pl']}" if k in hand else ""
+        print(f"{k} | {v.get('brand')} {v.get('brandModel')} {v.get('productionYear') or ''} "
+              f"{v.get('tramSet') or ''}\n    {remarks[k]}{old}")
+    print(f"{len(missing)} of {len(remarks)} remarks need English in {TRANSLATIONS.relative_to(ROOT)}")
 
 
 def show():
@@ -125,9 +171,12 @@ def show():
     for s in special:
         print(f"  {code(s)}  {s['id']:>7}  {s['start_date'][:10]} → {s['expiration_date'][:10]}  "
               f"{s['text']}" + (f" ({s['detailsText']})" if s.get("detailsText") not in (None, s["text"]) else ""))
+    hand = english()
     print(f"\nRemarks ({len(remarks)}):")
-    for k, v in sorted(remarks.items(), key=lambda kv: (kv[0][0], int(kv[0][2:]))):
-        print(f"  {'BUS ' if k[0] == '3' else 'TRAM'} #{k[2:]}: {v}")
+    for k, v in sorted(remarks.items(), key=by_vehicle):
+        en = hand.get(k, {})
+        print(f"  {'BUS ' if k[0] == '3' else 'TRAM'} #{k[2:]}: {v}\n"
+              f"        {en['en'] if en.get('pl') == v else '(no English yet)'}")
 
 
 if __name__ == "__main__":
@@ -135,5 +184,7 @@ if __name__ == "__main__":
         sync(sys.argv[2])
     elif sys.argv[1:] == ["show"]:
         show()
+    elif sys.argv[1:] == ["todo"]:
+        todo()
     else:
         sys.exit(__doc__)

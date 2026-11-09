@@ -1,6 +1,5 @@
 import SwiftData
 import SwiftUI
-import Translation
 
 struct VehicleView: View {
     let modelId: String
@@ -427,11 +426,12 @@ extension String {
 /// them: it's their note, not ours, and it always links back.
 private struct RemarkCard: View {
     let remark: VehicleRemark
-    /// The remarks are Polish: only a phone in another language gets TRANSLATE.
+    /// The remarks are Polish. A phone in another language reads the English, when there is
+    /// one, and can flip to the original: they're czynaczas's words, not ours.
     private let inPolish = Bundle.main.preferredLocalizations.first == "pl"
-    @State private var request: TranslationSession.Configuration?
-    @State private var translated: String?
-    @State private var showTranslation = false
+    @State private var showOriginal = false
+
+    private var english: String? { inPolish ? nil : remark.english }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -446,7 +446,7 @@ private struct RemarkCard: View {
                     Mono("ABOUT ITS SET WITH #\(String(car))", size: 9.5, weight: 700, spacing: 0.1, color: Palette.faint)
                         .padding(.top, 8)
                 }
-                Text(showTranslation ? translated ?? remark.text : remark.text)
+                Text(showOriginal ? remark.text : english ?? remark.text)
                     .font(TaborFont.grotesk(15.5, 500))
                     .foregroundStyle(Palette.ink)
                     .lineSpacing(3)
@@ -467,11 +467,14 @@ private struct RemarkCard: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(Text("Open czynaczas.pl"))
                     Spacer(minLength: 0)
-                    if !inPolish {
-                        Button(action: toggle) {
+                    if english != nil {
+                        Button {
+                            Haptics.shared.tick()
+                            withAnimation(.easeOut(duration: 0.2)) { showOriginal.toggle() }
+                        } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "translate").font(.system(size: 10, weight: .semibold))
-                                Mono(showTranslation ? "ORIGINAL" : "TRANSLATE", size: 10, weight: 700, spacing: 0.1, color: Palette.sub)
+                                Mono(showOriginal ? "ENGLISH" : "IN POLISH", size: 10, weight: 700, spacing: 0.1, color: Palette.sub)
                             }
                             .foregroundStyle(Palette.sub)
                             .contentShape(Rectangle())
@@ -487,21 +490,6 @@ private struct RemarkCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.yellow.opacity(0.18)))
-        }
-        // On the phone, in place: Apple's translation, asked for the first time TRANSLATE is tapped.
-        .translationTask(request) { session in
-            guard let reply = try? await session.translate(remark.text) else { return }
-            translated = reply.targetText
-            withAnimation(.easeOut(duration: 0.2)) { showTranslation = true }
-        }
-    }
-
-    private func toggle() {
-        Haptics.shared.tick()
-        if translated == nil {
-            request = .init(source: Locale.Language(identifier: "pl"), target: nil)
-        } else {
-            withAnimation(.easeOut(duration: 0.2)) { showTranslation.toggle() }
         }
     }
 }

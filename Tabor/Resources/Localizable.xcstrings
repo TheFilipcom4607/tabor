@@ -11088,16 +11088,6 @@
         }
       }
     },
-    "TRANSLATE": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "PRZETŁUMACZ"
-          }
-        }
-      }
-    },
     "Open czynaczas.pl": {
       "localizations": {
         "pl": {
@@ -11128,12 +11118,22 @@
         }
       }
     },
-    "ORIGINAL": {
+    "ENGLISH": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "ORYGINAŁ"
+            "value": "ANGIELSKI"
+          }
+        }
+      }
+    },
+    "IN POLISH": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PO POLSKU"
           }
         }
       }

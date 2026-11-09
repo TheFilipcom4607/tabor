@@ -9,6 +9,10 @@
 // app or the Action itself needs: the remarks and the special-vehicles list. Phones ask for one
 // vehicle at a time, under their own limit (REMARKS_PER_IP) on top of the app's, and there is
 // no endpoint that lists them. Every answer carries the credit he asked for.
+//
+// Each remark is kept as {pl, en}. The English is written by hand (scripts/czynaczas.py sends it
+// from a file kept out of git) and survives uploads without it, such as the nightly Action's,
+// for as long as the Polish it translates stays the same.
 
 const KEY = 'czynaczas';
 const KINDS = { bus: '3', tram: '0' };
@@ -32,20 +36,30 @@ export async function putCzynaczas(request, env) {
     return json({ result: 'Not JSON' }, 400);
   }
   const { etag, remarks, special } = body ?? {};
-  if (typeof etag !== 'string' || !isObject(remarks) || !Array.isArray(special)
-      || !Object.entries(remarks).every(([k, v]) => /^[03]\/\d+$/.test(k) && typeof v === 'string')) {
-    return json({ result: 'Expected {etag, remarks: {"3/5869": "…"}, special: [...]}' }, 400);
+  const entries = isObject(remarks) ? Object.entries(remarks).map(([k, v]) => [k, typeof v === 'string' ? { pl: v } : v]) : null;
+  if (typeof etag !== 'string' || !entries || !Array.isArray(special)
+      || !entries.every(([k, v]) => /^[03]\/[\w-]+$/.test(k) && isObject(v) && typeof v.pl === 'string'
+                                    && (v.en === undefined || typeof v.en === 'string'))) {
+    return json({ result: 'Expected {etag, remarks: {"3/5869": "…" or {pl, en}}, special: [...]}' }, 400);
   }
-  const count = Object.keys(remarks).length;
+  const count = entries.length;
   if (count < MIN_REMARKS) return json({ result: `Only ${count} remarks: keeping the old ones` }, 422);
-  const meta = { etag, special, remarks: count, updated: new Date().toISOString() };
+  const old = (await env.ROUTES.get(KEY, { type: 'json' })) ?? {};
+  const merged = {};
+  for (const [k, { pl, en }] of entries) {
+    const before = typeof old[k] === 'string' ? { pl: old[k] } : old[k];
+    const english = en ?? (before?.pl === pl ? before.en : undefined);
+    merged[k] = english ? { pl, en: english } : { pl };
+  }
+  const english = Object.values(merged).filter((v) => v.en).length;
+  const meta = { etag, special, remarks: count, english, updated: new Date().toISOString() };
   // Remarks first: a reader that sees the new ETag must find the remarks it names.
-  await env.ROUTES.put(KEY, JSON.stringify(remarks));
+  await env.ROUTES.put(KEY, JSON.stringify(merged));
   await env.ROUTES.put(`${KEY}:meta`, JSON.stringify(meta));
   memo = null;
   // Counts only: the logs are no place for his data either.
-  console.log(`czynaczas: ${count} remarks, ${special.length} special vehicles`);
-  return json({ result: 'ok', remarks: count, special: special.length }, 200);
+  console.log(`czynaczas: ${count} remarks (${english} in English), ${special.length} special vehicles`);
+  return json({ result: 'ok', remarks: count, english, special: special.length }, 200);
 }
 
 export async function getCzynaczasMeta(request, env) {
@@ -54,7 +68,8 @@ export async function getCzynaczasMeta(request, env) {
   return meta ? json(meta, 200) : json({ result: 'Nothing uploaded yet' }, 404);
 }
 
-// /v1/remarks/bus/5869 → {remark, source, url}, or remark null when he has none for it.
+// /v1/remarks/bus/5869 → {remark, remarkEn, source, url}: the Polish and its English (null until
+// translated), or remark null when he has none for it.
 export async function getRemark(request, env, url) {
   if (request.method !== 'GET') return json({ result: 'GET only' }, 405);
   const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
@@ -64,9 +79,11 @@ export async function getRemark(request, env, url) {
   if (!m) return json({ result: 'Ask for one vehicle: /v1/remarks/bus/5869 or /v1/remarks/tram/1252' }, 400);
   const remarks = await load(env);
   if (!remarks) return json({ result: 'No remarks yet' }, 503);
-  const remark = remarks[`${KINDS[m[1]]}/${Number(m[2])}`] ?? null;
+  const entry = remarks[`${KINDS[m[1]]}/${Number(m[2])}`];
+  // Uploads before 2026-11-09 evening stored the Polish alone.
+  const { pl = null, en = null } = typeof entry === 'string' ? { pl: entry } : entry ?? {};
   // A remark changes rarely; a day's copy on the phone is plenty.
-  return new Response(JSON.stringify({ remark, ...SOURCE }), {
+  return new Response(JSON.stringify({ remark: pl, remarkEn: en, ...SOURCE }), {
     headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, max-age=86400' },
   });
 }
