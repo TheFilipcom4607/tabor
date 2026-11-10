@@ -9,6 +9,10 @@ extension EnvironmentValues {
     /// fold runs across the middle, so screens put what you look at above it and what you
     /// tap below it.
     @Entry var tall = false
+    /// False on a tab kept alive behind the one on screen (`RootView`). Hidden isn't gone:
+    /// whatever animates for ever (a medal's sheen, HUNT's live dot) kept the phone drawing
+    /// at 30 frames a second behind the book, so those stop while this is false.
+    @Entry var tabActive = true
 }
 
 enum WideLayout {

@@ -4,13 +4,15 @@ import SwiftUI
 /// ME's look at the diary: your last few catches, newest first, and the way into all of them.
 struct CatchLogSection: View {
     let sightings: [Sighting]
+    /// One per sighting, in the same order (`CatchLog.marks`): ME works them out with the rest
+    /// of its figures, once per change of the book.
+    let marks: [CatchLog.Mark]
     @Environment(Router.self) private var router
     @State private var showAll = false
 
     static let preview = 3
 
     var body: some View {
-        let marks = CatchLog.marks(sightings.map(\.record))
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
                 SectionLabel(text: String(localized: "CATCH LOG"))

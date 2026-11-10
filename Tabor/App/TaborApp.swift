@@ -469,6 +469,7 @@ private extension View {
             .allowsHitTesting(on)
             .accessibilityHidden(!on)
             .zIndex(on ? 1 : 0)
+            .environment(\.tabActive, on)
     }
 }
 

@@ -113,10 +113,12 @@ struct Medallion: View {
 /// A band of light crossing the medal every few seconds; each badge on its own beat.
 struct MedalSheen: View {
     let seed: String
+    @Environment(\.tabActive) private var tabActive
 
     var body: some View {
         let offset = Double(abs(seed.hashValue % 1000)) / 1000 * 5.5
-        TimelineView(.animation(minimumInterval: 1 / 30)) { ctx in
+        // Not behind another tab: ME stays alive there, and nine medals went on shining.
+        TimelineView(.animation(minimumInterval: 1 / 30, paused: !tabActive)) { ctx in
             GeometryReader { g in
                 let t = (ctx.date.timeIntervalSinceReferenceDate + offset).truncatingRemainder(dividingBy: 5.5) / 5.5
                 let p = min(t / 0.35, 1)

@@ -7,6 +7,11 @@ struct MeView: View {
     @Query(sort: \Sighting.date, order: .reverse) private var sightings: [Sighting]
     @Environment(Router.self) private var router
     @Environment(\.wide) private var wide
+    /// ME is the tab on screen. From the environment rather than the router's tab: reading
+    /// that here worked the whole page out again on every switch between any two tabs.
+    @Environment(\.tabActive) private var onScreen
+    /// The page's figures, kept until the book changes (see `MeFigures`).
+    @State private var figures = MeFigures()
     @State private var showSettings = false
     @State private var showMap = false
     @State private var showStats = false
@@ -16,8 +21,9 @@ struct MeView: View {
     private let catalog = Fleet.catalog
 
     var body: some View {
-        let stats = sightings.stats
-        let trophies = stats.rarest(catalog: catalog, limit: 3)
+        let now = figures.of(sightings.map(\.record), catalog: catalog)
+        let stats = now.stats
+        let trophies = now.trophies
 
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -49,23 +55,23 @@ struct MeView: View {
                     HStack(alignment: .top, spacing: 0) {
                         VStack(alignment: .leading, spacing: 0) {
                             shelf(trophies, stats: stats)
-                            statsSection(stats)
+                            statsSection(stats, streak: now.streak)
                             tipCard
                             spotMap
                         }
                         .frame(maxWidth: .infinity)
                         VStack(alignment: .leading, spacing: 0) {
-                            badgeShelf
-                            catchLog
+                            badgeShelf(now.badges)
+                            catchLog(now.marks)
                         }
                         .frame(maxWidth: .infinity)
                     }
                 } else {
                     shelf(trophies, stats: stats)
-                    statsSection(stats)
+                    statsSection(stats, streak: now.streak)
                     tipCard
-                    badgeShelf
-                    catchLog
+                    badgeShelf(now.badges)
+                    catchLog(now.marks)
                     spotMap
                 }
             }
@@ -85,8 +91,8 @@ struct MeView: View {
             }
         }
         // Every time ME comes up, not once: the tab stays alive behind the others.
-        .task(id: router.tab == .me) {
-            guard router.tab == .me else { return }
+        .task(id: onScreen) {
+            guard onScreen else { return }
             if !widgetTipSeen, await WidgetTip.anyInstalled() { widgetTipSeen = true }
         }
         .fullScreenCover(isPresented: $showMap) {
@@ -129,7 +135,7 @@ struct MeView: View {
         }
     }
 
-    private func statsSection(_ stats: CollectionStats) -> some View {
+    private func statsSection(_ stats: CollectionStats, streak: Int) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
                 SectionLabel(text: String(localized: "STATS"))
@@ -151,7 +157,7 @@ struct MeView: View {
                 StatsStrip(items: [
                     (stats.caught.grouped, String(localized: "CAUGHT"), Palette.ink),
                     (fleetShareText(stats.fleetShare(catalog: catalog)), String(localized: "OF FLEET"), Palette.yellow),
-                    ("\(Streak.days(sightings.map(\.date)))", String(localized: "DAY STREAK"), Palette.ink),
+                    ("\(streak)", String(localized: "DAY STREAK"), Palette.ink),
                     (depotsTouched(stats), String(localized: "DEPOTS"), Palette.ink),
                 ])
             }
@@ -185,15 +191,16 @@ struct MeView: View {
         }
     }
 
-    private var badgeShelf: some View {
-        BadgeShelf(badges: Achievements.evaluate(sightings.map(\.record), catalog: catalog))
+    private func badgeShelf(_ badges: [Achievement]) -> some View {
+        BadgeShelf(badges: badges)
             .padding(.top, 18)
             .padding(.horizontal, 22)
     }
 
-    @ViewBuilder private var catchLog: some View {
-        if !sightings.isEmpty {
-            CatchLogSection(sightings: sightings)
+    @ViewBuilder private func catchLog(_ marks: [CatchLog.Mark]) -> some View {
+        // The marks are the book's as it was last worked out: the same catches, in step.
+        if !sightings.isEmpty, marks.count == sightings.count {
+            CatchLogSection(sightings: sightings, marks: marks)
                 .padding(.top, 16)
                 .padding(.horizontal, 22)
         }
@@ -250,6 +257,39 @@ struct MeView: View {
             }
         }
         return "\(hit.count)/\(catalog.depots.count)"
+    }
+}
+
+/// What ME shows that takes going through the whole book: the stats, the trophies, every
+/// badge rule, the streak and the log's marks. Worked out when the book changes, not on each
+/// redraw: opening a sheet redraws ME, and with a few hundred catches doing it all again each
+/// time held the tap up (about 20 ms in the simulator on a Mac, several times that on an
+/// older phone). A plain class in `@State`: filling it in doesn't redraw anything.
+private final class MeFigures {
+    struct Figures {
+        var stats = CollectionStats(sightings: [])
+        var trophies: [OwnedVehicle] = []
+        var badges: [Achievement] = []
+        var streak = 0
+        /// One per catch, in the book's order (see `CatchLog.marks`).
+        var marks: [CatchLog.Mark] = []
+    }
+
+    private var records: [SightingRecord]?
+    /// The streak ends at midnight without the book changing.
+    private var day = Date.distantPast
+    private var figures = Figures()
+
+    func of(_ records: [SightingRecord], catalog: FleetCatalog) -> Figures {
+        let today = Calendar.current.startOfDay(for: Date())
+        if records == self.records, today == day { return figures }
+        let stats = CollectionStats(sightings: records)
+        figures = Figures(stats: stats, trophies: stats.rarest(catalog: catalog, limit: 3),
+                          badges: Achievements.evaluate(records, catalog: catalog),
+                          streak: Streak.days(records.map(\.date)), marks: CatchLog.marks(records))
+        self.records = records
+        day = today
+        return figures
     }
 }
 

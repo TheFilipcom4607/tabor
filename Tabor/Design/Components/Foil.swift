@@ -28,10 +28,11 @@ extension Wrap {
 /// turning would be noise and work; turning on the reveal and the vehicle page.
 struct Foil: View {
     var animated = false
+    @Environment(\.tabActive) private var tabActive
 
     var body: some View {
         if animated {
-            TimelineView(.animation(minimumInterval: 1 / 30)) { ctx in
+            TimelineView(.animation(minimumInterval: 1 / 30, paused: !tabActive)) { ctx in
                 gradient(ctx.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 6) / 6 * 360)
             }
         } else {
