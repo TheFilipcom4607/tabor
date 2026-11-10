@@ -50,7 +50,9 @@ public struct FleetCatalog: Sendable {
         sourcePl = data.sourcePl
         fetched = data.fetched
         wraps = (data.wraps ?? []).sorted { $0.from < $1.from }
-        byId = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
+        // The first of an id wins rather than trapping: `validated` turns such a file down, but
+        // it has to be decoded to be checked.
+        byId = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var index: [Int: [VehicleModel]] = [:]
         for m in all {
             for n in m.numbers { index[n, default: []].append(m) }
@@ -70,10 +72,12 @@ public struct FleetCatalog: Sendable {
     /// No fleet data at all: the app still opens, with an empty book.
     public static let empty = FleetCatalog(data: FleetData(source: "", fetched: nil, models: [], depots: []))
 
-    /// Decodes a fleet.json and rejects ones that parse but can't be a real snapshot.
+    /// Decodes a fleet.json and rejects ones that parse but can't be a real snapshot. A model id
+    /// twice is one of those: the book, the pickers and the lists all go by id.
     public static func validated(json: Data) -> FleetCatalog? {
         guard let c = try? FleetCatalog(json: json), !c.models.isEmpty, c.fetched != nil,
-              c.models.allSatisfy({ $0.fleet == $0.numbers.count })
+              c.models.allSatisfy({ $0.fleet == $0.numbers.count }),
+              Set(c.models.map(\.id)).count == c.models.count
         else { return nil }
         return c
     }

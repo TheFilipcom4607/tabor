@@ -518,6 +518,12 @@ private func fleet(_ fetched: String?) -> FleetCatalog {
     #expect(FleetCatalog.validated(json: Data("<html>404</html>".utf8)) == nil)
     #expect(FleetCatalog.validated(json: Data(#"{"source":"","fetched":"2026-01-01","models":[],"depots":[]}"#.utf8)) == nil)
     #expect(FleetCatalog.empty.models.isEmpty && FleetCatalog.empty.totalFleet == 0)
+    // A model id twice: it decodes (it used to trap, which with a downloaded file meant at every
+    // launch) and is turned down.
+    let model = #"{"id":"bus-a","name":"A","make":"A","kind":"BUS","operators":[],"fleet":1,"batches":[{"depotCode":"","depotName":"","numbers":[1]}]}"#
+    let file = { (models: String) in Data(#"{"source":"","fetched":"2026-01-01","models":[\#(models)],"depots":[]}"#.utf8) }
+    #expect(FleetCatalog.validated(json: file(model)) != nil)
+    #expect(FleetCatalog.validated(json: file("\(model),\(model)")) == nil)
 }
 
 // MARK: - Backup
@@ -548,6 +554,19 @@ private func fleet(_ fetched: String?) -> FleetCatalog {
 
 @Test func zipReaderRejectsGarbage() {
     #expect(throws: ZipError.notAZip) { try ZipReader(data: Data("not a zip at all, sorry".utf8)) }
+}
+
+@Test func deflatedEntryWithNoBytesIsCorrupt() {
+    // A cut-off or crafted backup: one entry, said to inflate to 5 bytes from none.
+    func le(_ v: Int, _ bytes: Int) -> [UInt8] { (0..<bytes).map { UInt8((v >> (8 * $0)) & 0xFF) } }
+    let name = Array("a".utf8)
+    var zip = le(0x0403_4b50, 4) + le(20, 2) + le(0, 2) + le(8, 2) + le(0, 4) + le(0, 4) + le(0, 4) + le(5, 4)
+        + le(name.count, 2) + le(0, 2) + name
+    let central = zip.count
+    zip += le(0x0201_4b50, 4) + le(20, 2) + le(20, 2) + le(0, 2) + le(8, 2) + le(0, 4) + le(0, 4) + le(0, 4) + le(5, 4)
+        + le(name.count, 2) + le(0, 2) + le(0, 2) + le(0, 2) + le(0, 2) + le(0, 4) + le(0, 4) + name
+    zip += le(0x0605_4b50, 4) + le(0, 2) + le(0, 2) + le(1, 2) + le(1, 2) + le(zip.count - central, 4) + le(central, 4) + le(0, 2)
+    #expect(throws: ZipError.corrupt) { try ZipReader(data: Data(zip)).read("a") }
 }
 
 @Test func crcMatchesZlib() {

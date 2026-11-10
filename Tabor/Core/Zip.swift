@@ -173,6 +173,8 @@ public struct ZipReader {
 
     static func inflate(_ src: Data, size: Int) throws -> Data {
         if size == 0 { return Data() }
+        // Nothing to inflate into something: an empty buffer has no address to hand over.
+        guard !src.isEmpty else { throw ZipError.corrupt }
         #if canImport(Compression)
         var out = Data(count: size)
         let written = out.withUnsafeMutableBytes { dst in
