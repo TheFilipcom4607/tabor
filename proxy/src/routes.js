@@ -40,8 +40,10 @@ export async function getGtfs(request, env) {
     console.log(`gtfs: ZTM answered ${res.status} (colo ${request.cf?.colo})`);
     return json({ result: `ZTM answered ${res.status}` }, 502);
   }
+  // The length only when ZTM gives one: an empty Content-Length is no header to send.
+  const length = res.headers.get('Content-Length');
   return new Response(res.body, {
-    headers: { 'Content-Type': 'application/zip', 'Content-Length': res.headers.get('Content-Length') ?? '' },
+    headers: { 'Content-Type': 'application/zip', ...(length ? { 'Content-Length': length } : {}) },
   });
 }
 
