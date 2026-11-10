@@ -4609,6 +4609,17 @@
         }
       }
     },
+    "Map of where you've caught vehicles": {
+      "comment": "VoiceOver label of the map on ME",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mapa miejsc, w których złapano pojazdy"
+          }
+        }
+      }
+    },
     "MATCH · %@": {
       "localizations": {
         "pl": {
