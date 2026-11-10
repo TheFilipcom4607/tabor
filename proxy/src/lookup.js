@@ -45,7 +45,7 @@ export async function lookup(request, env, url) {
   const kind = typeParam === null ? null : TYPES[typeParam];
   if (kind === undefined) return json({ result: 'type must be bus or tram (or 1 or 2)' }, 400);
 
-  const fleet = await load();
+  const fleet = await loadFleet();
   if (!fleet) return json({ result: "The fleet data isn't available right now; try again in a few minutes" }, 503);
 
   if (!raw.includes(',')) {
@@ -59,7 +59,7 @@ export async function lookup(request, env, url) {
   return found({ result, fleetUpdated: fleet.fetched });
 }
 
-async function load() {
+export async function loadFleet() {
   if (memo && Date.now() - memo.at < MEMORY_MS) return memo.fleet;
   try {
     const res = await fetch(FLEET, { cf: { cacheTtl: EDGE_SECONDS, cacheEverything: true } });
