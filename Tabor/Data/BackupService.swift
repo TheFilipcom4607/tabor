@@ -7,6 +7,8 @@ enum BackupService {
     /// Builds `TABOR backup <date>.zip` in the temporary folder, for the share sheet.
     static func export(_ manifest: BackupManifest) throws -> URL {
         let stamp = DateFormatter()
+        // Fixed, as for the CSV: a phone on a 12-hour clock or another calendar wrote its own.
+        stamp.locale = Locale(identifier: "en_US_POSIX")
         stamp.dateFormat = "yyyy-MM-dd HHmm"
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("TABOR backup \(stamp.string(from: manifest.exported)).zip")
