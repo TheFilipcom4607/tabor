@@ -35,6 +35,7 @@ struct BookIndexView: View {
             }
         }
         let sorted = order.sort(rows, stats: stats)
+        let pictures = VehicleSightings(sightings)
 
         VStack(alignment: .leading, spacing: 0) {
             // A phone's width on a tall screen: one row stretched across it is mostly empty bar.
@@ -86,7 +87,7 @@ struct BookIndexView: View {
                         WrapShelf(wraps: wraps, sightings: sightings, catalog: catalog)
                             .padding(.bottom, 8)
                     }
-                    ForEach(sorted.filter(\.regular)) { m in row(m, stats: stats) }
+                    ForEach(sorted.filter(\.regular)) { m in row(m, stats: stats, pictures: pictures) }
                     // Test, tourist-line and works stock live in sections of their own: they're
                     // passing through, seasonal or not for passengers, not rare.
                     let onTest = sorted.filter(\.onTest)
@@ -94,19 +95,19 @@ struct BookIndexView: View {
                         sectionHeader(.onTest, note: onTest.allSatisfy(\.trialOver)
                             ? String(localized: "PAST TRIALS · NOT PART OF THE FLEET %")
                             : String(localized: "BUSES ON TRIAL · NOT PART OF THE FLEET %"))
-                        ForEach(onTest) { m in row(m, stats: stats) }
+                        ForEach(onTest) { m in row(m, stats: stats, pictures: pictures) }
                     }
                     let vintage = sorted.filter(\.vintage)
                     if !vintage.isEmpty {
                         sectionHeader(.vintage, note: String(localized: "TOURIST LINES ON SUMMER WEEKENDS · NOT PART OF THE FLEET %"))
-                        ForEach(vintage) { m in row(m, stats: stats) }
+                        ForEach(vintage) { m in row(m, stats: stats, pictures: pictures) }
                     }
                     // Shown from the start: hidden until the first catch, nobody could find
                     // them to go looking (#78).
                     let works = sorted.filter(\.works)
                     if !works.isEmpty {
                         sectionHeader(.works, note: String(localized: "TRAMWAJE WARSZAWSKIE'S OWN CARS · NOT PART OF THE FLEET %"))
-                        ForEach(works) { m in row(m, stats: stats) }
+                        ForEach(works) { m in row(m, stats: stats, pictures: pictures) }
                     }
                     Mono(catalog.sourceDisplay.uppercased(), size: 9, spacing: 0.06, color: Palette.faint)
                         .multilineTextAlignment(.center)
@@ -173,17 +174,18 @@ struct BookIndexView: View {
         .padding(.bottom, 2)
     }
 
-    private func row(_ m: VehicleModel, stats: CollectionStats) -> some View {
+    private func row(_ m: VehicleModel, stats: CollectionStats, pictures: VehicleSightings) -> some View {
         BookLink(route: .model(m.id)) {
-            DexRow(model: m, owned: stats.ownedCount(modelId: m.id), latest: latestSticker(m.id, stats: stats),
+            DexRow(model: m, owned: stats.ownedCount(modelId: m.id), latest: latestSticker(m.id, stats: stats, pictures: pictures),
                    selected: wide && router.bookPath.first == .model(m.id))
         }
         .buttonStyle(RowPressStyle())
     }
 
-    private func latestSticker(_ modelId: String, stats: CollectionStats) -> (number: Int, sticker: String?, photo: String?)? {
+    private func latestSticker(_ modelId: String, stats: CollectionStats,
+                               pictures: VehicleSightings) -> (number: Int, sticker: String?, photo: String?)? {
         guard let v = stats.owned(modelId: modelId).max(by: { $0.lastSeen < $1.lastSeen }) else { return nil }
-        return (v.number, sightings.sticker(number: v.number, modelId: modelId), sightings.photo(number: v.number, modelId: modelId))
+        return (v.number, pictures.sticker(number: v.number, modelId: modelId), pictures.photo(number: v.number, modelId: modelId))
     }
 }
 

@@ -212,6 +212,37 @@ extension Array where Element == Sighting {
     }
 }
 
+/// The book's sightings sorted out by vehicle, for a screen that draws many stickers. Asking
+/// the whole book for each sticker's picture (`sticker(number:modelId:)` and the rest go
+/// through every catch) made a page of them cost a look through the book per sticker, several
+/// times over: with a few hundred catches, a redraw of a model's page was long enough to see.
+struct VehicleSightings {
+    private struct Key: Hashable {
+        let number: Int
+        let modelId: String
+    }
+
+    private let byVehicle: [Key: [Sighting]]
+
+    init(_ sightings: [Sighting]) {
+        byVehicle = Dictionary(grouping: sightings) { Key(number: $0.number, modelId: $0.modelId) }
+    }
+
+    /// The vehicle's own sightings, in the book's order.
+    private func of(_ number: Int, _ modelId: String) -> [Sighting] {
+        byVehicle[Key(number: number, modelId: modelId)] ?? []
+    }
+
+    func sticker(number: Int, modelId: String) -> String? { of(number, modelId).sticker(number: number, modelId: modelId) }
+    func photo(number: Int, modelId: String) -> String? { of(number, modelId).photo(number: number, modelId: modelId) }
+    func pictured(number: Int, modelId: String) -> Sighting? { of(number, modelId).pictured(number: number, modelId: modelId) }
+
+    /// Caught in an event wrap at least once.
+    func inWrap(number: Int, modelId: String) -> Bool { of(number, modelId).contains { $0.wrap != nil } }
+
+    func count(number: Int, modelId: String) -> Int { of(number, modelId).count }
+}
+
 extension ModelContext {
     /// Records a hand-picked model for a number, updating the existing row if there is one.
     func assign(number: Int, to modelId: String, existing: [ManualAssignment]) {

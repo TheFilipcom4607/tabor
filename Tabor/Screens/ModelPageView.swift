@@ -14,6 +14,9 @@ enum StickerSort: String {
 
 struct ModelPageView: View {
     let modelId: String
+    /// This model's catches only: the page shows nothing else, and going through the whole
+    /// book on each redraw (the bounce of a sticker just stuck in is two) cost more the
+    /// bigger the book got.
     @Query private var sightings: [Sighting]
     @State private var sort: StickerSort = .number
     @AppStorage(DebugRecord.enabledKey) private var debugMode = false
@@ -28,6 +31,11 @@ struct ModelPageView: View {
     @Environment(Router.self) private var router
     /// Beside the index on a wide screen, where there's nothing to go back to.
     @Environment(\.wide) private var wide
+
+    init(modelId: String) {
+        self.modelId = modelId
+        _sightings = Query(filter: #Predicate<Sighting> { $0.modelId == modelId })
+    }
 
     var body: some View {
         if let model = Fleet.catalog.model(id: modelId) {
@@ -63,6 +71,7 @@ struct ModelPageView: View {
         let stats = sightings.stats
         let owned = stats.owned(modelId: model.id)
         let ownedByNumber = Dictionary(uniqueKeysWithValues: owned.map { ($0.number, $0) })
+        let pictures = VehicleSightings(sightings)
         // The site leaves out works cars that carry only a code.
         let onSite = !model.numbers.allSatisfy { FleetNumber.code(of: $0) != nil }
 
@@ -161,7 +170,7 @@ struct ModelPageView: View {
                                 .padding(.top, i == 0 ? 0 : 14)
                             stickerRows(ordered(batch.numbers, owned: ownedByNumber), grid: i) { n in
                                 if let v = ownedByNumber[n] {
-                                    sticker(n, model: model, timesSeen: v.timesSeen)
+                                    sticker(n, model: model, timesSeen: v.timesSeen, pictures: pictures)
                                 } else {
                                     EmptySlot(label: FleetNumber.label(n)).frame(height: Self.cell)
                                 }
@@ -173,7 +182,7 @@ struct ModelPageView: View {
                                 .padding(.top, 32)
                                 .padding(.bottom, 10)
                             stickerRows(strays.map(\.number), grid: Self.strays) { n in
-                                sticker(n, model: model, timesSeen: ownedByNumber[n]?.timesSeen ?? 1)
+                                sticker(n, model: model, timesSeen: ownedByNumber[n]?.timesSeen ?? 1, pictures: pictures)
                             }
                         }
                     }
@@ -205,7 +214,7 @@ struct ModelPageView: View {
                             isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
                             titleVisibility: .visible) {
             if let n = deleting {
-                let count = sightings.filter { $0.number == n && $0.modelId == model.id }.count
+                let count = pictures.count(number: n, modelId: model.id)
                 Button(count > 1 ? "Delete all \(count) sightings" : "Delete it", role: .destructive) { delete(n, model: model) }
             }
         } message: {
@@ -261,14 +270,14 @@ struct ModelPageView: View {
         }
     }
 
-    private func sticker(_ n: Int, model: VehicleModel, timesSeen: Int) -> some View {
+    private func sticker(_ n: Int, model: VehicleModel, timesSeen: Int, pictures: VehicleSightings) -> some View {
         // A button, not a NavigationLink: a link steals the long press the debug delete menu needs.
         Button { router.bookPath.append(.vehicle(modelId: model.id, number: n)) } label: {
-            DieCut(number: n, sticker: sightings.sticker(number: n, modelId: model.id),
-                   photo: sightings.photo(number: n, modelId: model.id),
-                   foil: sightings.pictured(number: n, modelId: model.id)?.wrap != nil) {
+            DieCut(number: n, sticker: pictures.sticker(number: n, modelId: model.id),
+                   photo: pictures.photo(number: n, modelId: model.id),
+                   foil: pictures.pictured(number: n, modelId: model.id)?.wrap != nil) {
                 // Caught in an event wrap: a form of its own, marked on the tag.
-                if sightings.contains(where: { $0.number == n && $0.modelId == model.id && $0.wrap != nil }) {
+                if pictures.inWrap(number: n, modelId: model.id) {
                     Image(systemName: "sparkles")
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(Palette.foilInk)
