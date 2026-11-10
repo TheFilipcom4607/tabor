@@ -38,6 +38,9 @@ struct HuntView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.wide) private var wide
     @Environment(\.tall) private var tall
+    /// HUNT is the tab on screen. From the environment rather than the router's tab: reading
+    /// that here redrew the whole map on every switch between any two tabs.
+    @Environment(\.tabActive) private var onScreen
     @AppStorage("huntFilter") private var filter: HuntFilter = .uncaught
     /// Rarities and models picked in the filter sheet; empty shows everything.
     @AppStorage("huntTargets") private var targets = HuntTargets()
@@ -64,6 +67,9 @@ struct HuntView: View {
     /// Opened on the default 3 km view around you, once there was a fix to open it on.
     @State private var centered = false
     @State private var pins: [WantedPin] = []
+    /// The book as of the last refresh. Kept rather than counted where it's needed: counting
+    /// goes through every catch, and a refresh did it three times over, the card on each redraw.
+    @State private var caught = CollectionStats(sightings: [])
     /// Vehicles out in an event wrap you haven't caught them in, anywhere, nearest first.
     @State private var wrapsOut: [WantedPin] = []
     /// Each vehicle placed on its route, when it could be, as of the last refresh.
@@ -716,8 +722,9 @@ struct HuntView: View {
                 let isLive = live.status == .live
                 Circle().fill(statusColor).frame(width: 6, height: 6)
                     .shadow(color: statusColor, radius: isLive ? 4 : 0)
-                    // Breathes while the feed is live, like the camera's hint dot.
-                    .phaseAnimator([0.35, 1]) { v, p in v.opacity(isLive ? p : 1) } animation: { _ in .easeInOut(duration: 0.9) }
+                    // Breathes while the feed is live, like the camera's hint dot. Only on
+                    // screen: it went on breathing behind the other tabs.
+                    .modifier(Breathing(on: isLive && onScreen))
                 Mono(statusText, size: 10.5, weight: 600, spacing: 0.1, color: .white.opacity(0.85))
             }
             .padding(.vertical, 6)
@@ -1056,9 +1063,8 @@ struct HuntView: View {
                 searchCard(HuntSearch.results(for: query, snapshot: live.snapshot, catalog: catalog))
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             } else if let selected {
-                let stats = sightings.stats
-                PinCard(pin: selected, owned: stats.ownedCount(modelId: selected.model.id),
-                        mine: stats.vehicle(number: selected.vehicle.number, modelId: selected.model.id),
+                PinCard(pin: selected, owned: caught.ownedCount(modelId: selected.model.id),
+                        mine: caught.vehicle(number: selected.vehicle.number, modelId: selected.model.id),
                         showDistance: hasFix, motion: motion(of: selected),
                         nextStops: creeping(selected)?.upcoming(stops: 3).stops.map(\.name) ?? [],
                         ending: creeping(selected)?.ending(within: 3),
@@ -1157,7 +1163,7 @@ struct HuntView: View {
     }
 
     private func searchedVehicleRow(_ v: HuntSearch.Vehicle) -> some View {
-        let mine = sightings.contains { $0.number == v.number && $0.modelId == v.model.id }
+        let mine = caught.vehicle(number: v.number, modelId: v.model.id) != nil
         let accent = v.model.tier.mapColor
         return Button { pickVehicle(v) } label: {
             HStack(spacing: 10) {
@@ -1267,11 +1273,11 @@ struct HuntView: View {
     }
 
     /// A vehicle from the search as a pin, wherever it is and whether or not you've caught it.
-    private func searchedPin(_ id: String, in snapshot: LiveSnapshot) -> WantedPin? {
+    private func searchedPin(_ id: String, in snapshot: LiveSnapshot, caught: CollectionStats) -> WantedPin? {
         guard let v = snapshot.vehicles.first(where: { "\($0.kind.rawValue)#\($0.number)" == id }) else { return nil }
         let user = here
         return Wanted.pins(snapshot: LiveSnapshot(vehicles: [v], fetched: snapshot.fetched), catalog: catalog,
-                           caught: sightings.stats, lat: v.latitude, lon: v.longitude, within: 10,
+                           caught: caught, lat: v.latitude, lon: v.longitude, within: 10,
                            from: user.map { ($0.latitude, $0.longitude) }, includeCaught: true)
             .first
     }
@@ -1552,23 +1558,26 @@ struct HuntView: View {
 
     /// Every uncaught vehicle out right now, anywhere (caught ones too in the ALL view);
     /// distances from you when there's a fix.
-    private func cityWide() -> [WantedPin] {
+    private func cityWide(caught: CollectionStats? = nil) -> [WantedPin] {
         guard let snapshot = live.snapshot else { return [] }
+        let caught = caught ?? sightings.stats
         let user = here
         let from = user ?? mapCenter ?? Self.warsaw.center
         if let line = targets.line {
-            return Wanted.onLine(line, snapshot: snapshot, catalog: catalog, caught: sightings.stats,
+            return Wanted.onLine(line, snapshot: snapshot, catalog: catalog, caught: caught,
                                  lat: from.latitude, lon: from.longitude, from: user.map { ($0.latitude, $0.longitude) })
         }
-        return Wanted.anywhere(snapshot: snapshot, catalog: catalog, caught: sightings.stats,
+        return Wanted.anywhere(snapshot: snapshot, catalog: catalog, caught: caught,
                                lat: from.latitude, lon: from.longitude,
                                from: user.map { ($0.latitude, $0.longitude) }, includeCaught: withCaught)
     }
 
-    private var onScreen: Bool { router.tab == .hunt }
 
     private func recompute(animated: Bool) {
         guard onScreen else { return }
+        // Counted once for everything below, and kept for the card and the search.
+        let caught = sightings.stats
+        self.caught = caught
         let user = here
         guard let snapshot = live.snapshot, let center = mapCenter ?? user else { return }
         // Half the visible diagonal, and never less than the 3 km the list needs.
@@ -1580,25 +1589,25 @@ struct HuntView: View {
         let picked = targets
         let filtered = picked.isCityWide || filter == .starred
         var next = filtered
-            ? cityWide().filter { picked.matches($0) }
-            : Wanted.pins(snapshot: snapshot, catalog: catalog, caught: sightings.stats,
+            ? cityWide(caught: caught).filter { picked.matches($0) }
+            : Wanted.pins(snapshot: snapshot, catalog: catalog, caught: caught,
                           lat: center.latitude, lon: center.longitude, within: max(Wanted.radius, visible),
                           from: user.map { ($0.latitude, $0.longitude) }, includeCaught: withCaught)
         // Panned away from you: make sure what's around you still feeds the list.
         if !filtered, let user, Geo.km((user.latitude, user.longitude), (center.latitude, center.longitude)) * 1000 > visible {
             let ids = Set(next.map(\.id))
-            next += Wanted.pins(snapshot: snapshot, catalog: catalog, caught: sightings.stats,
+            next += Wanted.pins(snapshot: snapshot, catalog: catalog, caught: caught,
                                 lat: user.latitude, lon: user.longitude, from: (user.latitude, user.longitude),
                                 includeCaught: withCaught)
                 .filter { !ids.contains($0.id) }
         }
         // The vehicle picked from the search, wherever it is and whether or not you have it.
-        if let focusId, !next.contains(where: { $0.id == focusId }), let pin = searchedPin(focusId, in: snapshot) {
+        if let focusId, !next.contains(where: { $0.id == focusId }), let pin = searchedPin(focusId, in: snapshot, caught: caught) {
             next.append(pin)
         }
         // The selected vehicle too, while it's still running: a stop picked far down its route
         // takes the map well away from it, and dropping it there closed the card (#73).
-        if let selectedId, !next.contains(where: { $0.id == selectedId }), let pin = searchedPin(selectedId, in: snapshot) {
+        if let selectedId, !next.contains(where: { $0.id == selectedId }), let pin = searchedPin(selectedId, in: snapshot, caught: caught) {
             next.append(pin)
         }
         // Only tags standing alone around the view, and the selected one, get placed on their
@@ -1625,7 +1634,7 @@ struct HuntView: View {
             }
         }
         matches = placed
-        wrapsOut = Wanted.wrapsOut(snapshot: snapshot, catalog: catalog, caught: sightings.stats,
+        wrapsOut = Wanted.wrapsOut(snapshot: snapshot, catalog: catalog, caught: caught,
                                    lat: (user ?? center).latitude, lon: (user ?? center).longitude,
                                    from: user.map { ($0.latitude, $0.longitude) })
         // Vehicles glide to where they are now rather than jumping. Not with a crowd of tags on
@@ -1979,6 +1988,19 @@ private struct GroupBubble: View {
             .overlay(Circle().strokeBorder(filled ? Palette.bg.opacity(0.6) : accent, lineWidth: 1.5))
             .accessibilityLabel("\(group.pins.count) vehicles here, zoom in")
             .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// Fades in and out for as long as it's on; still otherwise, with nothing left ticking.
+private struct Breathing: ViewModifier {
+    let on: Bool
+
+    func body(content: Content) -> some View {
+        if on {
+            content.phaseAnimator([0.35, 1]) { v, p in v.opacity(p) } animation: { _ in .easeInOut(duration: 0.9) }
+        } else {
+            content
+        }
     }
 }
 

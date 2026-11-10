@@ -161,7 +161,9 @@ final class LiveFleetService {
         nearby = snapshot.nearby(lat: here.coordinate.latitude, lon: here.coordinate.longitude, within: LiveHints.boostRadius)
     }
 
-    private static func fetch(_ kind: VehicleKind, from source: Source) async -> Result<[LiveVehicle], Error> {
+    /// Off the main actor: reading a reply's couple of thousand rows there cost a frame or two
+    /// of whatever was on screen (a map being panned, the viewfinder) at every poll.
+    private nonisolated static func fetch(_ kind: VehicleKind, from source: Source) async -> Result<[LiveVehicle], Error> {
         let type = kind == .bus ? 1 : 2
         var request: URLRequest
         switch source {
