@@ -58,13 +58,16 @@ enum TextReader {
             let cg = upscaled(decoded)
             let orientation = CGImagePropertyOrientation(image.imageOrientation)
             var report = Report(pass: "full")
-            report.full = read(cg, orientation: orientation, roi: nil)
+            // One handler for the whole frame and the tiles: it keeps what it has worked out
+            // about the picture, so each further read doesn't start from the bare pixels.
+            let handler = VNImageRequestHandler(cgImage: cg, orientation: orientation)
+            report.full = read(handler, roi: nil)
             report.candidates = NumberExtractor.candidates(in: report.full, mode: mode, catalog: Fleet.catalog)
             if NumberExtractor.wantsCloserLook(report.candidates) {
                 report.pass = report.candidates.isEmpty ? "tiles" : "full+tiles"
                 for y in [0.0, 0.3, 0.6] {
                     for x in [0.0, 0.3, 0.6] {
-                        report.tiles += read(cg, orientation: orientation, roi: CGRect(x: x, y: y, width: 0.4, height: 0.4))
+                        report.tiles += read(handler, roi: CGRect(x: x, y: y, width: 0.4, height: 0.4))
                     }
                 }
                 report.candidates = NumberExtractor.candidates(in: report.full + report.tiles, mode: mode, catalog: Fleet.catalog)
@@ -94,7 +97,7 @@ enum TextReader {
         return ctx.makeImage() ?? cg
     }
 
-    private static func read(_ cg: CGImage, orientation: CGImagePropertyOrientation, roi: CGRect?) -> [TextObservation] {
+    private static func read(_ handler: VNImageRequestHandler, roi: CGRect?) -> [TextObservation] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = false
@@ -102,7 +105,7 @@ enum TextReader {
         // Vision's default floor of 1/32 skips them.
         request.minimumTextHeight = 0.008
         if let roi { request.regionOfInterest = roi }
-        try? VNImageRequestHandler(cgImage: cg, orientation: orientation).perform([request])
+        try? handler.perform([request])
         let scale = Double(roi?.height ?? 1)
         return (request.results ?? []).flatMap { obs in
             let box = NumberExtractor.ocrBox(obs.boundingBox, roi: roi)
