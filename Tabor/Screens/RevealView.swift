@@ -35,6 +35,9 @@ struct RevealView: View {
     @State private var holdProgress = 0.0
     @State private var holding = false
     @State private var sticking = false
+    /// Stuck in, though still on its way down: a second tap in that moment (easy on a burst's
+    /// one-tap button) used to save the catch twice and deal the next card away unseen.
+    @State private var stuck = false
     @State private var tilt: CGSize = .zero
     @State private var nudge = false
     @State private var revealRun = 0
@@ -1013,7 +1016,8 @@ struct RevealView: View {
     }
 
     private func stick() async {
-        guard let model, let number = draft.number, !sticking else { return }
+        guard let model, let number = draft.number, !sticking, !stuck else { return }
+        stuck = true
         holding = false
         Haptics.shared.endHold()
         Haptics.shared.stick()
