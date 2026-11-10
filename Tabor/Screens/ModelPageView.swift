@@ -172,7 +172,9 @@ struct ModelPageView: View {
                             Mono("NOT IN ZTM DATABASE · ADDED BY YOU", size: 10, spacing: 0.14, color: Palette.faint)
                                 .padding(.top, 32)
                                 .padding(.bottom, 10)
-                            stickerRows(strays.map(\.number), grid: Self.strays) { n in sticker(n, model: model, timesSeen: 1) }
+                            stickerRows(strays.map(\.number), grid: Self.strays) { n in
+                                sticker(n, model: model, timesSeen: ownedByNumber[n]?.timesSeen ?? 1)
+                            }
                         }
                     }
                     .padding(.horizontal, 22)
