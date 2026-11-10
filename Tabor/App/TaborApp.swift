@@ -347,6 +347,11 @@ struct RootView: View {
             try? await Task.sleep(for: .seconds(3))
             await TaborStore.compactStickers(sightings, in: context)
         }
+        // The lists' small pictures, made ahead of time and out of the way (`ThumbStore`).
+        .task(id: pictureKey, priority: .utility) {
+            guard await settled() else { return }
+            await ThumbStore.fill(VehicleSightings(sightings).smallCopies)
+        }
         // Badges: celebrate anything newly earned, and fill in weather for the weather ones.
         // A catch saves several times in its first seconds (photo, sticker, place, weather):
         // let it settle, then work the rules out off the main thread, which animates the book.
@@ -373,6 +378,17 @@ struct RootView: View {
     /// was replaced by a newer one).
     private func settled() async -> Bool {
         (try? await Task.sleep(for: .seconds(2))) != nil
+    }
+
+    /// Changes when any catch's picture does.
+    private var pictureKey: Int {
+        var hasher = Hasher()
+        for s in sightings {
+            hasher.combine(s.stickerFile)
+            hasher.combine(s.photoFile)
+            hasher.combine(s.cover)
+        }
+        return hasher.finalize()
     }
 
     private var widgetKey: String {

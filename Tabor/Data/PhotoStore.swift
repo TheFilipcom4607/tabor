@@ -34,10 +34,13 @@ enum PhotoStore {
     /// Writes a file under a given name (restoring a backup keeps the original names).
     static func write(_ data: Data, name: String) throws {
         try data.write(to: url(name), options: .atomic)
+        // Small copies of whatever had the name before aren't of this.
+        ThumbStore.remove(name)
     }
 
     static func delete(_ file: String) {
         try? FileManager.default.removeItem(at: url(file))
+        ThumbStore.remove(file)
         cache.removeAllObjects()
     }
 
@@ -47,6 +50,7 @@ enum PhotoStore {
         for f in (try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? [] {
             try? fm.removeItem(at: f)
         }
+        ThumbStore.removeAll()
         cache.removeAllObjects()
     }
 
@@ -177,19 +181,31 @@ enum PhotoStore {
     static func thumbnail(_ file: String, maxPixel: Int) -> UIImage? {
         let key = "\(file)@\(maxPixel)" as NSString
         if let hit = cache.object(forKey: key) { return hit }
-        guard let src = CGImageSourceCreateWithURL(url(file) as CFURL, nil) else { return nil }
-        let opts: [CFString: Any] = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: maxPixel,
-        ]
-        guard let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) else { return nil }
+        // A list's size: there may be a small copy ready, far quicker to open than the picture.
+        let small = maxPixel <= ThumbStore.limit
+        if small, let ready = ThumbStore.load(file, maxPixel: maxPixel) {
+            cache.setObject(ready, forKey: key)
+            return ready
+        }
+        guard let src = CGImageSourceCreateWithURL(url(file) as CFURL, nil),
+              let cg = thumbnail(from: src, maxPixel: maxPixel) else { return nil }
+        if small { ThumbStore.keep(cg, of: file, maxPixel: maxPixel) }
         // Decoded once into what the screen draws as it is. A HEIC sticker decodes with straight
         // (not premultiplied) alpha, which the screen otherwise converts again on every redraw:
         // scrolling past stickers jittered.
         let img = UIImage(cgImage: cg).preparingForDisplay() ?? UIImage(cgImage: cg)
         cache.setObject(img, forKey: key)
         return img
+    }
+
+    /// A picture scaled down, upright, as every thumbnail in the app is made.
+    static func thumbnail(from src: CGImageSource, maxPixel: Int) -> CGImage? {
+        let opts: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixel,
+        ]
+        return CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary)
     }
 
     /// Date and GPS position embedded in a photo, if any (imported shots).

@@ -499,13 +499,13 @@ private struct SightingPicture: View {
     let sighting: Sighting
 
     var body: some View {
-        if let sticker = sighting.stickerFile, let img = PhotoStore.thumbnail(sticker, maxPixel: 200) {
+        if let sticker = sighting.stickerFile, let img = PhotoStore.thumbnail(sticker, maxPixel: ThumbStore.logRow) {
             Image(uiImage: img)
                 .resizable()
                 .scaledToFit()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            CatchPhoto(file: sighting.photoFile, maxPixel: 200)
+            CatchPhoto(file: sighting.photoFile, maxPixel: ThumbStore.logRow)
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
     }

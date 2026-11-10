@@ -184,11 +184,11 @@ private struct CatchLogRow: View {
 
     @ViewBuilder
     private func picture(_ s: Sighting) -> some View {
-        if let sticker = s.stickerFile, let img = PhotoStore.thumbnail(sticker, maxPixel: 200) {
+        if let sticker = s.stickerFile, let img = PhotoStore.thumbnail(sticker, maxPixel: ThumbStore.logRow) {
             Image(uiImage: img).resizable().scaledToFit()
                 .modifier(FoilIf(on: s.wrap != nil, image: Image(uiImage: img), width: 2))
         } else if s.photoFile != nil {
-            CatchPhoto(file: s.photoFile, maxPixel: 200)
+            CatchPhoto(file: s.photoFile, maxPixel: ThumbStore.logRow)
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 .modifier(FoilFrameIf(on: s.wrap != nil, cornerRadius: 6))
         }

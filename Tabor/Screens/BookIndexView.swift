@@ -231,7 +231,7 @@ struct DexRow: View {
         // Your latest catch of this model, peeking off the edge of the row.
         .overlay(alignment: .trailing) {
             if let latest {
-                DieCut(number: latest.number, sticker: latest.sticker, photo: latest.photo, height: 44, tagSize: 9, maxPixel: 240)
+                DieCut(number: latest.number, sticker: latest.sticker, photo: latest.photo, height: 44, tagSize: 9, maxPixel: ThumbStore.indexRow)
                     .frame(width: 74)
                     .rotationEffect(.degrees(stickerTilt(latest.number, range: 6)))
                     .offset(x: inset ? -8 : 6)

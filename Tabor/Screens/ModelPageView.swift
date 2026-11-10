@@ -274,7 +274,7 @@ struct ModelPageView: View {
         // A button, not a NavigationLink: a link steals the long press the debug delete menu needs.
         Button { router.bookPath.append(.vehicle(modelId: model.id, number: n)) } label: {
             DieCut(number: n, sticker: pictures.sticker(number: n, modelId: model.id),
-                   photo: pictures.photo(number: n, modelId: model.id),
+                   photo: pictures.photo(number: n, modelId: model.id), maxPixel: ThumbStore.page,
                    foil: pictures.pictured(number: n, modelId: model.id)?.wrap != nil) {
                 // Caught in an event wrap: a form of its own, marked on the tag.
                 if pictures.inWrap(number: n, modelId: model.id) {

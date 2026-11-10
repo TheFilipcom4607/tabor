@@ -241,6 +241,25 @@ struct VehicleSightings {
     func inWrap(number: Int, modelId: String) -> Bool { of(number, modelId).contains { $0.wrap != nil } }
 
     func count(number: Int, modelId: String) -> Int { of(number, modelId).count }
+
+    /// The pictures the book's lists draw and the sizes they draw them at, for `ThumbStore.fill`:
+    /// each vehicle's sticker (its photo, without one) in the index and on its model's page,
+    /// and each catch's own in the log.
+    var smallCopies: [String: Set<Int>] {
+        var wanted: [String: Set<Int>] = [:]
+        // A sticker still as it was cut (PNG) is about to be swapped for its HEIC copy,
+        // under a new name: not worth a copy of its own.
+        func want(_ file: String?, _ sizes: Set<Int>) {
+            guard let file, !file.hasSuffix(".png") else { return }
+            wanted[file, default: []].formUnion(sizes)
+        }
+        for (key, list) in byVehicle {
+            want(list.sticker(number: key.number, modelId: key.modelId) ?? list.photo(number: key.number, modelId: key.modelId),
+                 [ThumbStore.indexRow, ThumbStore.page])
+            for s in list { want(s.stickerFile ?? s.photoFile, [ThumbStore.logRow]) }
+        }
+        return wanted
+    }
 }
 
 extension ModelContext {
