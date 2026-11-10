@@ -28,7 +28,8 @@ SECTIONS = ("models", "worksModels", "codedWorksModels")
 PER_VEHICLE = {"batches", "fleet", "firstYear", "lastYear", "operators", "specs", "variants",
                "liveries", "generations", "name"}
 LIVERIES = {"suburbanBlue": "suburban blue", "oldYellowRed": "old yellow and red",
-            "greyRed": "grey and red", None: "everyday paint"}
+            "greyRed": "grey and red", "autosanPrototype": "Autosan's prototype stickers",
+            "lastRedYellow": "the last red and yellow", None: "everyday paint"}
 # Solaris Urbino generations, as the app shows them.
 ROMAN = {"1": "I", "2": "II", "3": "III", "4": "IV"}
 SPECS = {"length": "length", "drive": "drive", "seats": "seats", "places": "places",
