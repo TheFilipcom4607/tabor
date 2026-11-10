@@ -236,7 +236,9 @@ struct StatsWidgetView: View {
             if !s.topModels.isEmpty {
                 VStack(alignment: .leading, spacing: 7) {
                     WidgetKey(text: String(localized: "TOP MODELS"))
-                    ForEach(s.topModels, id: \.name) { m in
+                    // By place, not by name: both Conecto G models can make the top three, and
+                    // each row needs an id of its own.
+                    ForEach(Array(s.topModels.enumerated()), id: \.offset) { _, m in
                         HStack(spacing: 8) {
                             Text(m.name).font(.system(size: 12.5, weight: .medium)).foregroundStyle(WidgetPalette.ink)
                                 .lineLimit(1).frame(width: 138, alignment: .leading)
