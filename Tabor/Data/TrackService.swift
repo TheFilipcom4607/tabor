@@ -107,10 +107,14 @@ final class TrackService {
         watchers[activity.id]?.cancel()
         watchers[activity.id] = Task { [weak self] in
             await withTaskGroup(of: Void.self) { group in
-                if let plan {
-                    group.addTask {
-                        for await token in activity.pushTokenUpdates {
+                group.addTask {
+                    for await token in activity.pushTokenUpdates {
+                        if let plan {
                             await Self.register(activity.id, token: token, request: plan)
+                        } else {
+                            // Picked up after a relaunch: the Worker still has the follow, and
+                            // only needs the new address, or its pushes go on to the old one.
+                            await Self.send(method: "POST", body: ["id": activity.id, "token": Self.hex(token)])
                         }
                     }
                 }
@@ -135,7 +139,7 @@ final class TrackService {
         let p = r.plan
         let body: [String: Any] = [
             "id": id,
-            "token": token.map { String(format: "%02x", $0) }.joined(),
+            "token": hex(token),
             // Xcode installs talk to Apple's sandbox push servers; TestFlight to the real ones.
             "sandbox": isSandbox,
             "lang": Bundle.main.preferredLocalizations.first == "pl" ? "pl" : "en",
@@ -147,6 +151,10 @@ final class TrackService {
             "distance": p.distance,
         ]
         await send(method: "POST", body: body)
+    }
+
+    private nonisolated static func hex(_ token: Data) -> String {
+        token.map { String(format: "%02x", $0) }.joined()
     }
 
     private static var isSandbox: Bool {
