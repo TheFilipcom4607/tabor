@@ -908,7 +908,8 @@ struct CatchView: View {
         let p = await prepareLocked(photo, shot)
         let preview = await CatchReader.preview(p.data)
         withAnimation(.easeOut(duration: 0.2)) { frozen = preview }
-        var d = await CatchReader.read(p.data, fromCamera: true, record: p.record, nearby: p.nearby, mode: .auto, manual: manual.map)
+        var d = await CatchReader.read(p.data, fromCamera: true, date: shot.date, record: p.record, nearby: p.nearby, mode: .auto,
+                                       manual: manual.map)
         d.preview = preview
         d.date = shot.date
         d.geotag = p.geotag
@@ -1000,8 +1001,8 @@ struct CatchView: View {
     /// The same catch, read again from a crop of its photo (#94): where and when it was caught,
     /// and the book it counts from, stay as they were.
     private func reread(_ old: CatchDraft, cropped data: Data) async -> CatchDraft {
-        var d = await CatchReader.read(data, fromCamera: old.fromCamera, record: old.debug, nearby: old.nearby, mode: old.mode,
-                                       manual: manual.map)
+        var d = await CatchReader.read(data, fromCamera: old.fromCamera, date: old.date, record: old.debug, nearby: old.nearby,
+                                       mode: old.mode, manual: manual.map)
         d.preview = await CatchReader.preview(data)
         d.date = old.date
         d.geotag = old.geotag

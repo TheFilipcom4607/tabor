@@ -5,8 +5,10 @@ import SwiftUI
 @MainActor
 enum CatchReader {
     /// Reads the number, matches it and starts the sticker: everything in a draft that comes
-    /// from the photo itself.
-    static func read(_ data: Data, fromCamera: Bool, record: DebugRecord?, nearby: [NearbyVehicle],
+    /// from the photo itself. `date` is when a camera shot was taken, which for a burst or the
+    /// Lock Screen camera can be well before it's read: the line is the one the vehicle was on
+    /// then, not whatever it's running hours later.
+    static func read(_ data: Data, fromCamera: Bool, date: Date = Date(), record: DebugRecord?, nearby: [NearbyVehicle],
                      mode: CatchMode, manual: [Int: String]) async -> CatchDraft {
         let live = LiveFleetService.shared, catalog = Fleet.catalog
         record?.attach(photo: data)
@@ -54,6 +56,7 @@ enum CatchReader {
         liveInfo.partners = report.live.partners
         record?.update { $0.ocr = DebugRecord.ocr(report) }
         var d = CatchDraft(photo: data, number: number, fromCamera: fromCamera, sticker: sticker, debug: record)
+        d.date = date
         d.nearby = nearby
         d.mode = mode
         d.photoNumbers = Task { photoNumbers }

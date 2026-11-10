@@ -36,7 +36,8 @@ final class BurstQueue {
         let previous = tail
         tail = Task {
             await previous?.value
-            var d = await CatchReader.read(data, fromCamera: fromCamera, record: record, nearby: nearby, mode: mode, manual: manual)
+            var d = await CatchReader.read(data, fromCamera: fromCamera, date: date, record: record, nearby: nearby, mode: mode,
+                                           manual: manual)
             d.date = date
             d.geotag = geotag
             d.preview = await CatchReader.preview(data)
