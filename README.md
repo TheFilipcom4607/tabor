@@ -387,10 +387,11 @@ package, so it's tested on a Mac in about a second:
 swift test
 ```
 
-The proxy's tracking maths has its own:
+The proxy's tracking has its own, for its maths and for the phone writing while it pushes:
 
 ```bash
 node proxy/src/trackgeo.test.mjs
+node proxy/src/track.test.mjs
 ```
 
 GitHub Actions runs the Swift tests on every push to `main` and every pull request that

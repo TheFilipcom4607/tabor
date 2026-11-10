@@ -105,7 +105,14 @@ export class Tracker extends DurableObject {
         // One bad follow mustn't stop the others; it ends on its own time limit.
         console.log(`track ${f.number}: ${e}`);
       }
-      if (next) await this.ctx.storage.put(key, next);
+      // The pushes above wait on Apple, and the phone can write meanwhile. A follow it deleted
+      // (caught, or dismissed) stays deleted, rather than coming back and being pushed to for
+      // up to MAX_MS. One it gave a new token keeps that token, and is worked out again next
+      // tick from where it stood: whatever this tick sent went to the old address.
+      const stored = await this.ctx.storage.get(key);
+      if (!stored) continue;
+      if (stored.token !== f.token) await this.ctx.storage.put(key, { ...f, token: stored.token });
+      else if (next) await this.ctx.storage.put(key, next);
       else await this.ctx.storage.delete(key);
     }
   }
@@ -154,7 +161,11 @@ export class Tracker extends DurableObject {
         ...(arrived ? { alert: arrivalAlert(f) } : {}),
       },
     });
-    return sent === 'gone' ? null : { ...next, sent: state };
+    if (sent === 'gone') return null;
+    // Only what reached Apple counts as shown. A push that failed is sent again next tick:
+    // otherwise an arrival that didn't get through was never said, the vehicle standing at
+    // your stop being no change from what was "sent".
+    return sent === 'ok' ? { ...next, sent: state } : next;
   }
 
   async end(f, phase, along = f.along) {
