@@ -253,8 +253,9 @@ struct CaptureView: View {
         let data = await camera.capture()
         withAnimation(.easeOut(duration: 0.35)) { flash = false }
         guard let data else { return }
-        var shot = LockedShot(date: Date(), latitude: place.latest?.coordinate.latitude,
-                              longitude: place.latest?.coordinate.longitude, angle: Double(camera.captureAngle))
+        let here = place.current
+        var shot = LockedShot(date: Date(), latitude: here?.coordinate.latitude,
+                              longitude: here?.coordinate.longitude, angle: Double(camera.captureAngle))
         // Held upright, the app crops to the brackets as CATCH does; sideways it keeps it all.
         if camera.captureAngle == 90, bracketGlobal.width > 0, finderFrame.width > 0 {
             let brackets = bracketGlobal.offsetBy(dx: -finderFrame.minX, dy: -finderFrame.minY)
@@ -307,6 +308,14 @@ struct CaptureView: View {
 final class ShotPlace: NSObject, CLLocationManagerDelegate {
     private(set) var latest: CLLocation?
     @ObservationIgnored private let manager = CLLocationManager()
+
+    /// `latest`, if it's from about now. It starts as whatever fix the phone last had, which can
+    /// be hours old and across town: a shot taken before a new one arrives would be filed
+    /// there. Without one the app asks where you are itself, if it's unlocked soon after.
+    var current: CLLocation? {
+        guard let latest, latest.timestamp.timeIntervalSinceNow > -120 else { return nil }
+        return latest
+    }
 
     func start() {
         manager.delegate = self
