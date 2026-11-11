@@ -1492,29 +1492,59 @@ private func drive(from lon0: Double, step: Double, fixes: Int, lat: Double = ro
 }
 
 @Test func vehiclesOfAnotherTypeKeepTheirOwnSpecs() {
-    // #26: 70 diesels from 2010 outvote 60 CNG buses from 2019–20 for the model's specs.
-    let g = catalog.model(id: "bus-man-a23")!
-    #expect(g.specs(of: 3400)?.drive == .diesel)
-    #expect(g.specs(of: 7253)?.drive == .cng)
-    #expect(g.specs(of: 7253)?.seats == 38)
-    let spread = g.spread!
-    #expect(spread.drives == [.diesel, .cng])
-    #expect(spread.places == 139...156)
+    // Built by hand, not read from fleet.json: specs and variants come from the city's list,
+    // which flips vehicles on and off every night, and such a flip (#7322 coming back and
+    // turning its mixed 2015 batch all-LNG) broke the old assertions. The shapes mirror the
+    // real cases: MZA's MAN A23 (70 diesels from 2010 outvote 60 CNGs from 2019–20, #26), the
+    // Solbus SM18 batches, the Ursus CS2's two operators, the all-electric Urbino 18E.
+    let diesel = ModelSpecs(length: 18000, drive: .diesel, seats: 43, places: 180, airCon: true)
+    let lng = ModelSpecs(length: 18000, drive: .lng, seats: 40, places: 175, airCon: true)
+    // The type most of the model's vehicles are is the model's specs; the others keep their own.
+    let sm18 = VehicleModel(id: "bus-solbus-sm18", name: "Solbus Solcity 18", make: "Solbus", kind: .bus,
+                            operators: ["MZA"], fleet: 73, firstYear: 2014, lastYear: 2015, batches: [
+                                Batch(year: 2015, depotCode: "R-3", depotName: "Ostrobramska", operator: "MZA",
+                                      numbers: Array(7302...7334)),
+                                Batch(year: 2014, depotCode: "R-1", depotName: "Woronicza", operator: "MZA",
+                                      numbers: Array(2000...2039)),
+                            ], specs: diesel,
+                            variants: [SpecVariant(specs: lng, numbers: Array(7302...7334))])
+    #expect(sm18.specs(of: 7302)?.drive == .lng)
+    #expect(sm18.specs(of: 7302)?.seats == 40)
+    #expect(sm18.specs(of: 2000)?.drive == .diesel)
+    let spread = sm18.spread!
+    #expect(spread.drives == [.diesel, .lng])
+    #expect(spread.places == 175...180)
     #expect(spread.metres == 18...18)
     #expect(spread.airCon == .all)
-    #expect(g.drive(of: g.batch(containing: 7253)!) == .cng)
-    #expect(g.drive(of: g.batch(containing: 3400)!) == .diesel)
+    #expect(sm18.drive(of: sm18.batch(containing: 7302)!) == .lng)
+    #expect(sm18.drive(of: sm18.batch(containing: 2000)!) == .diesel)
+    // A batch that mixes types names no drive: what the SM18's 2015 batch was while a diesel ran in it.
+    let mixed = VehicleModel(id: "x", name: "X", make: "X", kind: .bus, operators: [], fleet: 3, firstYear: nil,
+                             lastYear: nil, batches: [Batch(year: 2015, depotCode: "", depotName: "", numbers: [1, 2, 3])],
+                             specs: diesel, variants: [SpecVariant(specs: lng, numbers: [3])])
+    #expect(mixed.drive(of: mixed.batches[0]) == nil)
     // One drive throughout: batches don't repeat it.
-    let e18 = catalog.model(id: "bus-solaris-urbino-18e")!
+    let e18 = VehicleModel(id: "bus-solaris-urbino-18e", name: "Solaris Urbino 18E", make: "Solaris", kind: .bus,
+                           operators: [], fleet: 2, firstYear: nil, lastYear: nil, batches: [
+                               Batch(year: 2021, depotCode: "", depotName: "", numbers: [10, 11]),
+                           ], specs: ModelSpecs(length: 18000, drive: .electric, seats: 38, places: 140, airCon: true))
     #expect(e18.spread?.drives == [.electric])
     #expect(e18.drive(of: e18.batches[0]) == nil)
-    // A batch that mixes types names no drive: MZA's 2015 Solbus SM18s are LNG and diesel.
-    let sm18 = catalog.model(id: "bus-solbus-sm18")!
-    #expect(sm18.drive(of: sm18.batches.first { $0.year == 2015 }!) == nil)
-    // The 2017 Ursus CS2s are two operators' batches: MZA's 10 electric, KM Łomianki's 2 diesel.
-    let cs2 = catalog.model(id: "bus-ursus-cs2")!
+    // Two operators' batches of one year: MZA's 10 electric, KM Łomianki's 2 diesel.
+    let electric = ModelSpecs(length: 12000, drive: .electric, seats: 28, places: 96, airCon: true)
+    let cs2 = VehicleModel(id: "bus-ursus-cs2", name: "Ursus CS2", make: "Ursus", kind: .bus, operators: [],
+                           fleet: 12, firstYear: nil, lastYear: nil, batches: [
+                               Batch(year: 2017, depotCode: "R-1", depotName: "Woronicza", operator: "MZA",
+                                     numbers: Array(755...764)),
+                               Batch(year: 2017, depotCode: "", depotName: "Łomianki", operator: "KM Łomianki",
+                                     numbers: [801, 802]),
+                           ],
+                           specs: electric,
+                           variants: [SpecVariant(specs: ModelSpecs(length: 12000, drive: .diesel, seats: 30, places: 90, airCon: true),
+                                                  numbers: [801, 802])])
     #expect(cs2.spread?.drives == [.electric, .diesel])
-    #expect(cs2.drive(of: cs2.batch(containing: 762)!) == .diesel)
+    #expect(cs2.drive(of: cs2.batch(containing: 801)!) == .diesel)
+    #expect(cs2.drive(of: cs2.batch(containing: 755)!) == .electric)
 }
 
 @Test func spreadMixesAirConAndKeepsOldFilesWorking() throws {

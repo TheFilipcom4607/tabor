@@ -793,7 +793,10 @@ STILL_RUNNING = {
     # Runs as 1390+1386 (tramwar.pl/tram105n2k.html, 2026-09-16); the city dropped only 1390.
     ("TRAM", "1390"),
     # Still with their owners and no withdrawal on phototrans.eu (2026-10-05): off the road for
-    # now, not gone. Recheck if they stay off the city's list.
+    # now, not gone. Recheck if they stay off the city's list. (2026-11-11: #7308, #9823 and
+    # #9854 are back on the city's list, and so was #7322 — its return turned the SM18's 2015
+    # batch all-LNG and broke a test. The entries stay: they only matter when the city drops
+    # these again, and a city row wins meanwhile.)
     ("BUS", "6212"), ("BUS", "7308"), ("BUS", "7322"), ("BUS", "7717"),
     ("BUS", "9802"), ("BUS", "9823"), ("BUS", "9854"),
     # PKS Grodzisk's Urbino 12: on line 170 with its batch every day, though the city's list
