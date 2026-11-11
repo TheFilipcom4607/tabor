@@ -7,12 +7,31 @@ private let root = URL(fileURLWithPath: #filePath)
 
 private let bundled = try! FleetCatalog(json: Data(contentsOf: root.appendingPathComponent("Tabor/Resources/fleet.json")))
 
-/// The real fleet with the ten sourced wraps of 2021 to summer 2026. The app ships only wraps
-/// from Christmas 2026 on, but these are what the colour thresholds were fitted on.
+/// The ten sourced wraps of 2021 to summer 2026, the ones the colour thresholds were fitted
+/// on. The app ships only wraps from Christmas 2026 on. The fleet around them is built by
+/// hand: the fixture vehicles are long retired, and a live bus off the city's list for a
+/// workshop visit mustn't fail the nightly run.
 private let catalog: FleetCatalog = {
-    var fleet = try! JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("Tabor/Resources/fleet.json"))) as! [String: Any]
-    fleet["wraps"] = try! JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("Tests/Fixtures/wraps-2021-2026.json")))
-    return try! FleetCatalog(json: JSONSerialization.data(withJSONObject: fleet))
+    let wraps = try! JSONDecoder().decode([Wrap].self,
+                                          from: try! Data(contentsOf: root.appendingPathComponent("Tests/Fixtures/wraps-2021-2026.json")))
+    func model(_ id: String, _ name: String, _ numbers: [Int], tier: Int = 200) -> VehicleModel {
+        VehicleModel(id: id, name: name, make: "X", kind: .bus, operators: ["MZA"], fleet: tier,
+                     firstYear: 2020, lastYear: 2020,
+                     batches: [Batch(year: 2020, depotCode: "", depotName: "", operator: "MZA", numbers: numbers)])
+    }
+    let models = [
+        // The wrap vehicles, in numbers no live bus has.
+        model("bus-5887", "Solaris Urbino 18 electric", [5887]),
+        model("bus-5919", "Solaris Urbino 18 electric", [5919]),
+        model("bus-1915", "Solaris Urbino 12 electric", [1915]),
+        model("bus-1919", "Solaris Urbino 12 electric", [1919]),
+        model("bus-1976", "Yutong U12", [1976]),
+        model("bus-4323", "Solaris Urbino 12 CNG", [4323]),
+        // A legendary, so HUNT's ranking has something plain to rank the wrap against.
+        model("bus-legendary", "Legendary", [701, 702, 703], tier: 3),
+    ]
+    return FleetCatalog(data: FleetData(source: "", fetched: "2026-01-01", models: models,
+                                        wraps: wraps, depots: []))
 }()
 
 private func day(_ s: String, hour: Int = 12) -> Date {

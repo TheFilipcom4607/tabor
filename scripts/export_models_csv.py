@@ -4,9 +4,10 @@ fleet numbers of one model, built in one year, at one depot, with one operator: 
 range, model, year, count, rarity tier, ZTM code, bus or tram, depot, operator and whether
 the cars run coupled in sets.
 
-fleet.json only keeps a batch's most common depot and a model's operators, so the depot
-and operator of each vehicle come from data/ztm-vehicles.json, data/ztm-pojazdy.json and the
-extra vehicles in fetch_fleet.py, the same rows fleet.json is built from.
+The depot and operator are read straight from fleet.json's batches (every batch carries
+them): re-reading the source rows here would go wrong for split models, whose ZTM rows
+still sit under the family's make/model, and for a hand-added bus whose city depot is
+blank.
 
 Usage:  python3 scripts/export_models_csv.py   # Python 3.12+, like fetch_fleet.py
 """
@@ -47,30 +48,16 @@ def tier(m):
     return "LEGENDARY" if fleet <= 12 else "GOLD" if fleet <= 48 else "RARE" if fleet <= 80 else "COMMON"
 
 
-def vehicles():
-    """(kind, ZTM code, number) -> (depot, operator) for every vehicle fleet.json is built from."""
-    out = {}
-    for v in fetch_fleet.with_vintage_extras(fetch_fleet.source_rows()):
-        if not v["number"].isdigit():
-            continue
-        code = f"{v['make']} {v['model']}".strip()
-        depot = " ".join(filter(None, fetch_fleet.parse_depot(v["depot"]))) if v["depot"] else ""
-        out[(v["kind"], code, int(v["number"]))] = (depot, fetch_fleet.short_carrier(v["carrier"]))
-    return out
-
-
 def main():
     data = json.loads(SRC.read_text())
     models = data["models"] + data.get("worksModels", []) + data.get("codedWorksModels", [])
-    where = vehicles()
     rows = []
     for m in models:
         in_sets = {n for pair in m.get("sets", []) for n in pair}
         groups = defaultdict(list)
         for b in m["batches"]:
-            for n in b["numbers"]:
-                depot, operator = where[(m["kind"], m["code"], n)]
-                groups[(b.get("year"), depot, operator)].append(n)
+            depot = " ".join(filter(None, (b["depotCode"], b["depotName"])))
+            groups[(b.get("year"), depot, b["operator"] or "")].extend(b["numbers"])
         for (year, depot, operator), numbers in groups.items():
             for lo, hi in spans(numbers):
                 rows.append({

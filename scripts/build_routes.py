@@ -22,8 +22,9 @@ import sys
 import urllib.request
 import zipfile
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "build" / "routes.json"
@@ -133,7 +134,9 @@ def active_days(z, today):
 
 
 def build(z, today=None):
-    today = today or date.today()
+    # Warsaw's day, not the runner's (UTC): a manual run between 23:00 and midnight Warsaw
+    # would otherwise pick yesterday's service day.
+    today = today or datetime.now(ZoneInfo("Europe/Warsaw")).date()
     feed = next(rows(z, "feed_info.txt"))["feed_version"]
     days = active_days(z, today)
 

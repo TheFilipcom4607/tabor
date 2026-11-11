@@ -45,6 +45,7 @@ import urllib.parse
 import urllib.request
 from datetime import date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent.parent
 FEED = "https://taborapi.thefilip.com/v1/vehicles?type={}"
@@ -220,7 +221,9 @@ def main():
         skip = {l.strip() for l in args.skip.read_text().splitlines() if l.strip()}
 
     fleet = json.loads((ROOT / "Tabor/Resources/fleet.json").read_text())
-    today = date.today()
+    # Warsaw's day, not the runner's (UTC): a manual run between 23:00 and midnight Warsaw
+    # would otherwise read yesterday's wrap windows.
+    today = datetime.now(ZoneInfo("Europe/Warsaw")).date()
     # Wraps already in, and running now: nothing to report about them.
     known = {(w["kind"], str(w["number"])) for w in fleet.get("wraps", [])
              if w["from"] <= today.isoformat() <= w["to"]}

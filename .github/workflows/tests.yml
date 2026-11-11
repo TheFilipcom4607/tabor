@@ -11,6 +11,7 @@ on:
       - "Tabor/Resources/fleet.json"
       - "Tests/**"
       - "Package.swift"
+      - "proxy/**"
       - ".github/workflows/tests.yml"
   pull_request:
     paths:
@@ -18,6 +19,7 @@ on:
       - "Tabor/Resources/fleet.json"
       - "Tests/**"
       - "Package.swift"
+      - "proxy/**"
       - ".github/workflows/tests.yml"
 
 permissions:
@@ -32,7 +34,7 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       # The runner's default Xcode lags behind the one the app is built with: take the newest.
       - name: Pick the newest Xcode
         run: |
@@ -41,3 +43,14 @@ jobs:
           swift --version
       - name: swift test
         run: swift test
+
+  # The tracking maths and the Durable Object (proxy/src/*.test.mjs), quick on Node.
+  worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - name: Node tests
+        run: |
+          node proxy/src/trackgeo.test.mjs
+          node proxy/src/track.test.mjs

@@ -22,9 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -32,7 +32,12 @@ jobs:
         env:
           GTFS_URL: https://taborapi.thefilip.com/v1/gtfs
           ROUTES_UPLOAD_TOKEN: ${{ secrets.ROUTES_UPLOAD_TOKEN }}
-        run: python3 scripts/build_routes.py
+        run: |
+          for attempt in 1 2 3; do
+            if python3 scripts/build_routes.py; then exit 0; fi
+            [ "$attempt" = 3 ] && exit 1
+            sleep $((attempt * 15))
+          done
 
       - name: Upload to the Worker
         env:

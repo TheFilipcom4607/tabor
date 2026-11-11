@@ -23,7 +23,8 @@ new = json.loads((ROOT / PATH).read_text())
 old = json.loads(subprocess.run(["git", "show", f"{REF}:{PATH}"], cwd=ROOT, check=True,
                                 capture_output=True, text=True).stdout)
 
-total = lambda d: sum(m["fleet"] for m in d["models"] if not m.get("vintage"))
+total = lambda d: sum(m["fleet"] for m in d["models"]
+                      if not (m.get("vintage") or m.get("onTest")))
 # A half-failed scrape shrinks the fleet; real retirements never take out a tenth of it in a week.
 if not new.get("fetched") or len(new["models"]) < 40 or total(new) < 0.9 * total(old):
     print(f"refusing: {len(new['models'])} models, {total(new)} vehicles (was {total(old)})", file=sys.stderr)

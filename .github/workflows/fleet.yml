@@ -21,7 +21,8 @@ name: Refresh fleet data
 #   event line in the live feed, fresh MZA posts about them and czynaczas.pl's special vehicles
 #   (as codes only: his terms) go in a third issue ("Fleet: possible event wraps"), for a human
 #   to add to WRAPS once a source names the bus. Closing that issue as not planned dismisses its
-#   hints for good.
+#   hints for good. Trials and wraps run in the hints job, which runs even when the fleet build
+#   fails, so a broken city list can't blind them for days.
 # The tests run here because a push or PR made with the workflow's own token starts no
 # other workflow.
 #
@@ -72,7 +73,7 @@ jobs:
       action: ${{ steps.check.outputs.action }}
       base: ${{ steps.base.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: main
 
@@ -83,10 +84,12 @@ jobs:
         id: base
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
+      # Fails loud and red (a 502, a sanity gate, a vanished model id): main stays as it is,
+      # the run fails, and hints below still get checked by the hints job.
       - name: Fetch the city's vehicle list and rebuild fleet.json
         env:
           DANE_URL: https://taborapi.thefilip.com/v1/pojazdy
@@ -94,49 +97,6 @@ jobs:
         run: |
           python3 scripts/fetch_fleet.py | tee "$RUNNER_TEMP/build.log"
           python3 scripts/export_models_csv.py
-
-      # A feed that can't be read leaves no marker, so the trials issue is left as it is, and
-      # the fleet update goes ahead either way.
-      - name: Look for buses on trial in the live feed
-        continue-on-error: true
-        run: |
-          python3 scripts/trial_buses.py trials.md
-          touch trials-checked
-
-      # czynaczas.pl's partner data (czynaczas.py): remarks for the app go to the Worker, and the
-      # special vehicles to the wraps step below. His terms keep all of it out of the repo, these
-      # logs and the artifacts, so the file stays in RUNNER_TEMP and the script prints counts only.
-      # Without it, the wraps issue just goes without his list.
-      - name: Bring czynaczas.pl's data to the Worker
-        continue-on-error: true
-        env:
-          CZYNACZAS_API_KEY: ${{ secrets.CZYNACZAS_API_KEY }}
-          ROUTES_UPLOAD_TOKEN: ${{ secrets.ROUTES_UPLOAD_TOKEN }}
-        run: python3 scripts/czynaczas.py sync "$RUNNER_TEMP/czynaczas-special.json"
-
-      # The same for event wraps: nothing read leaves the issue as it is. Hints in an issue a
-      # human closed stay dismissed, or the next run would only open a new issue with the same
-      # posts. It goes by who closed it, not the reason: closing with a comment makes it
-      # "completed" (#112 came back as #113). The bot's own close dismisses nothing.
-      - name: Look for signs of event wraps
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: |
-          gh api graphql -f q="repo:$GH_REPO is:issue is:closed author:app/github-actions" -f query='
-            query($q: String!) { search(query: $q, type: ISSUE, first: 100) { nodes { ... on Issue {
-              title body
-              timelineItems(itemTypes: CLOSED_EVENT, last: 1) { nodes { ... on ClosedEvent { actor { __typename } } } }
-            } } } }' \
-            --jq ".data.search.nodes[] | select((.title == \"$WRAPS_TITLE\" or .title == \"$OLD_WRAPS_TITLE\")
-                    and .timelineItems.nodes[0].actor.__typename != \"Bot\") | .body" \
-            | { grep -oE '\]\(https://www\.mza\.waw\.pl/[^)]+\)|^\| (BUS|TRAM) #[^|]+\|[^|]+\||^- kod [0-9a-f]{6}' || true; } \
-            | sed -E 's/^\]\((.*)\)$/\1/; s/^\| (.*[^ ]) *\|$/\1/; s/ +\| +/ | /; s/^- (kod .*)$/\1/' | sort -u > skip.txt
-          echo "$(wc -l < skip.txt) dismissed hints"
-          python3 scripts/possible_wraps.py wraps.md --skip skip.txt --special "$RUNNER_TEMP/czynaczas-special.json"
-          touch wraps-checked
 
       # apply: commit to main. review: open or update the PR. close: the fleet is main's again,
       # so an open PR is out of date. none: nothing to do.
@@ -210,7 +170,7 @@ jobs:
           } > waiting.md
           grep -q '^?' "$RUNNER_TEMP/build.txt" || rm waiting.md
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: fleet
           path: |
@@ -221,142 +181,76 @@ jobs:
             subject.txt
             pr-body.md
             waiting.md
-            trials.md
-            trials-checked
-            wraps.md
-            wraps-checked
           if-no-files-found: ignore
 
-  test:
+  # Trials, wraps and czynaczas.pl run apart from the fleet build, so a broken city list (a
+  # 502, a sanity gate, a vanished model id) doesn't blind them for days, as it did on
+  # 2026-11-06–09. They read main's fleet.json: a fresh build would only tell them about
+  # vehicles already placed, and fetch_fleet.py writes its file only once it passes, so
+  # main's copy is what a failed build leaves behind anyway.
+  hints:
     needs: build
-    if: contains(fromJSON('["apply", "review"]'), needs.build.outputs.action)
-    runs-on: macos-26
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.build.outputs.base }}
-      - uses: actions/download-artifact@v4
-        with:
-          name: fleet
-      # The runner's default Xcode lags behind the one the app is built with: take the newest.
-      - name: Pick the newest Xcode
-        run: |
-          xcode=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
-          sudo xcode-select -s "$xcode"
-          swift --version
-      - name: swift test
-        run: swift test
-
-  apply:
-    needs: [build, test]
-    if: needs.build.outputs.action == 'apply'
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
-          ref: ${{ needs.build.outputs.base }}
-      - uses: actions/download-artifact@v4
+          ref: main
+
+      - uses: actions/setup-python@v6
         with:
-          name: fleet
-      - name: Commit to main
+          python-version: "3.12"
+
+      # czynaczas.pl's partner data (czynaczas.py): remarks for the app go to the Worker, and the
+      # special vehicles to the wraps step below. His terms keep all of it out of the repo, these
+      # logs and the artifacts, so the file stays in RUNNER_TEMP and the script prints counts only.
+      # Without it, the wraps issue just goes without his list.
+      - name: Bring czynaczas.pl's data to the Worker
+        continue-on-error: true
         env:
-          GH_TOKEN: ${{ github.token }}
+          CZYNACZAS_API_KEY: ${{ secrets.CZYNACZAS_API_KEY }}
+          ROUTES_UPLOAD_TOKEN: ${{ secrets.ROUTES_UPLOAD_TOKEN }}
+        run: python3 scripts/czynaczas.py sync "$RUNNER_TEMP/czynaczas-special.json"
+
+      # A feed that can't be read leaves no marker, so the trials issue is left as it is.
+      - name: Look for buses on trial in the live feed
+        continue-on-error: true
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add $FILES
-          git commit -q -F - <<EOF
-          Fleet: $(cat subject.txt) ($(date -u +%F))
+          python3 scripts/trial_buses.py trials.md
+          touch trials-checked
 
-          $(cat changes.md)
-          EOF
-          # Someone pushed to main meanwhile: tomorrow's run builds on top of it.
-          if ! git push origin HEAD:main; then
-            echo "::notice::main moved during the run; the next run picks this up."
-            exit 0
-          fi
-          # A held-back PR is out of date now that main has moved on.
-          if [ "$(gh pr view "$BRANCH" --json state --jq .state 2>/dev/null)" = "OPEN" ]; then
-            gh pr close "$BRANCH" --delete-branch --comment "Superseded by tonight's update on main."
-          fi
-
-  review:
-    needs: [build, test]
-    if: needs.build.outputs.action == 'review'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.build.outputs.base }}
-      - uses: actions/download-artifact@v4
-        with:
-          name: fleet
-      - name: Push the branch and open or update the PR
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B "$BRANCH"
-          git add $FILES
-          git commit -m "Fleet: $(cat subject.txt) ($(date -u +%F))"
-          git push --force origin "$BRANCH"
-          title="Fleet: many vehicles leaving ($(date -u +%F))"
-          if [ "$(gh pr view "$BRANCH" --json state --jq .state 2>/dev/null)" = "OPEN" ]; then
-            gh pr edit "$BRANCH" --title "$title" --body-file pr-body.md
-          else
-            gh pr create --base main --head "$BRANCH" --title "$title" --body-file pr-body.md
-          fi
-
-  close:
-    needs: build
-    if: needs.build.outputs.action == 'close'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Close the out-of-date PR
+      # The same for event wraps: nothing read leaves the issue as it is. Hints in an issue a
+      # human closed stay dismissed, or the next run would only open a new issue with the same
+      # posts. It goes by who closed it, not the reason: closing with a comment makes it
+      # "completed" (#112 came back as #113). The bot's own close dismisses nothing.
+      - name: Look for signs of event wraps
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          if [ "$(gh pr view "$BRANCH" --json state --jq .state 2>/dev/null)" = "OPEN" ]; then
-            gh pr close "$BRANCH" --delete-branch \
-              --comment "The city's list matches \`main\` again, so this change isn't needed any more."
-          else
-            git push "https://x-access-token:$GH_TOKEN@github.com/$GH_REPO" --delete "$BRANCH" || true
-          fi
+          # The titles go into the search itself: the first:100 cap mustn't be spent on the
+          # bot's other issues. (GitHub's search ORs quoted phrases; the jq keeps only the
+          # two exact titles.)
+          gh api graphql -f q="repo:$GH_REPO is:issue is:closed author:app/github-actions \"$WRAPS_TITLE\" OR \"$OLD_WRAPS_TITLE\"" -f query='
+            query($q: String!) { search(query: $q, type: ISSUE, first: 100) { nodes { ... on Issue {
+              title body
+              timelineItems(itemTypes: CLOSED_EVENT, last: 1) { nodes { ... on ClosedEvent { actor { __typename } } } }
+            } } } }' \
+            --jq ".data.search.nodes[] | select((.title == \"$WRAPS_TITLE\" or .title == \"$OLD_WRAPS_TITLE\")
+                    and .timelineItems.nodes[0].actor.__typename != \"Bot\") | .body" \
+            | { grep -oE '\]\(https://www\.mza\.waw\.pl/[^)]+\)|^\| (BUS|TRAM) #[^|]+\|[^|]+\||^- kod [0-9a-f]{6}' || true; } \
+            | sed -E 's/^\]\((.*)\)$/\1/; s/^\| (.*[^ ]) *\|$/\1/; s/ +\| +/ | /; s/^- (kod .*)$/\1/' | sort -u > skip.txt
+          echo "$(wc -l < skip.txt) dismissed hints"
+          python3 scripts/possible_wraps.py wraps.md --skip skip.txt --special "$RUNNER_TEMP/czynaczas-special.json"
+          touch wraps-checked
 
-  # Editing an issue's text sends no notification, so the list stays current without pinging
-  # anyone every night: only opening it does.
-  waiting:
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: fleet
-      - name: Open, update or close the waiting-vehicles issue
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          number=$(gh issue list --state open --search "in:title \"$ISSUE_TITLE\"" --json number,title \
-            --jq "map(select(.title == \"$ISSUE_TITLE\")) | .[0].number // empty")
-          if [ -f waiting.md ]; then
-            if [ -n "$number" ]; then
-              gh issue edit "$number" --body-file waiting.md
-            else
-              gh issue create --title "$ISSUE_TITLE" --body-file waiting.md
-            fi
-          elif [ -n "$number" ]; then
-            gh issue close "$number" --reason completed --comment "Wszystkie mają już model."
-          fi
       # A trial can be over in a few weeks, so a bus that joins an open issue gets a comment
-      # (which notifies) as well as the silent edit.
+      # (which notifies) as well as the silent edit. Editing an issue's text sends no
+      # notification, so the list stays current without pinging anyone every night: only
+      # opening it does.
       - name: Open, update or close the trials issue
         env:
           GH_TOKEN: ${{ github.token }}
@@ -409,4 +303,134 @@ jobs:
             fi
           elif [ -n "$number" ]; then
             gh issue close "$number" --reason completed --comment "Nic nie zostało."
+          fi
+
+  test:
+    needs: build
+    if: contains(fromJSON('["apply", "review"]'), needs.build.outputs.action)
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.build.outputs.base }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: fleet
+      # The runner's default Xcode lags behind the one the app is built with: take the newest.
+      - name: Pick the newest Xcode
+        run: |
+          xcode=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$xcode"
+          swift --version
+      - name: swift test
+        run: swift test
+
+  apply:
+    needs: [build, test]
+    if: needs.build.outputs.action == 'apply'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.build.outputs.base }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: fleet
+      - name: Commit to main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add $FILES
+          git commit -q -F - <<EOF
+          Fleet: $(cat subject.txt) ($(date -u +%F))
+
+          $(cat changes.md)
+          EOF
+          # Someone pushed to main meanwhile: tomorrow's run builds on top of it.
+          if ! git push origin HEAD:main; then
+            echo "::notice::main moved during the run; the next run picks this up."
+            exit 0
+          fi
+          # A held-back PR is out of date now that main has moved on.
+          if [ "$(gh pr view "$BRANCH" --json state --jq .state 2>/dev/null)" = "OPEN" ]; then
+            gh pr close "$BRANCH" --delete-branch --comment "Superseded by tonight's update on main."
+          fi
+
+  review:
+    needs: [build, test]
+    if: needs.build.outputs.action == 'review'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.build.outputs.base }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: fleet
+      - name: Push the branch and open or update the PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add $FILES
+          git commit -m "Fleet: $(cat subject.txt) ($(date -u +%F))"
+          git push --force origin "$BRANCH"
+          title="Fleet: many vehicles leaving ($(date -u +%F))"
+          if [ "$(gh pr view "$BRANCH" --json state --jq .state 2>/dev/null)" = "OPEN" ]; then
+            gh pr edit "$BRANCH" --title "$title" --body-file pr-body.md
+          else
+            gh pr create --base main --head "$BRANCH" --title "$title" --body-file pr-body.md
+          fi
+
+  close:
+    needs: build
+    if: needs.build.outputs.action == 'close'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Close the out-of-date PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ "$(gh pr view "$BRANCH" --json state --jq .state 2>/dev/null)" = "OPEN" ]; then
+            gh pr close "$BRANCH" --delete-branch \
+              --comment "The city's list matches \`main\` again, so this change isn't needed any more."
+          else
+            git push "https://x-access-token:$GH_TOKEN@github.com/$GH_REPO" --delete "$BRANCH" || true
+          fi
+
+  # Editing an issue's text sends no notification, so the list stays current without pinging
+  # anyone every night: only opening it does. Trials and wraps live in the hints job, which
+  # runs even when this build fails.
+  waiting:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: fleet
+      - name: Open, update or close the waiting-vehicles issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          number=$(gh issue list --state open --search "in:title \"$ISSUE_TITLE\"" --json number,title \
+            --jq "map(select(.title == \"$ISSUE_TITLE\")) | .[0].number // empty")
+          if [ -f waiting.md ]; then
+            if [ -n "$number" ]; then
+              gh issue edit "$number" --body-file waiting.md
+            else
+              gh issue create --title "$ISSUE_TITLE" --body-file waiting.md
+            fi
+          elif [ -n "$number" ]; then
+            gh issue close "$number" --reason completed --comment "Wszystkie mają już model."
           fi
