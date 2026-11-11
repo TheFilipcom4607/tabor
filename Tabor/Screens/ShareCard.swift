@@ -321,7 +321,7 @@ struct BadgeShareCard: View {
                 Mono(badge.kicker, size: 9.5, spacing: 0.14, color: medal.ink)
             }
 
-            Medallion(badge: badge, size: 96)
+            Medallion(badge: badge, size: 96, still: true)
                 .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
                 .padding(.top, 12)
             Text(badge.title)

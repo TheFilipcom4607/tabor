@@ -48,6 +48,8 @@ struct Medallion: View {
     let badge: Achievement
     var size: CGFloat = 64
     var showsProgress = true
+    /// No sheen: a share card is drawn to an image, which can't hold the sheen's layer.
+    var still = false
 
     private var revealed: Bool { !badge.secret || badge.earned }
 
@@ -76,7 +78,7 @@ struct Medallion: View {
             glyph(color: dark.mix(with: .black, by: 0.55))
                 .shadow(color: light.opacity(0.9), radius: 0, x: -0.6, y: -0.6)
                 .shadow(color: .black.opacity(0.35), radius: 0, x: 0.8, y: 0.8)
-            MedalSheen(seed: badge.id).blendMode(.overlay)
+            if !still { MedalSheen(seed: badge.id).blendMode(.overlay) }
         }
         .mask(Circle())
     }
@@ -111,24 +113,85 @@ struct Medallion: View {
 }
 
 /// A band of light crossing the medal every few seconds; each badge on its own beat.
-struct MedalSheen: View {
+/// A Core Animation layer rather than a `TimelineView`: nine of those redrawing 30 times a
+/// second were all of ME's CPU (7–9%), and with nine beats one is always mid-sweep, so
+/// pausing between sweeps saved little. This way the system moves the band and the app sleeps.
+struct MedalSheen: UIViewRepresentable {
     let seed: String
     @Environment(\.tabActive) private var tabActive
 
-    var body: some View {
-        let offset = Double(abs(seed.hashValue % 1000)) / 1000 * 5.5
-        // Not behind another tab: ME stays alive there, and nine medals went on shining.
-        TimelineView(.animation(minimumInterval: 1 / 30, paused: !tabActive)) { ctx in
-            GeometryReader { g in
-                let t = (ctx.date.timeIntervalSinceReferenceDate + offset).truncatingRemainder(dividingBy: 5.5) / 5.5
-                let p = min(t / 0.35, 1)
-                LinearGradient(colors: [.clear, .white.opacity(0.7), .clear], startPoint: .leading, endPoint: .trailing)
-                    .frame(width: g.size.width * 0.45, height: g.size.height * 1.8)
-                    .rotationEffect(.degrees(22))
-                    .offset(x: -g.size.width * 0.7 + g.size.width * 1.9 * p, y: -g.size.height * 0.4)
-            }
-        }
-        .allowsHitTesting(false)
+    func makeUIView(context: Context) -> SheenView {
+        SheenView(offset: Double(abs(seed.hashValue % 1000)) / 1000 * SheenView.beat)
+    }
+
+    func updateUIView(_ view: SheenView, context: Context) {
+        // Not behind another tab: ME stays alive there, and the medals went on shining.
+        view.shining = tabActive
+    }
+}
+
+final class SheenView: UIView {
+    static let beat = 5.5
+    /// The part of a beat the band takes to cross; the rest it waits off the medal.
+    private static let crossing = 0.35
+
+    private let offset: Double
+    private let band = CAGradientLayer()
+    var shining = false {
+        didSet { if shining != oldValue { restart() } }
+    }
+
+    init(offset: Double) {
+        self.offset = offset
+        super.init(frame: .zero)
+        isUserInteractionEnabled = false
+        band.colors = [UIColor.white.withAlphaComponent(0).cgColor, UIColor.white.withAlphaComponent(0.7).cgColor,
+                       UIColor.white.withAlphaComponent(0).cgColor]
+        band.startPoint = CGPoint(x: 0, y: 0.5)
+        band.endPoint = CGPoint(x: 1, y: 0.5)
+        band.transform = CATransform3DMakeRotation(22 * .pi / 180, 0, 0, 1)
+        layer.addSublayer(band)
+        // The system drops a layer's animations when the app leaves the screen.
+        NotificationCenter.default.addObserver(self, selector: #selector(restart), name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let size = CGSize(width: bounds.width * 0.45, height: bounds.height * 1.8)
+        guard band.bounds.size != size else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        band.bounds.size = size
+        band.position = CGPoint(x: restX, y: bounds.midY)
+        CATransaction.commit()
+        restart()
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        restart()
+    }
+
+    /// Off the medal's right edge, where the band waits out the rest of its beat.
+    private var restX: CGFloat { bounds.width * 1.425 }
+
+    @objc private func restart() {
+        band.removeAnimation(forKey: "sweep")
+        guard shining, window != nil, bounds.width > 0 else { return }
+        let sweep = CAKeyframeAnimation(keyPath: "position.x")
+        sweep.values = [-bounds.width * 0.475, restX, restX]
+        sweep.keyTimes = [0, NSNumber(value: Self.crossing), 1]
+        sweep.duration = Self.beat
+        sweep.repeatCount = .infinity
+        // Started as far into its beat as the clock says, so every medal keeps its own.
+        let into = (Date.timeIntervalSinceReferenceDate + offset).truncatingRemainder(dividingBy: Self.beat)
+        sweep.beginTime = band.convertTime(CACurrentMediaTime(), from: nil) - into
+        // A slow soft band doesn't need a 120 Hz screen's full rate.
+        sweep.preferredFrameRateRange = CAFrameRateRange(minimum: 15, maximum: 30, preferred: 30)
+        band.add(sweep, forKey: "sweep")
     }
 }
 
