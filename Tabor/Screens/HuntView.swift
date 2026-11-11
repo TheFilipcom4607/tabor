@@ -26,6 +26,55 @@ enum HuntFilter: String, CaseIterable {
     }
 }
 
+/// What HUNT draws from the live feed, copied over only while it's the tab on screen.
+@Observable @MainActor
+private final class HuntFeed {
+    private(set) var snapshot: LiveSnapshot?
+    private(set) var status: LiveFleetService.Status
+    private(set) var trails: LiveTrails
+
+    init() {
+        let service = LiveFleetService.shared
+        snapshot = service.snapshot
+        status = service.status
+        trails = service.trails
+    }
+
+    func take(_ service: LiveFleetService) {
+        if snapshot?.fetched != service.snapshot?.fetched {
+            snapshot = service.snapshot
+            trails = service.trails
+        }
+        if status != service.status { status = service.status }
+    }
+
+    func fresh(maxAge: TimeInterval = 60) -> LiveSnapshot? {
+        guard let snapshot, Date().timeIntervalSince(snapshot.fetched) <= maxAge else { return nil }
+        return snapshot
+    }
+}
+
+/// Watches the service for HUNT. Only in the view tree while HUNT is on screen, so behind
+/// another tab nothing of HUNT's hangs on the feed.
+private struct FeedTap: View {
+    let into: HuntFeed
+    /// New positions are in. Called in the same pass that hands them over, so the map is
+    /// redrawn once per refresh: watching the copy from HUNT's body redrew it twice, first
+    /// with the old pins.
+    let refreshed: () -> Void
+    private let service = LiveFleetService.shared
+
+    // Nothing on appearing: HUNT takes the feed itself as it comes on screen.
+    var body: some View {
+        Color.clear
+            .onChange(of: service.snapshot?.fetched) {
+                into.take(service)
+                refreshed()
+            }
+            .onChange(of: service.status) { into.take(service) }
+    }
+}
+
 /// HUNT: every bus and tram running near you that isn't in your book yet, live (or, in the
 /// ALL view, everything running).
 /// Two rules on the map: a vehicle on its own is a tag with its line, vehicles that would
@@ -57,7 +106,10 @@ struct HuntView: View {
     /// Satellite photos (with street names) instead of the plain dark map.
     @AppStorage("huntSatellite") private var satellite = false
 
-    private let live = LiveFleetService.shared
+    private let service = LiveFleetService.shared
+    /// The feed as HUNT last took it. Not the service itself: read here, every poll redrew
+    /// the map behind whatever tab was up. `FeedTap` keeps it current while HUNT is on screen.
+    @State private var live = HuntFeed()
     private let location = LocationService.shared
     private let routes = RoutesUpdater.shared
     private let track = TrackService.shared
@@ -145,6 +197,15 @@ struct HuntView: View {
             .animation(.snappy, value: wrapsOut.first?.id)
         }
         .background(Palette.bg.ignoresSafeArea())
+        .background {
+            if onScreen {
+                FeedTap(into: live) {
+                    // Gliding every pin redraws the whole map, which stutters a stop list being
+                    // scrolled (#74): it waits for the list to settle.
+                    if stopScroll.active { stopScroll.missed = true } else { recompute(animated: true) }
+                }
+            }
+        }
         .foregroundStyle(Palette.ink)
         .sheet(isPresented: $showFilters) {
             HuntFilterSheet(targets: $targets, running: cityWide(), withCaught: withCaught, hasFix: hasFix)
@@ -154,9 +215,10 @@ struct HuntView: View {
         .onChange(of: onScreen, initial: true) { _, on in
             guard on else {
                 location.stopHeading("hunt")
-                return live.stop("hunt")
+                return service.stop("hunt")
             }
-            live.start("hunt")
+            service.start("hunt")
+            live.take(service)
             location.startHeading("hunt")
             routes.prepare()
             centerOnceOnYou()
@@ -166,13 +228,8 @@ struct HuntView: View {
             recompute(animated: false)
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active, onScreen { live.start("hunt") }
-            if phase == .background { live.stop("hunt") }
-        }
-        .onChange(of: live.snapshot?.fetched, initial: true) {
-            // Gliding every pin redraws the whole map, which stutters a stop list being
-            // scrolled (#74): it waits for the list to settle.
-            if stopScroll.active { stopScroll.missed = true } else { recompute(animated: true) }
+            if phase == .active, onScreen { service.start("hunt") }
+            if phase == .background { service.stop("hunt") }
         }
         // MapKit follows you on its own while facing; whatever ends facing leaves the map
         // where it is rather than letting it keep turning.
@@ -182,7 +239,7 @@ struct HuntView: View {
         }
         .onChange(of: location.latest) {
             centerOnceOnYou()
-            live.locationMoved()
+            service.locationMoved()
             recompute(animated: false)
         }
         .onChange(of: sightings.count) { recompute(animated: false) }
@@ -720,11 +777,10 @@ struct HuntView: View {
             .accessibilityLabel("Search for a fleet number or a line")
             HStack(spacing: 6) {
                 let isLive = live.status == .live
-                Circle().fill(statusColor).frame(width: 6, height: 6)
-                    .shadow(color: statusColor, radius: isLive ? 4 : 0)
-                    // Breathes while the feed is live, like the camera's hint dot. Only on
-                    // screen: it went on breathing behind the other tabs.
-                    .modifier(Breathing(on: isLive && onScreen))
+                // Breathes while the feed is live, like the camera's hint dot. Only on
+                // screen: it went on breathing behind the other tabs.
+                LiveDot(color: UIColor(statusColor), glows: isLive, breathing: isLive && onScreen)
+                    .frame(width: 6, height: 6)
                 Mono(statusText, size: 10.5, weight: 600, spacing: 0.1, color: .white.opacity(0.85))
             }
             .padding(.vertical, 6)
@@ -1991,15 +2047,65 @@ private struct GroupBubble: View {
     }
 }
 
-/// Fades in and out for as long as it's on; still otherwise, with nothing left ticking.
-private struct Breathing: ViewModifier {
-    let on: Bool
+/// The status dot by LIVE. A layer the system animates: breathing through SwiftUI redrew
+/// it every frame, which was HUNT's whole CPU between two refreshes (about 3%).
+private struct LiveDot: UIViewRepresentable {
+    let color: UIColor
+    let glows: Bool
+    let breathing: Bool
 
-    func body(content: Content) -> some View {
-        if on {
-            content.phaseAnimator([0.35, 1]) { v, p in v.opacity(p) } animation: { _ in .easeInOut(duration: 0.9) }
-        } else {
-            content
+    func makeUIView(context: Context) -> DotView { DotView() }
+
+    func updateUIView(_ view: DotView, context: Context) {
+        view.set(color: color, glows: glows, breathing: breathing)
+    }
+
+    final class DotView: UIView {
+        private var breathing = false
+
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            isUserInteractionEnabled = false
+            layer.shadowOffset = .zero
+            layer.shadowRadius = 4
+            // The system drops a layer's animations when the app leaves the screen.
+            NotificationCenter.default.addObserver(self, selector: #selector(restart), name: UIApplication.didBecomeActiveNotification, object: nil)
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) { fatalError() }
+
+        func set(color: UIColor, glows: Bool, breathing: Bool) {
+            layer.backgroundColor = color.cgColor
+            layer.shadowColor = color.cgColor
+            layer.shadowOpacity = glows ? 1 : 0
+            guard breathing != self.breathing else { return }
+            self.breathing = breathing
+            restart()
+        }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            layer.cornerRadius = bounds.width / 2
+        }
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            restart()
+        }
+
+        @objc private func restart() {
+            layer.removeAnimation(forKey: "breathe")
+            guard breathing, window != nil else { return }
+            let breathe = CABasicAnimation(keyPath: "opacity")
+            breathe.fromValue = 0.35
+            breathe.toValue = 1
+            breathe.duration = 0.9
+            breathe.autoreverses = true
+            breathe.repeatCount = .infinity
+            breathe.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            breathe.preferredFrameRateRange = CAFrameRateRange(minimum: 15, maximum: 30, preferred: 30)
+            layer.add(breathe, forKey: "breathe")
         }
     }
 }
