@@ -561,10 +561,11 @@ EXTRA_VINTAGE_BUSES = [
     ("Ikarus", "405", 6454, "KMKM", 1994),
     ("Ikarus", "411", 6550, "KMKM", 1995),
     ("Ikarus Zemun", "IK-160P", 70504, "KMKM", 1987),
+    # Not in the book, per the club's own pages: Jelcz PO1 #618 is a trailer towed behind
+    # the 272 MEX ("Przepisy zabraniają przewozu osób… w przyczepach"), and Jelcz PAT-4
+    # #643 is the MZK breakdown vehicle ("ogórkowe pogotowie"), 4+2 seats, later a snow plow.
     ("Jelcz", "043", 8058, "KMKM", 1974),
     ("Jelcz", "043", 8081, "KMKM", 1986),
-    ("Jelcz", "PO1", 618, "KMKM", None),
-    ("Jelcz", "PAT-4", 643, "KMKM", None),
     ("Jelcz", "M11", 95, "KMKM", 1987),
     ("Jelcz", "L11", 90904, "KMKM", 1989),
     ("Jelcz", "PR110M", 4617, "KMKM", 1991),
