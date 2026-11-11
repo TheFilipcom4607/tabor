@@ -92,6 +92,22 @@ public enum NumberExtractor {
         !candidates.contains { $0.number >= 1000 }
     }
 
+    /// The closer look's tiles, in Vision's terms (y runs up from the bottom). The middle row
+    /// comes first: on a whole-vehicle shot that's where the number nearly always is (on 67 of
+    /// the 72 test photos the tiles find one on), then the bottom row, then the sky.
+    public static let tiles: [CGRect] = [0.3, 0.0, 0.6].flatMap { y in
+        [0.3, 0.0, 0.6].map { x in CGRect(x: x, y: y, width: 0.4, height: 0.4) }
+    }
+
+    /// Whether the closer look can stop after `read` tiles: the middle row is done and a real
+    /// 4-digit number has turned up. Stopping after the first tile to show one picked the wrong
+    /// vehicle on two test photos (#3018 for #3019), and after the whole row on none, so the
+    /// other six tiles are only read when the row comes up empty.
+    public static func closerLookDone(_ candidates: [(number: Int, score: Double)], read: Int,
+                                      catalog: FleetCatalog) -> Bool {
+        read >= 3 && candidates.contains { $0.number >= 1000 && catalog.isKnown(number: $0.number) }
+    }
+
     /// Boxes of the text that reads as `number`, by the same rules `candidates` uses.
     public static func boxes(of number: Int, in observations: [TextObservation]) -> [CGRect] {
         observations.compactMap { obs in

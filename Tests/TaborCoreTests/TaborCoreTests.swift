@@ -2089,6 +2089,19 @@ private func read(_ n: Int, _ score: Double, x: Double, y: Double = 0.5) -> Also
     #expect(!NumberExtractor.wantsCloserLook([(7205, 3)]))
 }
 
+@Test func closerLookStopsAfterTheMiddleRowHasTheNumber() {
+    // The middle row first, and each tile once.
+    #expect(NumberExtractor.tiles.prefix(3).allSatisfy { $0.minY == 0.3 })
+    #expect(Set(NumberExtractor.tiles.map { "\($0.minX) \($0.minY)" }).count == 9)
+    let found: [(number: Int, score: Double)] = [(716, 2), (7205, 3)]
+    // Not before the row is done: the next tile may hold a better read of another vehicle.
+    #expect(!NumberExtractor.closerLookDone(found, read: 2, catalog: catalog))
+    #expect(NumberExtractor.closerLookDone(found, read: 3, catalog: catalog))
+    // A line alone, or a 4-digit number no vehicle has, keeps it looking.
+    #expect(!NumberExtractor.closerLookDone([(716, 2)], read: 3, catalog: catalog))
+    #expect(!NumberExtractor.closerLookDone([(7100, 2)], read: 3, catalog: catalog))
+}
+
 @Test func aPickedLineShowsAllOfItWhereverItIs() {
     // #37: the search said "4 out now", the map then showed nothing.
     let hrc = catalog.model(id: "tram-hrc-140n")!
