@@ -464,6 +464,8 @@ DISPLAY_NAMES = {
     ("Mercus", "906BB62"): "Mercus MB Sprinter City",
     # The same Mercus City body on a MAN TGE 6.180 (phototrans.eu).
     ("Mercus", "SYN2Z"): "Mercus MAN TGE City",
+    # Háček on screen only; the id slug has no Š.
+    ("Skoda", "706 RTO"): "Škoda 706 RTO",
     ("Ursus", "CS2"): "Ursus City Smile",
     ("HRC", "140N"): "Hyundai Rotem 140N",
     ("HRC", "141N"): "Hyundai Rotem 141N",
@@ -573,6 +575,14 @@ EXTRA_VINTAGE_BUSES = [
     ("San", "H-100A", 8082, "KMKM", 1972),
     ("San", "H-100B", 160, "KMKM", 1973),
     ("Solaris", "Urbino 15", 8731, "KMKM", 2001),
+    # Newer arrivals the club's site list (articles 2017–18) predates. The Škoda is theirs
+    # per the club's own article "Premiera Škody RTO": bought 2023 from a collector, back
+    # to its 1972 factory state, carrying passengers from May 2026 (photos named 8084);
+    # phototrans agrees on the number. The AP-02 — the 1960s Warsaw articulated ogórek,
+    # 130 of them 1964–69 (club's "Jelczańskie przegubowce") — is placed at KMKM since 2019
+    # by phototrans alone, and no source gives this one's build year.
+    ("Skoda", "706 RTO", 8084, "KMKM", 1972),
+    ("Jelcz", "AP-02", 2012, "KMKM", None),
     # MZA's own heritage buses on line 100 (issue #36; build years from wawakom.pl). The 1932
     # Somua is left out: it has no fleet number, so it can't be caught.
     ("Jelcz", "M181M", 6971, "MZA", 1999),
