@@ -1,5 +1,5 @@
 {
-"fetched": "2026-11-09",
+"fetched": "2026-11-12",
 "source": "https://dane.um.warszawa.pl/api/action/get_ztm_pojazdy",
 "vehicles": [
 {
@@ -1385,7 +1385,7 @@
 "idMarki": 37,
 "year": 2011,
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-3 \"Ostrobramska\" (R-10)",
+"depot": "R-4 \"Stalowa\" (R-13)",
 "colour": "RAL 1003+3020"
 },
 {
@@ -1624,25 +1624,7 @@
 },
 {
 "kind": "BUS",
-"number": "1851",
-"idMarki": 25,
-"year": 2008,
-"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-3 \"Ostrobramska\" (R-10)",
-"colour": "RAL 1004+3003"
-},
-{
-"kind": "BUS",
 "number": "1855",
-"idMarki": 25,
-"year": 2008,
-"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-3 \"Ostrobramska\" (R-10)",
-"colour": "RAL 1004+3003"
-},
-{
-"kind": "BUS",
-"number": "1857",
 "idMarki": 25,
 "year": 2008,
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
@@ -10211,6 +10193,15 @@
 {
 "kind": "BUS",
 "number": "7321",
+"idMarki": 47,
+"year": 2015,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "7322",
 "idMarki": 47,
 "year": 2015,
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
