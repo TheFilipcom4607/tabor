@@ -28,21 +28,83 @@ extension Wrap {
 /// turning would be noise and work; turning on the reveal and the vehicle page.
 struct Foil: View {
     var animated = false
-    @Environment(\.tabActive) private var tabActive
 
     var body: some View {
         if animated {
-            TimelineView(.animation(minimumInterval: 1 / 30, paused: !tabActive)) { ctx in
-                gradient(ctx.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 6) / 6 * 360)
-            }
+            TurningFoil()
         } else {
-            gradient(30)
+            AngularGradient(colors: Palette.foil, center: .center, angle: .degrees(30))
+                .allowsHitTesting(false)
         }
     }
+}
 
-    private func gradient(_ angle: Double) -> some View {
-        AngularGradient(colors: Palette.foil, center: .center, angle: .degrees(angle))
-            .allowsHitTesting(false)
+/// The turning foil as a layer the system spins: turning it through SwiftUI redrew it every
+/// frame (about 5% CPU for one, and HUNT's wrap banner is up all December). Share cards use
+/// the still one: `ImageRenderer` can't draw a UIView.
+private struct TurningFoil: UIViewRepresentable {
+    @Environment(\.tabActive) private var tabActive
+
+    func makeUIView(context: Context) -> FoilView { FoilView() }
+
+    func updateUIView(_ view: FoilView, context: Context) {
+        view.turning = tabActive
+    }
+
+    final class FoilView: UIView {
+        private static let turn = 6.0
+        private let wheel = CAGradientLayer()
+        var turning = false {
+            didSet { if turning != oldValue { restart() } }
+        }
+
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            isUserInteractionEnabled = false
+            clipsToBounds = true
+            wheel.type = .conic
+            wheel.colors = Palette.foil.map { UIColor($0).cgColor }
+            wheel.startPoint = CGPoint(x: 0.5, y: 0.5)
+            wheel.endPoint = CGPoint(x: 1, y: 0.5)
+            layer.addSublayer(wheel)
+            // The system drops a layer's animations when the app leaves the screen.
+            NotificationCenter.default.addObserver(self, selector: #selector(restart), name: UIApplication.didBecomeActiveNotification, object: nil)
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) { fatalError() }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            // A square that still covers the corners at any angle.
+            let side = hypot(bounds.width, bounds.height)
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            wheel.bounds = CGRect(x: 0, y: 0, width: side, height: side)
+            wheel.position = CGPoint(x: bounds.midX, y: bounds.midY)
+            CATransaction.commit()
+        }
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            restart()
+        }
+
+        @objc private func restart() {
+            wheel.removeAnimation(forKey: "turn")
+            guard turning, window != nil else { return }
+            let spin = CABasicAnimation(keyPath: "transform.rotation.z")
+            spin.fromValue = 0
+            spin.toValue = 2 * Double.pi
+            spin.duration = Self.turn
+            spin.repeatCount = .infinity
+            // As far into its turn as the clock says, so a sticker's rim and the sheen over it
+            // (two foils) turn as one.
+            let into = Date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: Self.turn)
+            spin.beginTime = wheel.convertTime(CACurrentMediaTime(), from: nil) - into
+            spin.preferredFrameRateRange = CAFrameRateRange(minimum: 15, maximum: 30, preferred: 30)
+            wheel.add(spin, forKey: "turn")
+        }
     }
 }
 
