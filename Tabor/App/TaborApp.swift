@@ -241,6 +241,7 @@ struct RootView: View {
         .environment(router)
         .environment(undo)
         .environment(\.wide, wide)
+        .environment(\.lowPower, LowPower.shared.on)
         .environment(\.tall, tall)
         // Keep the live feed ticking on every tab, so HUNT opens with trails already drawn.
         .onAppear { LiveFleetService.shared.start(LiveFleetService.appClient) }

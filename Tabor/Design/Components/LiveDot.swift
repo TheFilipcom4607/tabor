@@ -8,11 +8,12 @@ struct LiveDot: UIViewRepresentable {
     let color: UIColor
     let glows: Bool
     let breathing: Bool
+    @Environment(\.lowPower) private var lowPower
 
     func makeUIView(context: Context) -> DotView { DotView() }
 
     func updateUIView(_ view: DotView, context: Context) {
-        view.set(color: color, glows: glows, breathing: breathing)
+        view.set(color: color, glows: glows, breathing: breathing && !lowPower)
     }
 
     final class DotView: UIView {

@@ -449,8 +449,9 @@ private struct WantedSlot: View {
 
     var body: some View {
         // The feed keeps only rows that reported in the last few minutes. A coupled tram's
-        // second car has no row of its own, so it never shows as out.
-        let live = LiveFleetService.shared.snapshot?.vehicle(number: number, kind: kind)
+        // second car has no row of its own, so it never shows as out. Off CATCH and HUNT the
+        // feed stops after a minute, so an older snapshot says nothing about now.
+        let live = LiveFleetService.shared.fresh(maxAge: 120)?.vehicle(number: number, kind: kind)
         ZStack(alignment: .bottomTrailing) {
             Palette.card
             Text(FleetNumber.label(number))

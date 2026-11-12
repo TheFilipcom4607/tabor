@@ -13,6 +13,9 @@ extension EnvironmentValues {
     /// whatever animates for ever (a medal's sheen, HUNT's live dot) kept the phone drawing
     /// at 30 frames a second behind the book, so those stop while this is false.
     @Entry var tabActive = true
+    /// Low Power Mode is on (`LowPower`): the endless decorations (foil, medal sheen, live
+    /// dots) hold still. Set once, in `RootView`.
+    @Entry var lowPower = false
 }
 
 enum WideLayout {

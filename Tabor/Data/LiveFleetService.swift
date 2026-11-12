@@ -2,8 +2,10 @@ import CoreLocation
 import Foundation
 
 /// Live GPS for every ZTM bus and tram, from Warsaw's open-data API. Polls every 10 s while
-/// the HUNT map is up, and every 30 s otherwise (the camera, or the app merely open), so
-/// trails are already drawn when you get to HUNT. Never in the background.
+/// the HUNT map is up and every 30 s on the camera. Off those two it keeps going for a
+/// minute, so trails are still drawn if you hop back to HUNT, then stops: on mobile data a
+/// poll every 30 s kept the radio from ever going idle while you leafed through the book.
+/// Low Power Mode slows HUNT to 20 s and drops the minute. Never in the background.
 /// It comes through TABOR's proxy (proxy/ in the repo), which holds the city key, unless
 /// you've typed your own key into Settings. With neither, everything live is quietly off.
 @Observable @MainActor
@@ -13,14 +15,22 @@ final class LiveFleetService {
     /// A key typed into Settings goes straight to the city instead of through the proxy.
     static let keyOverrideKey = "umApiKey"
     static let interval: Duration = .seconds(10)
-    /// With only the app itself watching: half the rate, since each poll is ~180 KB
-    /// (the API doesn't compress), and trails don't need more.
+    /// Off HUNT: a third of the rate. A poll is only ~36 KB compressed, but each one wakes
+    /// the radio, and trails don't need more.
     static let idleInterval: Duration = .seconds(30)
-    /// The client the app registers while it's in the foreground, whatever the tab.
+    /// HUNT's rate in Low Power Mode.
+    static let lowPowerInterval: Duration = .seconds(20)
+    /// How long the feed keeps going after the camera or HUNT closes.
+    static let grace: TimeInterval = 60
+    /// The client the app registers while it's in the foreground, whatever the tab. On its
+    /// own it only keeps the feed going for `grace` after a screen that uses it closes.
     static let appClient = "app"
     /// Screens that want the fast rate. The camera only uses the feed to nudge OCR and fill
     /// in the line, which 30 s old positions do fine; every poll keeps the radio awake.
     static let fastClients: Set<String> = ["hunt"]
+    /// Screens that want a precise location. The camera's hints reach 300 m, which a rough
+    /// fix covers; the shutter takes its own precise one for the catch's pin.
+    static let preciseClients: Set<String> = ["hunt"]
 
     enum Status: Equatable {
         case noKey, idle, loading, live
@@ -38,6 +48,8 @@ final class LiveFleetService {
 
     @ObservationIgnored private var clients: Set<String> = []
     @ObservationIgnored private var poller: Task<Void, Never>?
+    /// Until when the app client alone keeps polling, after a screen closed.
+    @ObservationIgnored private var graceUntil: Date?
     /// Where the current snapshot came from.
     @ObservationIgnored private var usedSource: Source?
 
@@ -77,29 +89,65 @@ final class LiveFleetService {
 
     private var fast: Bool { !clients.isDisjoint(with: Self.fastClients) }
 
+    private var pollInterval: Duration {
+        guard fast else { return Self.idleInterval }
+        return LowPower.shared.on ? Self.lowPowerInterval : Self.interval
+    }
+
+    /// A screen that uses the feed is open, or one closed less than `grace` ago.
+    private var wanted: Bool {
+        if clients.contains(where: { $0 != Self.appClient }) { return true }
+        guard clients.contains(Self.appClient), !LowPower.shared.on, let graceUntil else { return false }
+        return graceUntil > Date()
+    }
+
     /// The app client only keeps the feed (and trails) going; it doesn't ask for location.
     func start(_ client: String) {
         clients.insert(client)
-        if client != Self.appClient { LocationService.shared.startUpdating("live-\(client)") }
+        if client != Self.appClient {
+            LocationService.shared.startUpdating("live-\(client)", precise: Self.preciseClients.contains(client))
+        }
         guard poller == nil else {
             // A live screen opening mid-way through a slow wait gets a fresh snapshot now if
             // it's due; the poller picks up the screen's rate after its current sleep.
             if client != Self.appClient, fresh(maxAge: fast ? 10 : 30) == nil { Task { await refresh() } }
             return
         }
-        poller = Task { [weak self] in
-            while !Task.isCancelled {
-                await self?.refresh()
-                let interval = self?.fast == true ? Self.interval : Self.idleInterval
-                try? await Task.sleep(for: interval)
-            }
-        }
+        if wanted { startPolling() }
     }
 
     func stop(_ client: String) {
         clients.remove(client)
-        if client != Self.appClient { LocationService.shared.stopUpdating("live-\(client)") }
-        guard clients.isEmpty else { return }
+        if client != Self.appClient {
+            LocationService.shared.stopUpdating("live-\(client)")
+            if clients == [Self.appClient] { graceUntil = Date().addingTimeInterval(Self.grace) }
+        }
+        if !wanted { stopPolling() }
+    }
+
+    /// Low Power Mode came on or went off.
+    func powerChanged() {
+        if wanted, poller == nil { startPolling() }
+        if !wanted { stopPolling() }
+    }
+
+    private func startPolling() {
+        poller = Task { [weak self] in
+            while !Task.isCancelled {
+                await self?.refresh()
+                guard let interval = self?.pollInterval else { return }
+                try? await Task.sleep(for: interval)
+                // Nothing on screen needs it any more: stop until something does.
+                guard let self, !Task.isCancelled else { return }
+                guard self.wanted else {
+                    self.poller = nil
+                    return
+                }
+            }
+        }
+    }
+
+    private func stopPolling() {
         poller?.cancel()
         poller = nil
     }

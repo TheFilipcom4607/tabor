@@ -44,11 +44,12 @@ struct Foil: View {
 /// the still one: `ImageRenderer` can't draw a UIView.
 private struct TurningFoil: UIViewRepresentable {
     @Environment(\.tabActive) private var tabActive
+    @Environment(\.lowPower) private var lowPower
 
     func makeUIView(context: Context) -> FoilView { FoilView() }
 
     func updateUIView(_ view: FoilView, context: Context) {
-        view.turning = tabActive
+        view.turning = tabActive && !lowPower
     }
 
     final class FoilView: UIView {

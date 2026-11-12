@@ -119,6 +119,7 @@ struct Medallion: View {
 struct MedalSheen: UIViewRepresentable {
     let seed: String
     @Environment(\.tabActive) private var tabActive
+    @Environment(\.lowPower) private var lowPower
 
     func makeUIView(context: Context) -> SheenView {
         SheenView(offset: Double(abs(seed.hashValue % 1000)) / 1000 * SheenView.beat)
@@ -126,7 +127,7 @@ struct MedalSheen: UIViewRepresentable {
 
     func updateUIView(_ view: SheenView, context: Context) {
         // Not behind another tab: ME stays alive there, and the medals went on shining.
-        view.shining = tabActive
+        view.shining = tabActive && !lowPower
     }
 }
 
