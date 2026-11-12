@@ -166,8 +166,8 @@ struct VehicleView: View {
                 let note = model?.note(of: number)
                 if note != nil || remark != nil {
                     VStack(alignment: .leading, spacing: 9) {
-                        SectionLabel(text: note != nil && remark != nil ? String(localized: "NOTES") : String(localized: "NOTE"))
-                        NotesCard(note: note, remark: remark)
+                        SectionLabel(text: String(localized: "NOTE"))
+                        NotesCard(note: note, remark: shownRemark(beside: note)).id(number)
                     }
                     .padding(.top, 18)
                     .padding(.horizontal, 22)
@@ -407,6 +407,14 @@ struct VehicleView: View {
     }
 
     /// Most recent line first, no repeats.
+    /// czynaczas.pl's remark, unless it's a word or two next to our own note: #43's "Stary."
+    /// after a paragraph on its 1906 build only reads like a joke.
+    private func shownRemark(beside note: VehicleNote?) -> VehicleRemark? {
+        guard let remark else { return nil }
+        guard note != nil else { return remark }
+        return remark.text.split(whereSeparator: \.isWhitespace).count < 3 ? nil : remark
+    }
+
     private func orderedLines(_ list: [Sighting]) -> [String] {
         var seen = Set<String>()
         return list.compactMap(\.line).filter { seen.insert($0).inserted }
@@ -484,56 +492,91 @@ private struct WantedSlot: View {
     }
 }
 
-/// The vehicle page's notes as one card, a rule between them: TABOR's own, then czynaczas.pl's.
-/// Each ends with a chip that opens where it comes from.
+/// The vehicle page's note: TABOR's own background, then czynaczas.pl's remark, read as one
+/// text. The footer credits each source with a chip that opens it, and IN POLISH flips both.
+/// The remark stays word for word czynaczas's, never blended into ours: that's the deal.
 private struct NotesCard: View {
     let note: VehicleNote?
     let remark: VehicleRemark?
+    @State private var inPolish = false
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if let note {
-                NoteRow(text: note.text) {
-                    if let source = note.source, let url = note.url.flatMap(URL.init(string:)) {
-                        SourceChip(name: source, url: url)
-                    }
-                }
-            }
-            if note != nil, remark != nil {
-                Rectangle().fill(Palette.hairline).frame(height: 1)
-            }
-            if let remark { RemarkRow(remark: remark).id(remark) }
-        }
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.hairline))
+    /// Both are in Polish already on a Polish phone; elsewhere there's something to flip once
+    /// either has an English text.
+    private var canFlip: Bool { !AppLanguage.polish && (note != nil || remark?.english != nil) }
+    private var noteText: String? { note.map { inPolish ? $0.pl : $0.text } }
+    private var remarkText: String? {
+        remark.map { inPolish || AppLanguage.polish ? $0.text : $0.english ?? $0.text }
     }
-}
-
-/// One note: what it's about, the text, then its source.
-private struct NoteRow<Footer: View>: View {
-    var kicker: String? = nil
-    let text: String
-    @ViewBuilder let footer: Footer
+    private var noteSource: (name: String, url: URL)? {
+        guard let name = note?.source, let url = note?.url.flatMap(URL.init(string:)) else { return nil }
+        return (name, url)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let kicker {
-                Mono(kicker, size: 9.5, weight: 700, spacing: 0.1, color: Palette.faint)
-                    .padding(.bottom, 7)
+            if let noteText { paragraph(noteText) }
+            if let remark, let remarkText {
+                if let car = remark.fromCar {
+                    Mono(String(localized: "ABOUT ITS SET WITH #\(String(car))"), size: 9.5, weight: 700, spacing: 0.1, color: Palette.faint)
+                        .padding(.top, note == nil ? 0 : 14)
+                        .padding(.bottom, 7)
+                }
+                paragraph(remarkText)
+                    .padding(.top, note != nil && remark.fromCar == nil ? 10 : 0)
             }
-            Text(text)
-                .font(TaborFont.grotesk(15.5, 500))
-                .foregroundStyle(Palette.ink)
-                .lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true)
-                .textSelection(.enabled)
-                .contentTransition(.opacity)
-            HStack(alignment: .center, spacing: 12) { footer }
-                .padding(.top, 11)
+            if noteSource != nil || remark != nil || canFlip {
+                // Both chips and IN POLISH don't fit a 402 pt phone: the flip keeps just its icon.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) { chips; Spacer(minLength: 12); flip(label: true) }
+                    HStack(spacing: 8) { chips; Spacer(minLength: 8); flip(label: false) }
+                    VStack(alignment: .leading, spacing: 10) { HStack(spacing: 8) { chips }; flip(label: true) }
+                }
+                .padding(.top, 12)
+            }
         }
         .padding(.vertical, 14)
         .padding(.horizontal, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.hairline))
+    }
+
+    private func paragraph(_ text: String) -> some View {
+        Text(text)
+            .font(TaborFont.grotesk(15.5, 500))
+            .foregroundStyle(Palette.ink)
+            .lineSpacing(3)
+            .fixedSize(horizontal: false, vertical: true)
+            .textSelection(.enabled)
+            .contentTransition(.opacity)
+    }
+
+    @ViewBuilder private var chips: some View {
+        if let noteSource { SourceChip(name: noteSource.name, url: noteSource.url) }
+        if remark != nil { SourceChip(name: "czynaczas.pl", url: URL(string: "https://czynaczas.pl")!) }
+    }
+
+    @ViewBuilder private func flip(label: Bool) -> some View {
+        if canFlip {
+            Button {
+                Haptics.shared.tick()
+                withAnimation(.easeOut(duration: 0.2)) { inPolish.toggle() }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "translate").font(.system(size: label ? 10 : 13, weight: .semibold))
+                    if label {
+                        Mono(inPolish ? "ENGLISH" : "IN POLISH", size: 10, weight: 700, spacing: 0.1, color: Palette.sub)
+                    }
+                }
+                .foregroundStyle(inPolish && !label ? Palette.ink : Palette.sub)
+                .padding(.vertical, label ? 0 : 5)
+                .padding(.horizontal, label ? 0 : 4)
+                .contentShape(Rectangle())
+            }
+            .accessibilityLabel(Text(inPolish ? "ENGLISH" : "IN POLISH"))
+            // Plain, or a List row fires every button in it on any tap.
+            .buttonStyle(.plain)
+        }
     }
 }
 
@@ -557,40 +600,6 @@ private struct SourceChip: View {
         // Plain, or a List row fires every button in it on any tap.
         .buttonStyle(.plain)
         .accessibilityLabel(Text("Open \(name)"))
-    }
-}
-
-/// czynaczas.pl's remark, as agreed with them: it's their note, not ours, and it always
-/// links back.
-private struct RemarkRow: View {
-    let remark: VehicleRemark
-    /// The remarks are Polish. A phone in another language reads the English, when there is
-    /// one, and can flip to the original: they're czynaczas's words, not ours.
-    private let inPolish = Bundle.main.preferredLocalizations.first == "pl"
-    @State private var showOriginal = false
-
-    private var english: String? { inPolish ? nil : remark.english }
-
-    var body: some View {
-        NoteRow(kicker: remark.fromCar.map { String(localized: "ABOUT ITS SET WITH #\(String($0))") },
-                text: showOriginal ? remark.text : english ?? remark.text) {
-            SourceChip(name: "czynaczas.pl", url: URL(string: "https://czynaczas.pl")!)
-            Spacer(minLength: 0)
-            if english != nil {
-                Button {
-                    Haptics.shared.tick()
-                    withAnimation(.easeOut(duration: 0.2)) { showOriginal.toggle() }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "translate").font(.system(size: 10, weight: .semibold))
-                        Mono(showOriginal ? "ENGLISH" : "IN POLISH", size: 10, weight: 700, spacing: 0.1, color: Palette.sub)
-                    }
-                    .foregroundStyle(Palette.sub)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-        }
     }
 }
 

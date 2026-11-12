@@ -21,16 +21,6 @@
         }
       }
     },
-    "NOTES": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NOTATKI"
-          }
-        }
-      }
-    },
     "Open %@": {
       "localizations": {
         "pl": {
