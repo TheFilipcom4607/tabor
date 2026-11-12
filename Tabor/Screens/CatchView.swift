@@ -512,12 +512,8 @@ struct CatchView: View {
     private var hintPill: some View {
         let text = toast ?? hint
         return HStack(spacing: 7) {
-            // A symbol effect pulses on the render server; a SwiftUI loop here re-rendered
-            // the view every frame for as long as the camera was open.
-            Image(systemName: "circle.fill")
-                .font(.system(size: 5.5))
-                .foregroundStyle(.white)
-                .symbolEffect(.pulse)
+            LiveDot(color: .white, glows: false, breathing: true)
+                .frame(width: 5.5, height: 5.5)
             Text(text)
                 .font(TaborFont.mono(10.5, 500))
                 .em(0.12, size: 10.5)
