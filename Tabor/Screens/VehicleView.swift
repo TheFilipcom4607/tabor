@@ -107,7 +107,13 @@ struct VehicleView: View {
                 .padding(.horizontal, 22)
 
                 let photo = mine.photo(number: number, modelId: modelId)
-                CatchPhoto(file: photo, maxPixel: 1200, placeholder: String(localized: "NO PHOTO YET"))
+                Group {
+                    if photo == nil, let model {
+                        WantedSlot(number: number, kind: model.kind, caught: !mine.isEmpty)
+                    } else {
+                        CatchPhoto(file: photo, maxPixel: 1200, placeholder: String(localized: "NO PHOTO YET"))
+                    }
+                }
                     // The photo's own shape, so a tall shot isn't cut to a strip (#27). Up to
                     // about half the screen for an upright one; panoramas no thinner than 150 pt.
                     .aspectRatio(min(max(photo.flatMap(PhotoStore.aspect) ?? 2.4, 0.85), 2.4), contentMode: .fit)
@@ -157,11 +163,14 @@ struct VehicleView: View {
                 .padding(.top, 9)
                 .padding(.horizontal, 22)
 
-                if let remark {
-                    RemarkCard(remark: remark)
-                        .id(remark)
-                        .padding(.top, 18)
-                        .padding(.horizontal, 22)
+                let note = model?.note(of: number)
+                if note != nil || remark != nil {
+                    VStack(alignment: .leading, spacing: 9) {
+                        SectionLabel(text: note != nil && remark != nil ? String(localized: "NOTES") : String(localized: "NOTE"))
+                        NotesCard(note: note, remark: remark)
+                    }
+                    .padding(.top, 18)
+                    .padding(.horizontal, 22)
                 }
 
                 let lines = orderedLines(mine)
@@ -422,9 +431,138 @@ extension String {
     var nonEmpty: String? { isEmpty ? nil : self }
 }
 
-/// czynaczas.pl's remark, set apart from TABOR's own facts as a signed quote, as agreed with
-/// them: it's their note, not ours, and it always links back.
-private struct RemarkCard: View {
+/// The empty photo slot of a vehicle with no picture: its number ghosted in the corner and,
+/// while it's on the live feed, the line it's on and a way to HUNT's map.
+private struct WantedSlot: View {
+    let number: Int
+    let kind: VehicleKind
+    let caught: Bool
+    @Environment(Router.self) private var router
+
+    var body: some View {
+        // The feed keeps only rows that reported in the last few minutes. A coupled tram's
+        // second car has no row of its own, so it never shows as out.
+        let live = LiveFleetService.shared.snapshot?.vehicle(number: number, kind: kind)
+        ZStack(alignment: .bottomTrailing) {
+            Palette.card
+            Text(FleetNumber.label(number))
+                .font(TaborFont.mono(96, 700))
+                .foregroundStyle(Palette.thumb)
+                .lineLimit(1)
+                .fixedSize()
+                .offset(x: 4, y: 28)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 0) {
+                Mono(caught ? "NO PHOTO YET" : "NOT IN YOUR BOOK", size: 10.5, spacing: 0.14, color: Palette.faint)
+                Spacer(minLength: 0)
+                if let live {
+                    HStack(spacing: 6) {
+                        Image(systemName: "dot.radiowaves.left.and.right").font(.system(size: 11, weight: .bold))
+                        Mono("ON LINE \(live.line) NOW", size: 11, weight: 700, spacing: 0.1, color: Palette.radar)
+                    }
+                    .foregroundStyle(Palette.radar)
+                    HStack(spacing: 5) {
+                        Mono("FIND IT IN HUNT", size: 11, weight: 700, spacing: 0.1, color: Palette.yellow)
+                        Image(systemName: "arrow.right").font(.system(size: 10, weight: .bold))
+                    }
+                    .foregroundStyle(Palette.yellow)
+                    .padding(.top, 8)
+                }
+            }
+            .padding(.vertical, 14)
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard live != nil else { return }
+            Haptics.shared.detent()
+            router.showOnHunt(vehicle: "\(kind.rawValue)#\(number)")
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(live != nil ? .isButton : [])
+    }
+}
+
+/// The vehicle page's notes as one card, a rule between them: TABOR's own, then czynaczas.pl's.
+/// Each ends with a chip that opens where it comes from.
+private struct NotesCard: View {
+    let note: VehicleNote?
+    let remark: VehicleRemark?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let note {
+                NoteRow(text: note.text) {
+                    if let source = note.source, let url = note.url.flatMap(URL.init(string:)) {
+                        SourceChip(name: source, url: url)
+                    }
+                }
+            }
+            if note != nil, remark != nil {
+                Rectangle().fill(Palette.hairline).frame(height: 1)
+            }
+            if let remark { RemarkRow(remark: remark).id(remark) }
+        }
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.hairline))
+    }
+}
+
+/// One note: what it's about, the text, then its source.
+private struct NoteRow<Footer: View>: View {
+    var kicker: String? = nil
+    let text: String
+    @ViewBuilder let footer: Footer
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let kicker {
+                Mono(kicker, size: 9.5, weight: 700, spacing: 0.1, color: Palette.faint)
+                    .padding(.bottom, 7)
+            }
+            Text(text)
+                .font(TaborFont.grotesk(15.5, 500))
+                .foregroundStyle(Palette.ink)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+                .contentTransition(.opacity)
+            HStack(alignment: .center, spacing: 12) { footer }
+                .padding(.top, 11)
+        }
+        .padding(.vertical, 14)
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Where a note comes from, as a chip that opens it.
+private struct SourceChip: View {
+    let name: String
+    let url: URL
+
+    var body: some View {
+        Link(destination: url) {
+            HStack(spacing: 5) {
+                Mono(name.uppercased(), size: 10, weight: 700, spacing: 0.1, color: Palette.routeInk)
+                Image(systemName: "arrow.up.right").font(.system(size: 8.5, weight: .bold))
+            }
+            .foregroundStyle(Palette.routeInk)
+            .padding(.vertical, 5)
+            .padding(.horizontal, 8)
+            .background(Palette.track, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        // Plain, or a List row fires every button in it on any tap.
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("Open \(name)"))
+    }
+}
+
+/// czynaczas.pl's remark, as agreed with them: it's their note, not ours, and it always
+/// links back.
+private struct RemarkRow: View {
     let remark: VehicleRemark
     /// The remarks are Polish. A phone in another language reads the English, when there is
     /// one, and can flip to the original: they're czynaczas's words, not ours.
@@ -434,62 +572,24 @@ private struct RemarkCard: View {
     private var english: String? { inPolish ? nil : remark.english }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            SectionLabel(text: String(localized: "NOTE"))
-            VStack(alignment: .leading, spacing: 0) {
-                Text(verbatim: "\u{201C}")
-                    .font(TaborFont.grotesk(44, 700))
-                    .foregroundStyle(Palette.yellow)
-                    .frame(height: 22, alignment: .top)
-                    .accessibilityHidden(true)
-                if let car = remark.fromCar {
-                    Mono("ABOUT ITS SET WITH #\(String(car))", size: 9.5, weight: 700, spacing: 0.1, color: Palette.faint)
-                        .padding(.top, 8)
-                }
-                Text(showOriginal ? remark.text : english ?? remark.text)
-                    .font(TaborFont.grotesk(15.5, 500))
-                    .foregroundStyle(Palette.ink)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
-                    .padding(.top, 8)
-                    .contentTransition(.opacity)
-                HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    Link(destination: URL(string: "https://czynaczas.pl")!) {
-                        HStack(spacing: 5) {
-                            Mono("— czynaczas.pl" as String, size: 11, weight: 700, spacing: 0.04, color: Palette.yellow)
-                            Image(systemName: "arrow.up.right").font(.system(size: 9, weight: .bold))
-                        }
-                        .foregroundStyle(Palette.yellow)
-                        .contentShape(Rectangle())
+        NoteRow(kicker: remark.fromCar.map { String(localized: "ABOUT ITS SET WITH #\(String($0))") },
+                text: showOriginal ? remark.text : english ?? remark.text) {
+            SourceChip(name: "czynaczas.pl", url: URL(string: "https://czynaczas.pl")!)
+            Spacer(minLength: 0)
+            if english != nil {
+                Button {
+                    Haptics.shared.tick()
+                    withAnimation(.easeOut(duration: 0.2)) { showOriginal.toggle() }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "translate").font(.system(size: 10, weight: .semibold))
+                        Mono(showOriginal ? "ENGLISH" : "IN POLISH", size: 10, weight: 700, spacing: 0.1, color: Palette.sub)
                     }
-                    // Plain, or a List row fires every button in it on any tap.
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(Text("Open czynaczas.pl"))
-                    Spacer(minLength: 0)
-                    if english != nil {
-                        Button {
-                            Haptics.shared.tick()
-                            withAnimation(.easeOut(duration: 0.2)) { showOriginal.toggle() }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "translate").font(.system(size: 10, weight: .semibold))
-                                Mono(showOriginal ? "ENGLISH" : "IN POLISH", size: 10, weight: 700, spacing: 0.1, color: Palette.sub)
-                            }
-                            .foregroundStyle(Palette.sub)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
+                    .foregroundStyle(Palette.sub)
+                    .contentShape(Rectangle())
                 }
-                .padding(.top, 14)
+                .buttonStyle(.plain)
             }
-            .padding(.top, 14)
-            .padding(.bottom, 15)
-            .padding(.horizontal, 16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.yellow.opacity(0.18)))
         }
     }
 }

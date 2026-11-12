@@ -172,7 +172,12 @@ struct ModelPageView: View {
                                 if let v = ownedByNumber[n] {
                                     sticker(n, model: model, timesSeen: v.timesSeen, pictures: pictures)
                                 } else {
-                                    EmptySlot(label: FleetNumber.label(n)).frame(height: Self.cell)
+                                    // Its page has things to read before it's caught: specs, notes.
+                                    Button { router.bookPath.append(.vehicle(modelId: model.id, number: n)) } label: {
+                                        EmptySlot(label: FleetNumber.label(n)).frame(height: Self.cell)
+                                            .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
                         }

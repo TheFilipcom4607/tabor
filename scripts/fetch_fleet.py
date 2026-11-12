@@ -317,6 +317,240 @@ LIVERIES = {
     ("TRAM", 1388): "lastRedYellow",
     ("TRAM", 1389): "lastRedYellow",
 }
+# TABOR's own notes on single vehicles: emitted per model as fleet.json's "notes"
+# ({"5408": {"pl", "en", "source", "url"}}), which older builds ignore. Written in our own words
+# from a source we can link, never from czynaczas.pl's remarks (those stay behind the Worker
+# and carry his credit). (kind, number) -> (Polish, English, source name, link); a note about
+# TABOR itself has no source. Candidates and what's still unchecked: build/drafts/vehicle-notes.md.
+def _note(pl, en, source=None, url=None):
+    return {"pl": pl, "en": en, **({"source": source, "url": url} if source else {})}
+
+
+_HTP = "htp.org.pl"
+_WIKIA = "Warszawikia"
+_KMKM = "kmkm.waw.pl"
+_MZA = "mza.waw.pl"
+_FIRST_U10 = _note(
+    "Jeden z trzech pierwszych Urbino 10 w MZA. Przyjechały 9 czerwca 2010, tydzień później pokazano je "
+    "pod Pałacem Kultury, a 24 czerwca wyjechały na linię 153. Numery przejęły po Ikarusach 260 ze Stalowej.",
+    "One of MZA's first three Urbino 10s. They arrived on 9 June 2010, were shown off outside the Palace of "
+    "Culture a week later and entered service on line 153 on 24 June. Their numbers had belonged to "
+    "Stalowa depot's Ikarus 260s.",
+    _HTP, "https://www.htp.org.pl/solaris-urbino-10-dla-mza-warszawa/")
+_LAST_SM18 = _note(
+    "Jeden z dwóch ostatnich nowych Solbusów SM18, jakie wyjechały z fabryki w Solcu Kujawskim. "
+    "Oba dotarły do Warszawy 11 kwietnia 2014.",
+    "One of the last two new Solbus SM18s to leave the factory in Solec Kujawski. Both reached Warsaw on "
+    "11 April 2014.",
+    _HTP, "https://www.htp.org.pl/warszawa-10-lat-od-zakonczenia-dostaw-autobusow-solbus-sm18-do-mza/")
+_POGOT = _note(
+    "Pogotowie techniczne zbudowane z przedniego członu przegubowego Ikarusa 280: w miejscu przegubu ma "
+    "szerokie drzwi i hak holowniczy, a w środku mały warsztat. Od 1986 powstało blisko sto takich „pogotów”.",
+    "A breakdown vehicle built from the front half of an articulated Ikarus 280: wide doors and a tow hook "
+    "where the joint was, and a small workshop inside. Nearly a hundred were converted from 1986 on.",
+    _KMKM, "https://kmkm.waw.pl/ikarus-280a-pogotowie/")
+NOTES = {
+    ("BUS", 5408): _note(
+        "W lipcu 2016 przez dwa tygodnie woził pasażerów w Berlinie, na liniach X34 i M49, z napisem "
+        "„Warschau grüsst Berlin”, na 25-lecie partnerstwa obu miast. W maju po Warszawie, na linii 180, "
+        "jeździł w zamian piętrowy MAN z BVG.",
+        "In July 2016 it spent two weeks carrying passengers in Berlin, on lines X34 and M49, with "
+        "“Warschau grüsst Berlin” on its side, for 25 years of the two cities' partnership. In May a BVG "
+        "double-decker MAN had run on Warsaw's line 180 in return.",
+        "um.warszawa.pl", "https://um.warszawa.pl/-/warszawa-berlin-rewizyta"),
+    ("BUS", 5869): _note(
+        "Zbudowany w 2017 jako pokazowy autobus Solarisa. Przez pięć lat testowali go przewoźnicy m.in. w "
+        "Berlinie, Bratysławie, Poznaniu, Łodzi i Olsztynie. W lipcu 2022 jeździł w Warszawie na linii 158 "
+        "jako testowy #942, a rok później kupiło go MZA.",
+        "Built in 2017 as Solaris's demonstrator. For five years operators tried it out in Berlin, "
+        "Bratislava, Poznań, Łódź, Olsztyn and elsewhere. In July 2022 it ran in Warsaw on line 158 as "
+        "trial bus #942, and MZA bought it a year later.",
+        _HTP, "https://www.htp.org.pl/komunikacyjne-rodzynki-w-polsce-solaris-urbino-18-iv-5869-z-warszawskiego-mza/"),
+    ("BUS", 1000): _FIRST_U10,
+    ("BUS", 1001): _FIRST_U10,
+    ("BUS", 1002): _FIRST_U10,
+    ("BUS", 2045): _LAST_SM18,
+    ("BUS", 2046): _LAST_SM18,
+    ("BUS", 7890): _note(
+        "Pierwszy egzemplarz, testowy. Przyjechał w maju 2022 jako #7800, numer zmieniono później.",
+        "The first one built, a test bus. It arrived in May 2022 as #7800 and was renumbered later.",
+        _WIKIA, "https://warszawa.fandom.com/wiki/Autosan_Sancity_18LF_LNG"),
+    ("BUS", 8880): _note(
+        "W 2020 dostał na próbę nowe białe wyświetlacze i ekrany LCD. W marcu 2025 wróciły stare.",
+        "In 2020 it was fitted with new white displays and LCD screens as a trial. The old ones came back "
+        "in March 2025.",
+        _WIKIA, "https://warszawa.fandom.com/wiki/Solaris_Urbino_18"),
+    ("BUS", 5870): _note(
+        "1 marca 2020 jako pierwszy z nowych elektryków wyjechał na linię 503. Po pełnym kółku zostało mu "
+        "60% baterii.",
+        "On 1 March 2020 it was the first of the new electrics on line 503. After a full round trip it had "
+        "60% of its battery left.",
+        _WIKIA, "https://warszawa.fandom.com/wiki/Solaris_Urbino_18_electric"),
+    ("TRAM", 3116): _note(
+        "Pierwszy Swing w Warszawie: przyjechał w czerwcu 2010.",
+        "Warsaw's first Swing: it arrived in June 2010.",
+        _WIKIA, "https://warszawa.fandom.com/wiki/PESA_120Na"),
+    ("TRAM", 4201): _note(
+        "Pierwszy Hyundai w Warszawie. Dotarł 30 czerwca 2021 razem z #4202, a 16 lipca odbył pierwszą "
+        "jazdę próbną.",
+        "Warsaw's first Hyundai. It arrived on 30 June 2021 together with #4202 and made its first test "
+        "run on 16 July.",
+        _WIKIA, "https://warszawa.fandom.com/wiki/Hyundai_Rotem_140N"),
+    ("TRAM", 4238): _note(
+        "We wrześniu 2022 stał na targach InnoTrans w Berlinie.",
+        "In September 2022 it was on show at the InnoTrans fair in Berlin.",
+        _WIKIA, "https://warszawa.fandom.com/wiki/Hyundai_Rotem_140N"),
+    ("TRAM", 4101): _note(
+        "Pierwszy dwukierunkowy Hyundai 141N: dotarł 5 listopada 2021.",
+        "The first two-way Hyundai 141N: it arrived on 5 November 2021.",
+        _WIKIA, "https://warszawa.fandom.com/wiki/Hyundai_Rotem_141N"),
+    ("TRAM", 3014): _note(
+        "Pierwszy 116Na w dzisiejszym malowaniu: dostał je w styczniu 2010.",
+        "The first 116Na in today's livery: it got it in January 2010.",
+        _WIKIA, "https://warszawa.fandom.com/wiki/Konstal_116N"),
+    ("TRAM", 503): _note(
+        "Pierwszy zbudowany wagon 13N (1959). Testowano go w Warszawie do kwietnia 1962. W 1984 miał iść "
+        "na złom, ale zamieniono go nadwoziem z #753 i jeździł pod tym numerem do końca 13N w grudniu 2012. "
+        "Od 2018 znów w fabrycznym wyglądzie.",
+        "The first 13N ever built (1959). It was tested in Warsaw until April 1962. In 1984 it was due for "
+        "scrap, but it swapped bodies with #753 and ran under that number until the 13Ns bowed out in "
+        "December 2012. Back in its factory look since 2018.",
+        _KMKM, "https://kmkm.waw.pl/13n-503/2/"),
+    ("TRAM", 43): _note(
+        "Najstarszy wagon w kolekcji: z pierwszej serii 130 tramwajów elektrycznych dla Warszawy, "
+        "zamówionej w 1905 i zbudowanej latem 1906.",
+        "The oldest car in the collection: from Warsaw's first series of 130 electric trams, ordered in "
+        "1905 and built in the summer of 1906.",
+        _KMKM, "https://kmkm.waw.pl/a-43/"),
+    ("TRAM", 1006): _note(
+        "Tramwaj turystyczny z szafą w kształcie pianina, na którym można grać w czasie jazdy. To nie jest "
+        "pierwotny #1006: tamten w 1990 trafił do Wrocławia, a Konstal przysłał nowy wagon, który przejął "
+        "numer.",
+        "A tourist tram with a piano-shaped cabinet that can be played during the ride. It isn't the "
+        "original #1006: that car went to Wrocław in 1990, and Konstal sent a new one that took over the "
+        "number.",
+        _WIKIA, "https://warszawa.fandom.com/wiki/Warszawski_Tramwaj_Promocyjny"),
+    ("BUS", 8731): _note(
+        "Przyjechał w 2001 jako #8102, numer 8731 dostał około 2005. Po wycofaniu w 2019 dwa lata stał "
+        "rozebrany z wyposażenia i czekał na złom. W maju 2021 trafił do KMKM.",
+        "It arrived in 2001 as #8102 and became #8731 around 2005. After it was withdrawn in 2019 it stood "
+        "for two years, stripped of its equipment and waiting for the scrapyard. KMKM got it in May 2021.",
+        _HTP, "https://www.htp.org.pl/solaris-urbino-15-8731-zabytkowa-deskorolka-w-warszawie/"),
+    ("BUS", 646): _POGOT,
+    ("BUS", 691): _POGOT,
+    ("BUS", 3873): _note(
+        "Zbudowany w 1980 we Francji, jeździł w Orleanie. W 1991 razem z trzydziestoma innymi podarowano go "
+        "Krakowowi, a na koniec woził klientów na darmowej linii do Carrefoura. KMKM kupił go w 2005 jako "
+        "prawdopodobnie ostatniego Berlieta PR100 w Polsce. Do Warszawy przyjechał o własnych siłach.",
+        "Built in France in 1980, it ran in Orléans. In 1991 it was given to Kraków along with thirty "
+        "others, and it ended its working life on a free shuttle to a Carrefour. KMKM bought it in 2005 as "
+        "probably the last Berliet PR100 in Poland. It drove to Warsaw under its own power.",
+        _KMKM, "https://kmkm.waw.pl/berliet-pr100-3873/"),
+    ("BUS", 70504): _note(
+        "Mimo nazwy nie jest węgierski: to owoc współpracy Jelcza z jugosłowiańskim Ikarusem z belgradzkiego "
+        "Zemunu. Nadwozie jest jugosłowiańskie, a silnik i skrzynia biegów polskie.",
+        "Despite the name it isn't Hungarian: it comes from Jelcz's partnership with Yugoslavia's Ikarus, "
+        "of Zemun in Belgrade. The body is Yugoslav; the engine and gearbox are Polish.",
+        _KMKM, "https://kmkm.waw.pl/ikarus-zemun-ik-160p-70504/"),
+    ("BUS", 6900): _note(
+        "Do października 2026 jeździł jako #1400. Numer 6900 dostał, gdy został autobusem zabytkowym.",
+        "Until October 2026 it ran as #1400. It got number 6900 when it became a heritage bus.",
+        "phototrans.eu", "https://phototrans.eu"),
+    ("BUS", 1971): _note(
+        "Ikona TABOR-u jest narysowana na podstawie tego autobusu.",
+        "TABOR's app icon is drawn from this bus."),
+    # Event wraps from before Christmas 2026: never collectable forms (see WRAPS), only told here.
+    # Months, not days: an event's dates aren't the wrap's. Each has two sources or one and a photo.
+    ("BUS", 4323): _note(
+        "Świąteczny autobus zimy 2021/22: od grudnia jeździł oklejony jak zielono-czerwony prezent, "
+        "z napisem „Jestem świąteczny”.",
+        "The Christmas bus of winter 2021/22: from December it ran wrapped as a green-and-red present, "
+        "with “Jestem świąteczny” (“I'm Christmassy”) on it.",
+        _MZA, "https://www.mza.waw.pl"),
+    ("BUS", 5899): _note(
+        "Świąteczny autobus zimy 2023/24, w granatowo-różowym oklejeniu.",
+        "The Christmas bus of winter 2023/24, in a navy and pink wrap.",
+        _MZA, "https://www.mza.waw.pl"),
+    ("BUS", 5919): _note(
+        "Świąteczny autobus zimy 2024/25.",
+        "The Christmas bus of winter 2024/25.",
+        _MZA, "https://www.mza.waw.pl"),
+    ("BUS", 5887): _note(
+        "Autobus od okazji. W październiku 2025 jeździł w różowym oklejeniu z klawiaturą na Konkurs "
+        "Chopinowski, w grudniu jako „Świętobus”, a latem 2026 jako wakacyjny „Magiczny autobus”.",
+        "The bus for every occasion. In October 2025 it wore a pink wrap with piano keys for the Chopin "
+        "Competition, in December it was the Christmas “Świętobus”, and in summer 2026 the holiday "
+        "“Magiczny autobus”.",
+        _MZA, "https://www.mza.waw.pl"),
+    ("BUS", 1976): _note(
+        "Pod koniec października 2025 wystąpił w halloweenowym oklejeniu na pikniku na Ursynowie.",
+        "In late October 2025 it appeared in a Halloween wrap at a picnic in Ursynów.",
+        _MZA, "https://www.mza.waw.pl"),
+    ("BUS", 1919): _note(
+        "W grudniu 2025 jeździł jako „Prezentobus”, świąteczny autobus Radia Kolor i MZA.",
+        "In December 2025 it ran as the “Prezentobus”, Radio Kolor and MZA's Christmas gift bus.",
+        "radiokolor.pl", "https://radiokolor.pl"),
+    ("BUS", 1915): _note(
+        "W walentynki 2026 jeździł jako „Zakochany autobus” na specjalnej linii W26.",
+        "For Valentine's Day 2026 it ran as the “Zakochany autobus” (“bus in love”) on special line W26.",
+        "radiokolor.pl", "https://radiokolor.pl"),
+    ("TRAM", 3148): _note(
+        "Świąteczny tramwaj zimy 2025/26.",
+        "The Christmas tram of winter 2025/26.",
+        "um.warszawa.pl", "https://um.warszawa.pl"),
+    ("TRAM", 2028): _note(
+        "W listopadzie 2022 jeździł jako reklama LEGO, z Mikołajem na burcie.",
+        "In November 2022 it ran as a LEGO advert, with Santa on its side.",
+        "wgkm.waw.pl", "https://wgkm.waw.pl"),
+}
+# The same note on every vehicle of a batch, worded for one of them (the user, 2026-11-12).
+# Never on a vintage vehicle that shares a number with the batch: #1983 is a Yutong and KMKM's
+# Jelcz 272 MEX.
+BATCH_NOTED = set()
+for _kind, _numbers, _batch_note in (
+    ("BUS", range(4500, 4529), _note(
+        "Do 2024 jeździł u Michalczewskiego, z numerem z zakresu 9671–9699. MZA odkupiło wszystkie 29 "
+        "Scanii, gdy przewoźnik przedwcześnie zakończył kontrakt.",
+        "Until 2024 it ran for Michalczewski, numbered somewhere in 9671–9699. MZA bought all 29 Scanias "
+        "when the operator's contract ended early.",
+        _WIKIA, "https://warszawa.fandom.com/wiki/Scania_CityWide_12_LF_CNG")),
+    ("BUS", range(1901, 1911), _note(
+        "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów "
+        "linią 222 po Trakcie Królewskim.",
+        "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along "
+        "the Royal Route.",
+        _WIKIA, "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric")),
+    ("BUS", range(1940, 1988), _note(
+        "Yutongi to pierwsze elektryki MZA bez pantografu: ładują się tylko z kabla w zajezdni.",
+        "The Yutongs are MZA's first electrics without a pantograph: they charge only by cable at the depot.",
+        _WIKIA, "https://warszawa.fandom.com/wiki/Yutong_U12")),
+    ("TRAM", range(3501, 3507), _note(
+        "Jeden z sześciu dwukierunkowych Swingów, zamówionych na „kryzysową” trasę na Tarchomin przez most "
+        "Północny. Pierwszy wyjechał 15 października 2012.",
+        "One of six two-way Swings, ordered for the stopgap route to Tarchomin over the Północny bridge. "
+        "The first entered service on 15 October 2012.",
+        _WIKIA, "https://warszawa.fandom.com/wiki/PESA_120Na")),
+    ("TRAM", range(3101, 3116), _note(
+        "Jeden z piętnastu wagonów kupionych dla linii 9 po remoncie torów w Alejach Jerozolimskich. "
+        "Pierwszy kurs z pasażerami: 20 sierpnia 2007.",
+        "One of fifteen cars bought for line 9 after the tracks on Aleje Jerozolimskie were rebuilt. "
+        "First run with passengers: 20 August 2007.",
+        _WIKIA, "https://warszawa.fandom.com/wiki/PESA_120N")),
+):
+    for _n in _numbers:
+        # A vehicle's own note wins over its batch's (#1971, the icon's bus).
+        if (_kind, _n) not in NOTES:
+            NOTES[(_kind, _n)] = _batch_note
+            BATCH_NOTED.add((_kind, _n))
+# The three heritage type K cars share their type's story; they are vintage, so not in the loop above.
+_BERLINKA = _note(
+        "„Berlinka”: te wagony zamówiono dla Warszawy przed wojną, ale po jej wybuchu trafiły do Berlina. "
+        "Warszawa odzyskała je jesienią 1945 i od stycznia 1946 woziły pasażerów, aż do listopada 1975.",
+        "A “Berlinka”: these cars were ordered for Warsaw before the war, but once it broke out they went "
+        "to Berlin. Warsaw got them back in autumn 1945, and they carried passengers from January 1946 "
+        "until November 1975.",
+        _KMKM, "https://kmkm.waw.pl/k-403/2/")
+NOTES |= {("TRAM", _n): _BERLINKA for _n in (403, 445, 446)}
 # The colour codes the city's list gets right, by bus. Suburban (L) buses are blue, whole
 # models of them (confirmed on the street, 2026-09-28). RAL 1004+3003 is the old yellow and red
 # with a red band over the windows (the 2008-09 Urbinos #8890 and #1859 on phototrans,
@@ -951,6 +1185,9 @@ def build(vehicles, city=None):
                     if c.get("colour") in CITY_PAINTS and (CITY_PAINTS[c["colour"]] != "oldYellowRed" or old_paint_ok)}
         liveries |= {v["number"]: LIVERIES[(kind, int(v["number"]))] for v in vs if (kind, int(v["number"])) in LIVERIES}
         liveries = {n: l for n, l in liveries.items() if l}
+        notes = {v["number"]: NOTES[(kind, int(v["number"]))] for v in vs
+                 if str(v["number"]).isdigit() and (kind, int(v["number"])) in NOTES
+                 and not (vintage and (kind, int(v["number"])) in BATCH_NOTED)}
         generations = defaultdict(list)
         if kind == "BUS" and make == "Solaris":
             for v in vs:
@@ -980,10 +1217,14 @@ def build(vehicles, city=None):
             **({"variants": variants} if variants else {}),
             **({"liveries": dict(sorted(liveries.items(), key=lambda kv: int(kv[0])))} if liveries else {}),
             **({"generations": {g: sorted(ns) for g, ns in sorted(generations.items())}} if generations else {}),
+            **({"notes": dict(sorted(notes.items(), key=lambda kv: int(kv[0])))} if notes else {}),
             # Ids this model's numbers were filed under before a SPLIT. Older apps ignore it.
             **({"formerly": formerly} if formerly else {}),
         })
     ids = Counter(m["id"] for m in models)
+    noted = {(m["kind"], int(n)) for m in models for n in m.get("notes", {})}
+    if lost := sorted(NOTES.keys() - noted):
+        print(f"  notes for vehicles not in the book: {lost} (NOTES)")
     assert all(c == 1 for c in ids.values()), f"duplicate model ids: {[i for i, c in ids.items() if c > 1]}"
     for m in models:
         if m["kind"] != "BUS":

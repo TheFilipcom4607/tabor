@@ -44,6 +44,26 @@ public struct Batch: Codable, Hashable, Sendable {
     }
 }
 
+/// Something worth knowing about one vehicle ("spent two weeks in Berlin in 2016"), written by
+/// TABOR from a source it links. Not czynaczas.pl's remarks: those are theirs and come from the proxy.
+public struct VehicleNote: Codable, Hashable, Sendable {
+    public let pl: String
+    public let en: String
+    /// Where the facts come from, e.g. "htp.org.pl", and its page. A note about TABOR itself has none.
+    public let source: String?
+    public let url: String?
+
+    public init(pl: String, en: String, source: String? = nil, url: String? = nil) {
+        self.pl = pl
+        self.en = en
+        self.source = source
+        self.url = url
+    }
+
+    /// In the app's language.
+    public var text: String { AppLanguage.polish ? pl : en }
+}
+
 public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
     public let id: String
     /// In the app's language: works cars are named for their type and job ("Gdańsk type K
@@ -90,6 +110,9 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
     /// Solaris Urbino generations, buses by generation ("3": [8300, …]), from a hand-checked
     /// list in fetch_fleet.py. Older fleet files lack it; a bus missing from it has none.
     public let generations: [String: [Int]]
+    /// TABOR's own notes on single vehicles, by fleet number (JSON keys are strings), from a
+    /// hand-kept, sourced list in fetch_fleet.py. Older fleet files lack it.
+    public let notes: [String: VehicleNote]
     /// Its trams run as two coupled cars, each with its own fleet number.
     public let coupled: Bool
     /// Cars that always run together, e.g. [[1000, 1001]]. In a model that isn't `coupled`,
@@ -113,7 +136,8 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
                 trial: String? = nil, runsPl: String? = nil, trialPl: String? = nil, trialEnded: String? = nil,
                 specs: ModelSpecs? = nil,
                 variants: [SpecVariant] = [],
-                liveries: [String: String]? = nil, generations: [String: [Int]] = [:], coupled: Bool = false, sets: [[Int]] = [], pairs: [[Int]] = [],
+                liveries: [String: String]? = nil, generations: [String: [Int]] = [:], notes: [String: VehicleNote] = [:],
+                coupled: Bool = false, sets: [[Int]] = [], pairs: [[Int]] = [],
                 trailers: [Int] = [], tows: Bool = false, formerly: [String] = []) {
         self.id = id
         self.name = name
@@ -138,6 +162,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
         self.variants = variants
         self.liveries = liveries
         self.generations = generations
+        self.notes = notes
         self.coupled = coupled
         self.sets = sets
         self.pairs = pairs
@@ -148,7 +173,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
 
     private enum CodingKeys: String, CodingKey {
         case id, name, namePl, make, code, kind, operators, fleet, firstYear, lastYear, batches, vintage, onTest, works, runs, trial,
-             runsPl, trialPl, trialEnded, specs, variants, liveries, generations, coupled, sets, pairs, trailers, tows, formerly
+             runsPl, trialPl, trialEnded, specs, variants, liveries, generations, notes, coupled, sets, pairs, trailers, tows, formerly
     }
 
     public init(from decoder: Decoder) throws {
@@ -178,6 +203,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
         variants = (try? c.decodeIfPresent([SpecVariant].self, forKey: .variants)) ?? []
         liveries = try? c.decodeIfPresent([String: String].self, forKey: .liveries)
         generations = (try? c.decodeIfPresent([String: [Int]].self, forKey: .generations)) ?? [:]
+        notes = (try? c.decodeIfPresent([String: VehicleNote].self, forKey: .notes)) ?? [:]
         coupled = try c.decodeIfPresent(Bool.self, forKey: .coupled) ?? false
         sets = (try? c.decodeIfPresent([[Int]].self, forKey: .sets)) ?? []
         pairs = (try? c.decodeIfPresent([[Int]].self, forKey: .pairs)) ?? []
@@ -188,6 +214,9 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
 
     /// A special paint job, if this vehicle has one.
     public func livery(of number: Int) -> Livery? { liveries?[String(number)].flatMap { Livery(rawValue: $0) } }
+
+    /// TABOR's own note on this vehicle, if it has one.
+    public func note(of number: Int) -> VehicleNote? { notes[String(number)] }
 
     /// Which Solaris Urbino generation this bus is, if the fleet file knows.
     public func generation(of number: Int) -> UrbinoGeneration? {
@@ -221,7 +250,8 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
                      batches: batches + more.batches, vintage: vintage, onTest: onTest, works: works,
                      runs: runs, trial: trial, runsPl: runsPl, trialPl: trialPl, trialEnded: trialEnded,
                      specs: specs, variants: variants,
-                     liveries: liveries, generations: generations, coupled: coupled, sets: sets, pairs: pairs, trailers: trailers, tows: tows, formerly: formerly)
+                     liveries: liveries, generations: generations, notes: notes.merging(more.notes) { a, _ in a },
+                     coupled: coupled, sets: sets, pairs: pairs, trailers: trailers, tows: tows, formerly: formerly)
     }
 
     public var yearsDisplay: String? {

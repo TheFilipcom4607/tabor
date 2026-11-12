@@ -1,6 +1,46 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "FIND IT IN HUNT": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ZNAJDŹ W HUNT"
+          }
+        }
+      }
+    },
+    "NOT IN YOUR BOOK": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NIE MA W ALBUMIE"
+          }
+        }
+      }
+    },
+    "NOTES": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOTATKI"
+          }
+        }
+      }
+    },
+    "Open %@": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz %@"
+          }
+        }
+      }
+    },
     "Photo, facts and every number": {
       "localizations": {
         "pl": {
