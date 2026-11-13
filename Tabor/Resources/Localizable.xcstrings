@@ -11198,6 +11198,36 @@
           }
         }
       }
+    },
+    "THE CAMERA IS RESTING": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "APARAT ODPOCZYWA"
+          }
+        }
+      }
+    },
+    "TAP OR LIFT THE PHONE TO WAKE IT": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DOTKNIJ ALBO PODNIEŚ TELEFON"
+          }
+        }
+      }
+    },
+    "Wake the camera": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obudź aparat"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

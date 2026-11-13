@@ -16,6 +16,8 @@ extension EnvironmentValues {
     /// Low Power Mode is on (`LowPower`): the endless decorations (foil, medal sheen, live
     /// dots) hold still. Set once, in `RootView`.
     @Entry var lowPower = false
+    /// The view floats over CATCH's live camera, where frosted glass costs a blur per frame.
+    @Entry var overCamera = false
 }
 
 enum WideLayout {

@@ -25,6 +25,8 @@ struct CaptureView: View {
     @State private var tap = UIImpactFeedbackGenerator(style: .medium)
 
     private static let yellow = Color(red: 1, green: 0.808, blue: 0)
+    /// A plain dark fill, not frosted glass: over the camera a blur is redone on every frame.
+    private static let glass = Color(red: 10 / 255, green: 12 / 255, blue: 14 / 255, opacity: 0.6)
     private static let red = Color(red: 0.894, green: 0, blue: 0.169)
 
     var body: some View {
@@ -60,7 +62,7 @@ struct CaptureView: View {
                     .contentTransition(.opacity)
                     .padding(.vertical, 6)
                     .padding(.horizontal, 12)
-                    .background(.ultraThinMaterial, in: Capsule())
+                    .background(Self.glass, in: Capsule())
                     .environment(\.colorScheme, .dark)
                     .padding(.top, 14)
 
@@ -121,7 +123,7 @@ struct CaptureView: View {
                 .foregroundStyle(rapid ? .black : .white.opacity(0.72))
                 .frame(width: 36, height: 36)
                 .background(rapid ? Self.yellow : .clear, in: Circle())
-                .background(.ultraThinMaterial, in: Circle())
+                .background(Self.glass, in: Circle())
                 .environment(\.colorScheme, .dark)
                 // Hit with a thumb in a hurry: a 60 pt target, the lock icon included, without moving anything.
                 .padding(EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 30))
@@ -194,7 +196,7 @@ struct CaptureView: View {
                 .foregroundStyle(camera.torchOn ? .black : .white.opacity(0.85))
                 .frame(width: 50, height: 50)
                 .background(camera.torchOn ? Self.yellow : .clear, in: Circle())
-                .background(.ultraThinMaterial, in: Circle())
+                .background(Self.glass, in: Circle())
                 .environment(\.colorScheme, .dark)
         }
         .buttonStyle(.plain)
@@ -223,7 +225,7 @@ struct CaptureView: View {
             }
         }
         .padding(3)
-        .background(.ultraThinMaterial, in: Capsule())
+        .background(Self.glass, in: Capsule())
         .environment(\.colorScheme, .dark)
         .animation(.snappy(duration: 0.2), value: active)
     }

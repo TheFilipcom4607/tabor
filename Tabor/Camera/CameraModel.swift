@@ -63,6 +63,11 @@ final class CameraModel: NSObject, @unchecked Sendable {
     @ObservationIgnored private var pressureObservation: NSKeyValueObservation?
     /// The phone is running hot: fewer frames. Guarded by `lock`.
     @ObservationIgnored private var _hot = false
+    /// Nobody's using the viewfinder (`CameraRest`): fewer frames too. Guarded by `lock`.
+    @ObservationIgnored private var _resting = false
+    /// Whether the camera in use is on the slow rate; nil until it's been set either way.
+    /// Only touched on sessionQueue.
+    @ObservationIgnored private var slowed: Bool?
     @ObservationIgnored private var _pressure = "nominal"
     @ObservationIgnored private var _lastCaptureError: String?
 
@@ -160,6 +165,7 @@ final class CameraModel: NSObject, @unchecked Sendable {
         rotation = nil
         pressureObservation = nil
         device = nil
+        slowed = nil
         configured = false
         // A shot in flight won't finish now.
         photoContinuation?.resume(returning: nil)
@@ -299,8 +305,8 @@ final class CameraModel: NSObject, @unchecked Sendable {
         }
         session.addInput(input)
         session.commitConfiguration()
-        // So the new camera's first heat reading is applied, not taken for no change.
-        lock.withLock { _hot = false }
+        // The new camera starts on its own frame rate.
+        slowed = nil
         use(cam)
         // The main lens's torch went with it.
         Task { @MainActor in self.torchOn = false }
@@ -365,21 +371,42 @@ final class CameraModel: NSObject, @unchecked Sendable {
 
     /// Called on sessionQueue.
     private func throttle(_ level: AVCaptureDevice.SystemPressureState.Level) {
-        let hot = level == .serious || level == .critical || level == .shutdown
-        let changed = lock.withLock {
+        lock.withLock {
             _pressure = level.rawValue
-            defer { _hot = hot }
-            return _hot != hot
+            _hot = level == .serious || level == .critical || level == .shutdown
         }
-        guard changed, let d = device, (try? d.lockForConfiguration()) != nil else { return }
+        setFrameRate()
+    }
+
+    /// The viewfinder at half its frames while nobody's using it. The shutter works the same.
+    func rest(_ on: Bool) {
+        lock.withLock { _resting = on }
+        sessionQueue.async { self.setFrameRate() }
+    }
+
+    /// Called on sessionQueue. 15 frames a second while the phone is hot or the viewfinder is
+    /// resting, the camera's own rate otherwise.
+    private func setFrameRate() {
+        let slow = lock.withLock { _hot || _resting }
+        guard slow != slowed, let d = device, (try? d.lockForConfiguration()) != nil else { return }
+        slowed = slow
         let fps: Int32 = 15
-        if hot, d.activeFormat.videoSupportedFrameRateRanges.contains(where: { $0.minFrameRate <= Double(fps) }) {
+        if slow, d.activeFormat.videoSupportedFrameRateRanges.contains(where: { $0.minFrameRate <= Double(fps) }) {
+            // Longer frames would let the camera expose for longer in poor light, and blur a
+            // moving bus's number: hold exposures to what the usual rate allows.
+            let usual = d.activeVideoMaxFrameDuration
+            let format = d.activeFormat
+            if usual.isValid, usual.seconds > 0,
+               usual >= format.minExposureDuration, usual <= format.maxExposureDuration {
+                d.activeMaxExposureDuration = usual
+            }
             d.activeVideoMinFrameDuration = CMTime(value: 1, timescale: fps)
             d.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: fps)
         } else {
-            // Invalid restores the format's default frame rate.
+            // Invalid restores the format's defaults.
             d.activeVideoMinFrameDuration = .invalid
             d.activeVideoMaxFrameDuration = .invalid
+            d.activeMaxExposureDuration = .invalid
         }
         d.unlockForConfiguration()
     }

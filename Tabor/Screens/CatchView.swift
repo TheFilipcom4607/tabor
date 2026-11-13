@@ -87,6 +87,8 @@ struct CatchView: View {
 
     private let camera = CameraModel.shared
     private let live = LiveFleetService.shared
+    /// Lets the camera slow down, then stop, while nobody's using it.
+    @State private var rest = CameraRest()
     @State private var mode: CatchMode = .auto
     @State private var draft: CatchDraft?
     @State private var flash = false
@@ -236,6 +238,7 @@ struct CatchView: View {
                 .allowsHitTesting(false)
         }
         .background(Color.black.ignoresSafeArea())
+        .environment(\.overCamera, true)
         .onAppear {
             LaunchTiming.mark("catch")
             visible = true
@@ -249,12 +252,37 @@ struct CatchView: View {
             catches = (try? context.fetchCount(FetchDescriptor<Sighting>())) ?? 0
             // Ask for location now, while spotting — never in the middle of a reveal.
             if geotag { LocationService.shared.requestPermission() }
+            rest.start()
         }
         .onDisappear {
             visible = false
+            rest.stop()
+            camera.rest(false)
             camera.stop()
             live.stop("camera")
         }
+        .onChange(of: restBusy, initial: true) { _, busy in
+            rest.busy = busy
+            if !busy { rest.poke() }
+        }
+        .onChange(of: rest.level) { old, level in
+            camera.rest(level != .awake)
+            if level == .asleep {
+                // The feed and the GPS are only here for the next shot: they rest too.
+                camera.stop()
+                live.stop("camera")
+            } else if old == .asleep, visible, draft == nil, cards == nil {
+                live.start("camera")
+                Task { await camera.start() }
+            }
+        }
+        // Using a control is using the camera.
+        .onChange(of: camera.zoom) { rest.poke() }
+        .onChange(of: camera.torchOn) { rest.poke() }
+        .onChange(of: mode) { rest.poke() }
+        .onChange(of: rapid) { rest.poke() }
+        .onChange(of: focusPoint) { rest.poke() }
+        .onChange(of: toast) { rest.poke() }
         // The volume buttons (and Camera Control) fire the shutter, as in the Camera app:
         // quicker than finding the button on screen with a bus pulling away. The system
         // only hands them over while the camera runs, so volume works as usual elsewhere.
@@ -376,8 +404,40 @@ struct CatchView: View {
         }
     }
 
+    /// The camera stopped itself after a while of nobody using it; a tap or a lift wakes it.
+    private var asleep: Bool { rest.level == .asleep && camera.status == .running }
+
+    /// Nothing for the camera to rest from: a shot being read, a reveal up, no camera running.
+    private var restBusy: Bool {
+        draft != nil || cards != nil || capturing || finishing || camera.status != .running || scenePhase != .active
+    }
+
+    private var resting: some View {
+        ZStack {
+            Color(hex: 0x0E1013)
+            let sign = VStack(spacing: 14) {
+                Image(systemName: "moon.zzz")
+                    .font(.system(size: 34, weight: .light))
+                    .foregroundStyle(Palette.faint)
+                Mono("THE CAMERA IS RESTING", size: 11, color: Palette.sub)
+            }
+            if tall {
+                FoldSplit { sign } bottom: { Color.clear }
+            } else {
+                sign.padding(.trailing, wide ? Self.sideColumn : 0)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { rest.poke() }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Wake the camera")
+        .accessibilityAddTraits(.isButton)
+    }
+
     @ViewBuilder private var viewfinder: some View {
         switch camera.status {
+        case .running where asleep:
+            resting
         case .running:
             CameraPreview(session: camera.session) { point, devicePoint in
                 // Only inside the brackets: a hurried tap that just misses the shutter or a
@@ -530,7 +590,7 @@ struct CatchView: View {
     // A 3:2 landscape frame, like a photo: the shot is cropped to it.
     private var brackets: some View {
         ViewfinderBrackets()
-            .opacity(camera.status == .running ? 1 : 0)
+            .opacity(camera.status == .running && !asleep ? 1 : 0)
             .overlay { frozenShot }
             .aspectRatio(3 / 2, contentMode: .fit)
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { bracketGlobal = $0 }
@@ -692,6 +752,7 @@ struct CatchView: View {
 
     private var shutter: some View {
         Button {
+            if asleep { return rest.poke() }
             Task { await shoot() }
         } label: {
             ZStack {
@@ -808,6 +869,7 @@ struct CatchView: View {
         if finishing, router.burst.reading > 0 { return String(localized: "READING \(router.burst.reading) MORE…") }
         if capturing, !rapid { return String(localized: "READING THE NUMBER…") }
         switch camera.status {
+        case .running where asleep: return String(localized: "TAP OR LIFT THE PHONE TO WAKE IT")
         case .running: break
         case .idle: return String(localized: "WAKING THE CAMERA")
         case .interrupted: return String(localized: "WAITING FOR THE CAMERA")
@@ -1017,12 +1079,28 @@ extension View {
             .padding(EdgeInsets(top: -top, leading: -sides, bottom: -bottom, trailing: -trailing))
     }
 
-    /// Frosted dark glass for controls floating over the live camera.
-    func glass<S: Shape>(_ shape: S) -> some View {
-        background(.ultraThinMaterial, in: shape)
-            .background(Color(hex: 0x0A0C0E, opacity: 0.35), in: shape)
-            .overlay(shape.stroke(Color.white.opacity(0.1), lineWidth: 1))
-            .environment(\.colorScheme, .dark)
+    /// Dark glass for controls floating over the map or the camera.
+    func glass<S: Shape>(_ shape: S) -> some View { modifier(Glass(shape: shape)) }
+}
+
+/// Frosted over the map. Over the live camera it's a plain dark fill: a blur there is worked
+/// out again on every frame the camera delivers, for as long as CATCH is open.
+private struct Glass<S: Shape>: ViewModifier {
+    let shape: S
+    @Environment(\.overCamera) private var overCamera
+
+    func body(content: Content) -> some View {
+        Group {
+            if overCamera {
+                content.background(Color(hex: 0x0A0C0E, opacity: 0.6), in: shape)
+            } else {
+                content
+                    .background(.ultraThinMaterial, in: shape)
+                    .background(Color(hex: 0x0A0C0E, opacity: 0.35), in: shape)
+            }
+        }
+        .overlay(shape.stroke(Color.white.opacity(0.1), lineWidth: 1))
+        .environment(\.colorScheme, .dark)
     }
 }
 
