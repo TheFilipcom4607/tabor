@@ -271,7 +271,9 @@ struct CatchView: View {
                 // The feed and the GPS are only here for the next shot: they rest too.
                 camera.stop()
                 live.stop("camera")
-            } else if old == .asleep, visible, draft == nil, cards == nil {
+            } else if old == .asleep, visible, draft == nil, cards == nil, scenePhase == .active {
+                // Locking the phone wakes it too (not active counts as busy), but starting the
+                // camera on the way out raced the background's stop: coming back is what starts it.
                 live.start("camera")
                 Task { await camera.start() }
             }

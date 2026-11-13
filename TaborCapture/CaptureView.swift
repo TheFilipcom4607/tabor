@@ -18,6 +18,8 @@ struct CaptureView: View {
     @State private var finderFrame: CGRect = .zero
     @State private var bracketGlobal: CGRect = .zero
     @State private var pinchStart: CGFloat?
+    /// This screen's camera start, so going away stops only that.
+    @State private var started: Int?
     /// Off every time it opens (#114): most locked catches are one bus. The extension can't
     /// read the app's own RAPID setting, and nothing it keeps would outlive the session anyway.
     @State private var rapid = false
@@ -89,10 +91,10 @@ struct CaptureView: View {
         .preferredColorScheme(.dark)
         .task {
             tap.prepare()
-            await camera.start()
+            started = await camera.start()
             place.start()
         }
-        .onDisappear { camera.stop() }
+        .onDisappear { camera.stop(started: started) }
         // The volume buttons and Camera Control fire the shutter, as in CATCH.
         .onCameraCaptureEvent(isEnabled: camera.status == .running) { event in
             switch event.phase {

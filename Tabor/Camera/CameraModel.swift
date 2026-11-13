@@ -50,6 +50,8 @@ final class CameraModel: NSObject, @unchecked Sendable {
     /// CATCH is on screen and wants the camera; recovery only restarts it then. Guarded by `lock`.
     @ObservationIgnored private var _wantsRunning = false
     private var wantsRunning: Bool { lock.withLock { _wantsRunning } }
+    /// Goes up on every start and stop, so a start that a stop overtook can tell. Guarded by `lock`.
+    @ObservationIgnored private var _turn = 0
     @ObservationIgnored private let log = Logger(subsystem: "com.filipmanikowski.tabor", category: "camera")
     @ObservationIgnored private var device: AVCaptureDevice?
     @ObservationIgnored private var photoContinuation: CheckedContinuation<Data?, Never>?
@@ -85,18 +87,25 @@ final class CameraModel: NSObject, @unchecked Sendable {
         observeSession()
     }
 
-    @MainActor
-    func start() async {
+    /// Returns this start's turn, for `stop(started:)`.
+    @MainActor @discardableResult
+    func start() async -> Int {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .notDetermined:
-            guard await AVCaptureDevice.requestAccess(for: .video) else { status = .denied; return }
+            guard await AVCaptureDevice.requestAccess(for: .video) else { status = .denied; return 0 }
         case .authorized: break
-        default: status = .denied; return
+        default: status = .denied; return 0
         }
-        lock.withLock { _wantsRunning = true }
-        status = await withCheckedContinuation { cont in
-            sessionQueue.async { cont.resume(returning: self.startSession()) }
+        let turn = lock.withLock { _wantsRunning = true; _turn += 1; return _turn }
+        // A stop that came in meanwhile (the phone locking as the camera starts) wins: starting
+        // anyway, or writing this start's "running" over the stop, left a black viewfinder
+        // with the shutter lit.
+        func current() -> Bool { lock.withLock { _turn == turn } }
+        let result: Status? = await withCheckedContinuation { cont in
+            sessionQueue.async { cont.resume(returning: current() ? self.startSession() : nil) }
         }
+        if let result, current() { status = result }
+        return turn
     }
 
     /// Builds the session ahead of CATCH asking for it, at launch, so the camera only has to
@@ -109,8 +118,17 @@ final class CameraModel: NSObject, @unchecked Sendable {
         }
     }
 
-    func stop() {
-        lock.withLock { _wantsRunning = false }
+    /// With `started`, only if nothing started the camera since that start: the Lock Screen
+    /// keeps the extension's process (and this one camera) between openings, and an old
+    /// screen can go away after the next one started it, stopping it under a lit shutter (#119).
+    func stop(started: Int? = nil) {
+        let mine = lock.withLock {
+            if let started, started != _turn { return false }
+            _wantsRunning = false
+            _turn += 1
+            return true
+        }
+        guard mine else { return }
         sessionQueue.async { if self.session.isRunning { self.session.stopRunning() } }
         Task { @MainActor in self.torchOn = false }
     }
