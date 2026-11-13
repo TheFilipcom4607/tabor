@@ -213,13 +213,9 @@ struct HuntView: View {
         // The tab stays alive behind the others once opened, so it comes back at once: the
         // fast polling and the refreshes only run while it's the one on screen.
         .onChange(of: onScreen, initial: true) { _, on in
-            guard on else {
-                location.stopHeading("hunt")
-                return service.stop("hunt")
-            }
+            guard on else { return service.stop("hunt") }
             service.start("hunt")
             live.take(service)
-            location.startHeading("hunt")
             routes.prepare()
             centerOnceOnYou()
             // Models a fleet update dropped can't match anything; don't leave them as ghost chips.
@@ -230,6 +226,9 @@ struct HuntView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active, onScreen { service.start("hunt") }
             if phase == .background { service.stop("hunt") }
+        }
+        .onChange(of: wantsCompass, initial: true) { _, wanted in
+            if wanted { location.startHeading("hunt") } else { location.stopHeading("hunt") }
         }
         // MapKit follows you on its own while facing; whatever ends facing leaves the map
         // where it is rather than letting it keep turning.
@@ -439,6 +438,16 @@ struct HuntView: View {
 
     /// A city-wide (filtered) hunt only gets pins around where you're looking, with a screen's
     /// margin all round, so a broad filter doesn't hand the map a thousand annotations.
+    /// The compass is only for your dot's cone and the facing map, so it rests while HUNT is
+    /// hidden or the map is panned to where your dot isn't.
+    private var wantsCompass: Bool {
+        guard onScreen else { return false }
+        guard !facing, let r = mapRegion, let you = location.latest?.coordinate else { return true }
+        // A little past the edge, so the cone is already turning as the dot slides back in.
+        return abs(you.latitude - r.center.latitude) < r.span.latitudeDelta * 0.6
+            && abs(you.longitude - r.center.longitude) < r.span.longitudeDelta * 0.6
+    }
+
     private func onMap(_ shown: [WantedPin]) -> [WantedPin] {
         guard cityWideHunt, let r = mapRegion else { return shown }
         return shown.filter { p in

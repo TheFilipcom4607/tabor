@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Photo
 
@@ -79,20 +80,69 @@ struct EmptySlot: View {
 }
 
 /// Diagonal white sheen: CSS `gloss 4.2s` — translateX(-120% → 320%) over the first 55%.
-struct GlossSweep: View {
-    var body: some View {
-        // 30 fps is smooth for a soft sheen and half the redraws on a 60 Hz screen.
-        TimelineView(.animation(minimumInterval: 1 / 30)) { ctx in
-            let t = ctx.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 4.2) / 4.2
-            let p = min(t / 0.55, 1)
-            let eased = p < 0.5 ? 2 * p * p : 1 - pow(-2 * p + 2, 2) / 2
-            LinearGradient(colors: [.clear, .white.opacity(0.75), .clear], startPoint: .leading, endPoint: .trailing)
-                .frame(width: 70, height: 240)
-                .rotationEffect(.degrees(18))
-                .offset(x: -84 + 308 * eased, y: -40)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+/// A layer the system moves, like the foil: as a `TimelineView` it redrew the reveal 30 times
+/// a second. Holds off in Low Power Mode.
+struct GlossSweep: UIViewRepresentable {
+    @Environment(\.lowPower) private var lowPower
+
+    func makeUIView(context: Context) -> SweepView { SweepView() }
+
+    func updateUIView(_ view: SweepView, context: Context) {
+        view.sweeping = !lowPower
+    }
+
+    final class SweepView: UIView {
+        private let band = CAGradientLayer()
+        var sweeping = false {
+            didSet { if sweeping != oldValue { restart() } }
         }
-        .allowsHitTesting(false)
+
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            isUserInteractionEnabled = false
+            clipsToBounds = true
+            // White all the way: fading to `.clear` (see-through black) greys the band's edges.
+            let edge = UIColor.white.withAlphaComponent(0).cgColor
+            band.colors = [edge, UIColor.white.withAlphaComponent(0.75).cgColor, edge]
+            band.startPoint = CGPoint(x: 0, y: 0.5)
+            band.endPoint = CGPoint(x: 1, y: 0.5)
+            band.bounds = CGRect(x: 0, y: 0, width: 70, height: 240)
+            band.position = CGPoint(x: Self.from, y: 80)
+            band.transform = CATransform3DMakeRotation(18 * .pi / 180, 0, 0, 1)
+            band.isHidden = true
+            layer.addSublayer(band)
+            // The system drops a layer's animations when the app leaves the screen.
+            NotificationCenter.default.addObserver(self, selector: #selector(restart), name: UIApplication.didBecomeActiveNotification, object: nil)
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) { fatalError() }
+
+        /// The band's centre, from off the left edge to off the right.
+        private static let from: CGFloat = -49, to: CGFloat = 259
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            restart()
+        }
+
+        @objc private func restart() {
+            band.removeAnimation(forKey: "sweep")
+            let on = sweeping && window != nil
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            band.isHidden = !on
+            CATransaction.commit()
+            guard on else { return }
+            let sweep = CAKeyframeAnimation(keyPath: "position.x")
+            sweep.values = [Self.from, Self.to, Self.to]
+            sweep.keyTimes = [0, 0.55, 1]
+            sweep.timingFunctions = [CAMediaTimingFunction(name: .easeInEaseOut), CAMediaTimingFunction(name: .linear)]
+            sweep.duration = 4.2
+            sweep.repeatCount = .infinity
+            sweep.preferredFrameRateRange = CAFrameRateRange(minimum: 15, maximum: 30, preferred: 30)
+            band.add(sweep, forKey: "sweep")
+        }
     }
 }
 
