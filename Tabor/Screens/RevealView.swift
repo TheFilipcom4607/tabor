@@ -55,6 +55,9 @@ struct RevealView: View {
     /// A crop is being read; the next number/model change is the crop's, not an edit.
     @State private var rereading = false
     @State private var skipEdit = false
+    /// Where the catch was made, once that's worked out (`placeKnown`; nil for nowhere).
+    @State private var placed: Geotag?
+    @State private var placeKnown = false
     /// The wrap's own sparkle: on when the reveal lands in a wrap, or the chip adds one.
     @State private var foilBurst = 0
 
@@ -388,6 +391,11 @@ struct RevealView: View {
         // Only now may the book scroll to the catch: CATCH (and this cover with it) goes as the
         // tab switches, so the cover's own onDismiss never runs.
         .onDisappear { if step == nil { router.revealGone() } }
+        .task {
+            guard let tag = draft.geotag else { return }
+            placed = await tag.value
+            placeKnown = true
+        }
         .task {
             Haptics.shared.warmUp()
             await playReveal(run: 0)
@@ -1097,6 +1105,9 @@ struct RevealView: View {
         if draft.modelPickedByHand {
             context.assign(number: number, to: model.id, existing: manual)
         }
+        // The place was being worked out from the shutter on, so it's usually in by now: it
+        // goes into the first save rather than making one of its own.
+        if placeKnown { _ = place(cars, at: placed) }
         try? context.save()
         // A moment worth asking for a tip on; the sheet waits until the reveal has gone.
         let catches = (try? context.fetchCount(FetchDescriptor<Sighting>(predicate: #Predicate { $0.pairedWith == nil }))) ?? 0
@@ -1105,15 +1116,19 @@ struct RevealView: View {
         if let reason = SupportAsk.reason(catchesBefore: catches - added, catchesAfter: catches, firstLegendary: firstLegendary) {
             router.askForSupport(reason)
         }
-        // Shrinking a full-size shot takes a moment: off the main thread, then each sighting
-        // points at its own small copy (HEIC, so a new name) and the full-size one goes.
+        // Shrinking a full-size shot takes a moment, and so does re-encoding the sticker (as cut,
+        // PNG, for now): both off the main thread, then each sighting points at its own small
+        // copies (HEIC, so new names), the book is saved once for the two, and the big ones go.
         let files = cars.map(\.photoFile)
-        if files.contains(where: { $0 != nil }) {
-            let original = draft.photo
-            Task { @MainActor in
-                guard let small = await Task.detached(priority: .utility, operation: { PhotoStore.compact(original) }).value
-                else { return }
-                var replaced: [String] = []
+        let original = draft.photo
+        Task { @MainActor in
+            let shrinking = files.contains { $0 != nil }
+                ? Task.detached(priority: .utility) { PhotoStore.compact(original) } : nil
+            let stickers = await TaborStore.StickerCopies(of: cars)
+            let small = await shrinking?.value
+            await BookQuiet.pass()
+            var replaced = stickers?.swap() ?? []
+            if let small {
                 for (car, file) in zip(cars, files) {
                     // Deleted (or edited) meanwhile: leave it be.
                     guard let file, !car.isDeleted, car.modelContext != nil, car.photoFile == file,
@@ -1121,14 +1136,11 @@ struct RevealView: View {
                     car.photoFile = smallFile
                     replaced.append(file)
                 }
-                guard !replaced.isEmpty else { return }
-                try? context.save()
-                replaced.forEach(PhotoStore.delete)
             }
+            guard !replaced.isEmpty else { return }
+            try? context.save()
+            replaced.forEach(PhotoStore.delete)
         }
-        // Stickers the same way: as cut (PNG) for now, HEIC once it's re-encoded.
-        let stickered = cars
-        Task { @MainActor in await TaborStore.compactStickers(stickered, in: context) }
         // After the reveal, never during it: the Photos permission prompt may appear here.
         if draft.fromCamera, saveToGallery {
             let data = draft.photo
@@ -1139,6 +1151,7 @@ struct RevealView: View {
         if s.stickerFile == nil, let stickerTask = draft.sticker {
             Task { @MainActor in
                 guard let png = await stickerTask.value?.png else { return }
+                await BookQuiet.pass()
                 for car in shot where car.stickerFile == nil && !car.isDeleted && car.modelContext != nil {
                     car.stickerFile = PhotoStore.save(png, ext: "png")
                 }
@@ -1146,21 +1159,29 @@ struct RevealView: View {
                 await TaborStore.compactStickers(shot, in: context)
             }
         }
-        if let tagTask = draft.geotag {
+        // The place wasn't known yet at the save (a quick shot, a slow fix): it follows.
+        if !placeKnown, let tagTask = draft.geotag {
             Task { @MainActor in
                 let tag = await tagTask.value
-                let place = tag.map { "\($0.coordinate.latitude), \($0.coordinate.longitude) · \($0.street ?? "?"), \($0.district ?? "?")" }
-                draft.debug?.update { $0.geotag = place ?? "no location" }
-                guard let tag else { return }
-                for car in cars where !car.isDeleted && car.modelContext != nil {
-                    car.latitude = tag.coordinate.latitude
-                    car.longitude = tag.coordinate.longitude
-                    car.street = tag.street
-                    car.district = tag.district
-                }
+                await BookQuiet.pass()
+                guard place(cars, at: tag) else { return }
                 try? context.save()
             }
         }
+    }
+
+    /// Puts the catch's cars where it was made; false when there's no place to give them.
+    private func place(_ cars: [Sighting], at tag: Geotag?) -> Bool {
+        let place = tag.map { "\($0.coordinate.latitude), \($0.coordinate.longitude) · \($0.street ?? "?"), \($0.district ?? "?")" }
+        draft.debug?.update { $0.geotag = place ?? "no location" }
+        guard let tag else { return false }
+        for car in cars where !car.isDeleted && car.modelContext != nil {
+            car.latitude = tag.coordinate.latitude
+            car.longitude = tag.coordinate.longitude
+            car.street = tag.street
+            car.district = tag.district
+        }
+        return true
     }
 
     private func kicker(isNewVehicle: Bool, isNewModel: Bool, modelOwned: Int, added: Int, existing: OwnedVehicle?) -> String {

@@ -198,7 +198,6 @@ struct RootView: View {
     @State private var tall = false
     /// Back from the background, rather than launching: the camera's timing counts from here.
     @State private var wasAway = false
-    @Query private var sightings: [Sighting]
     @Environment(\.modelContext) private var context
     @Environment(\.scenePhase) private var scenePhase
 
@@ -239,6 +238,7 @@ struct RootView: View {
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { tabBarHeight = $0 }
         }
         .background(Palette.bg.ignoresSafeArea())
+        .background { BookChores(badges: badges) }
         .environment(router)
         .environment(undo)
         .environment(\.wide, wide)
@@ -343,38 +343,56 @@ struct RootView: View {
             try? await Task.sleep(for: .seconds(1.5))
             await Task.detached(priority: .background) { StorageUsage.sweep() }.value
         }
-        // Stickers from before they were kept as HEIC, or from a restored backup: once the
-        // first screen has settled.
-        .task {
-            try? await Task.sleep(for: .seconds(3))
-            await TaborStore.compactStickers(sightings, in: context)
-        }
-        // The lists' small pictures, made ahead of time and out of the way (`ThumbStore`).
-        .task(id: pictureKey, priority: .utility) {
-            guard await settled() else { return }
-            await ThumbStore.fill(VehicleSightings(sightings).smallCopies)
-        }
-        // Badges: celebrate anything newly earned, and fill in weather for the weather ones.
-        // A catch saves several times in its first seconds (photo, sticker, place, weather):
-        // let it settle, then work the rules out off the main thread, which animates the book.
-        .task(id: sightings.map(\.record)) {
-            let records = sightings.map(\.record), catalog = Fleet.catalog
-            guard await settled() else { return }
-            let earned = await Task.detached(priority: .utility) { Achievements.evaluate(records, catalog: catalog) }.value
-            guard !Task.isCancelled else { return }
-            if badges.update(earned) { router.badgeEarned() }
-            await WeatherService.backfill(sightings, context: context)
-        }
-        // Refresh the Home / Lock Screen widgets whenever what they show could have changed.
-        .task(id: widgetKey) {
-            guard await settled() else { return }
-            await WidgetBridge.publish(sightings)
-            // A tracked vehicle just went into the book: its Live Activity says so and ends.
-            TrackService.shared.endCaught(sightings)
-        }
     }
 
     private func keeps(_ tab: AppTab) -> Bool { router.tab == tab || opened.contains(tab) }
+}
+
+/// What follows from the book changing: stickers kept small, the lists' pictures made ahead,
+/// badges, weather, widgets. A view of its own, with the only whole-book query outside the
+/// tabs, so `RootView` holds none: its body runs on every tab switch, and with the book in
+/// it each switch went through every catch twice over.
+private struct BookChores: View {
+    let badges: BadgeTracker
+    @Query private var sightings: [Sighting]
+    @Environment(\.modelContext) private var context
+    @Environment(Router.self) private var router
+
+    var body: some View {
+        let records = sightings.map(\.record), widgetKey = widgetKey
+        Color.clear
+            .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
+            // Stickers from before they were kept as HEIC, or from a restored backup: once the
+            // first screen has settled.
+            .task {
+                try? await Task.sleep(for: .seconds(3))
+                await TaborStore.compactStickers(sightings, in: context)
+            }
+            // The lists' small pictures, made ahead of time and out of the way (`ThumbStore`).
+            .task(id: pictureKey, priority: .utility) {
+                guard await settled() else { return }
+                await ThumbStore.fill(VehicleSightings(sightings).smallCopies)
+            }
+            // Badges: celebrate anything newly earned, and fill in weather for the weather ones.
+            // A catch saves more than once in its first seconds (pictures, place, weather): let
+            // it settle, then work the rules out off the main thread, which animates the book.
+            .task(id: records) {
+                let catalog = Fleet.catalog
+                guard await settled() else { return }
+                let earned = await Task.detached(priority: .utility) { Achievements.evaluate(records, catalog: catalog) }.value
+                guard !Task.isCancelled else { return }
+                if badges.update(earned) { router.badgeEarned() }
+                await WeatherService.backfill(sightings, context: context)
+            }
+            // Refresh the Home / Lock Screen widgets whenever what they show could have changed.
+            .task(id: widgetKey) {
+                guard await settled() else { return }
+                await WidgetBridge.publish(sightings, key: widgetKey)
+                // A tracked vehicle just went into the book: its Live Activity says so and ends.
+                TrackService.shared.endCaught(sightings)
+            }
+    }
 
     /// Waits for the book to stop changing; false when it changed again meanwhile (the task
     /// was replaced by a newer one).

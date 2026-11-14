@@ -151,41 +151,102 @@ enum TaborStore {
     /// every save redraws whatever shows the book, and a first launch converting a few hundred
     /// stickers 25 at a time made ME lag for a minute.
     @MainActor static func compactStickers(_ sightings: [Sighting], in context: ModelContext) async {
-        let due = Dictionary(grouping: sightings.filter { $0.stickerFile?.hasSuffix(".png") == true }) { $0.stickerFile! }
-        guard !due.isEmpty else { return }
-        let copies = due.mapValues(\.count)
-        let made = await Task.detached(priority: .utility) {
-            var made: [String: [String]] = [:]
-            for (file, count) in copies {
-                guard let png = try? Data(contentsOf: PhotoStore.url(file)),
-                      let small = PhotoStore.compactSticker(png) else { continue }
-                made[file] = (0..<count).compactMap { _ in PhotoStore.save(small, ext: "heic") }
-            }
-            return made
-        }.value
-        var replaced: [String] = []
-        for (file, names) in made {
-            // Deleted, or given another cut meanwhile: leave it be.
-            let still = due[file, default: []].filter { !$0.isDeleted && $0.modelContext != nil && $0.stickerFile == file }
-            for (s, name) in zip(still, names) { s.stickerFile = name }
-            names.dropFirst(still.count).forEach(PhotoStore.delete)
-            if !still.isEmpty, names.count >= still.count { replaced.append(file) }
-        }
+        guard let copies = await StickerCopies(of: sightings) else { return }
+        let replaced = copies.swap()
         guard !replaced.isEmpty else { return }
         try? context.save()
         replaced.forEach(PhotoStore.delete)
+    }
+
+    /// Stickers' HEIC copies, written and waiting to take the PNGs' place.
+    @MainActor struct StickerCopies {
+        private let due: [String: [Sighting]]
+        private let made: [String: [String]]
+
+        /// Nil when none of them is still a PNG.
+        init?(of sightings: [Sighting]) async {
+            due = Dictionary(grouping: sightings.filter { $0.stickerFile?.hasSuffix(".png") == true }) { $0.stickerFile! }
+            guard !due.isEmpty else { return nil }
+            let counts = due.mapValues(\.count)
+            made = await Task.detached(priority: .utility) {
+                var made: [String: [String]] = [:]
+                for (file, count) in counts {
+                    guard let png = try? Data(contentsOf: PhotoStore.url(file)),
+                          let small = PhotoStore.compactSticker(png) else { continue }
+                    made[file] = (0..<count).compactMap { _ in PhotoStore.save(small, ext: "heic") }
+                }
+                return made
+            }.value
+        }
+
+        /// Points each sighting at its copy. Hands back the PNGs nothing uses any more, to
+        /// delete once the book is saved.
+        func swap() -> [String] {
+            var replaced: [String] = []
+            for (file, names) in made {
+                // Deleted, or given another cut meanwhile: leave it be.
+                let still = due[file, default: []].filter { !$0.isDeleted && $0.modelContext != nil && $0.stickerFile == file }
+                for (s, name) in zip(still, names) { s.stickerFile = name }
+                names.dropFirst(still.count).forEach(PhotoStore.delete)
+                if !still.isEmpty, names.count >= still.count { replaced.append(file) }
+            }
+            return replaced
+        }
+    }
+}
+
+/// Rapid fire's cards come one after another, and whatever a catch still has to add to the
+/// book after it's stuck in (smaller pictures, a late sticker, the place) redraws every screen
+/// that shows the book, right as the next card flies in. While a burst is being dealt those
+/// additions wait here, and land together when it reaches its summary.
+@MainActor enum BookQuiet {
+    private static var on = false
+    private static var waiting: [CheckedContinuation<Void, Never>] = []
+
+    static func begin() { on = true }
+
+    static func end() {
+        on = false
+        let all = waiting
+        waiting = []
+        all.forEach { $0.resume() }
+    }
+
+    /// Straight through, or once the burst is done.
+    static func pass() async {
+        guard on else { return }
+        await withCheckedContinuation { waiting.append($0) }
     }
 }
 
 extension Array where Element == Sighting {
     var stats: CollectionStats { CollectionStats(sightings: map(\.record)) }
+}
 
-    func of(number: Int, modelId: String) -> [Sighting] {
+/// A catch as the book's pictures see it: a `Sighting`, or a copy of one that can leave the
+/// main thread (the widgets' counting).
+protocol PicturedCatch {
+    var number: Int { get }
+    var modelId: String { get }
+    var date: Date { get }
+    var photoFile: String? { get }
+    var stickerFile: String? { get }
+    var cover: Bool? { get }
+}
+
+extension PicturedCatch {
+    var hasPicture: Bool { stickerFile != nil || photoFile != nil }
+}
+
+extension Sighting: PicturedCatch {}
+
+extension Array where Element: PicturedCatch {
+    func of(number: Int, modelId: String) -> [Element] {
         filter { $0.number == number && $0.modelId == modelId }.sorted { $0.date > $1.date }
     }
 
     /// The sighting picked for the book, if it still has a picture.
-    func cover(number: Int, modelId: String) -> Sighting? {
+    func cover(number: Int, modelId: String) -> Element? {
         of(number: number, modelId: modelId).first { $0.cover == true && $0.hasPicture }
     }
 
@@ -198,9 +259,9 @@ extension Array where Element == Sighting {
 
     /// The sighting whose picture the book shows: the picked one, else the newest with a sticker,
     /// else the newest with a photo.
-    func pictured(number: Int, modelId: String) -> Sighting? {
+    func pictured(number: Int, modelId: String) -> Element? {
         let list = of(number: number, modelId: modelId)
-        return list.first { $0.cover == true && $0.hasPicture } ?? list.first { $0.stickerFile != nil } ?? list.first(where: \.hasPicture)
+        return list.first { $0.cover == true && $0.hasPicture } ?? list.first { $0.stickerFile != nil } ?? list.first { $0.hasPicture }
     }
 
     /// The vehicle's die-cut sticker: the picked sighting's (none if it has only a photo, so

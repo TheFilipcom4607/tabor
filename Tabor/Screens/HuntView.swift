@@ -75,6 +75,31 @@ private struct FeedTap: View {
     }
 }
 
+/// Watches the book for HUNT, the way `FeedTap` watches the feed: only in the view tree while
+/// HUNT is on screen. With the query in HUNT itself, every save of a catch ran its whole body
+/// behind whatever tab was up, and every refresh and pan counted the book again.
+private struct BookTap: View {
+    /// The book counted, when it's first read and whenever what's in it changes.
+    let changed: (CollectionStats) -> Void
+    @Query private var sightings: [Sighting]
+
+    var body: some View {
+        Color.clear.onChange(of: key, initial: true) { changed(sightings.stats) }
+    }
+
+    /// All HUNT asks of the book: which vehicles are in it, how often, and in which wraps.
+    private var key: Int {
+        var hasher = Hasher()
+        for s in sightings {
+            hasher.combine(s.number)
+            hasher.combine(s.modelId)
+            hasher.combine(s.date)
+            hasher.combine(s.wrap)
+        }
+        return hasher.finalize()
+    }
+}
+
 /// HUNT: every bus and tram running near you that isn't in your book yet, live (or, in the
 /// ALL view, everything running).
 /// Two rules on the map: a vehicle on its own is a tag with its line, vehicles that would
@@ -82,7 +107,7 @@ private struct FeedTap: View {
 /// a model you already have. Colour is always rarity.
 /// A filter (rarities, models) narrows it to what you're after, anywhere in the city.
 struct HuntView: View {
-    @Query private var sightings: [Sighting]
+    @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.wide) private var wide
@@ -119,9 +144,11 @@ struct HuntView: View {
     /// Opened on the default 3 km view around you, once there was a fix to open it on.
     @State private var centered = false
     @State private var pins: [WantedPin] = []
-    /// The book as of the last refresh. Kept rather than counted where it's needed: counting
-    /// goes through every catch, and a refresh did it three times over, the card on each redraw.
+    /// The book, counted by `BookTap` when it changes. Kept rather than counted where it's
+    /// needed: counting goes through every catch, and every refresh and pan did it.
     @State private var caught = CollectionStats(sightings: [])
+    /// False until the book's first count is in: pins made before it would all read as uncaught.
+    @State private var bookRead = false
     /// Vehicles out in an event wrap you haven't caught them in, anywhere, nearest first.
     @State private var wrapsOut: [WantedPin] = []
     /// Each vehicle placed on its route, when it could be, as of the last refresh.
@@ -204,6 +231,11 @@ struct HuntView: View {
                     // scrolled (#74): it waits for the list to settle.
                     if stopScroll.active { stopScroll.missed = true } else { recompute(animated: true) }
                 }
+                BookTap { book in
+                    caught = book
+                    bookRead = true
+                    recompute(animated: false)
+                }
             }
         }
         .foregroundStyle(Palette.ink)
@@ -241,7 +273,6 @@ struct HuntView: View {
             service.locationMoved()
             recompute(animated: false)
         }
-        .onChange(of: sightings.count) { recompute(animated: false) }
         .onChange(of: routes.book?.feed) { recompute(animated: false) }
         .task(id: onScreen ? selectedId : nil) { await creep() }
         .onChange(of: picked) {
@@ -1623,9 +1654,8 @@ struct HuntView: View {
 
     /// Every uncaught vehicle out right now, anywhere (caught ones too in the ALL view);
     /// distances from you when there's a fix.
-    private func cityWide(caught: CollectionStats? = nil) -> [WantedPin] {
+    private func cityWide() -> [WantedPin] {
         guard let snapshot = live.snapshot else { return [] }
-        let caught = caught ?? sightings.stats
         let user = here
         let from = user ?? mapCenter ?? Self.warsaw.center
         if let line = targets.line {
@@ -1638,11 +1668,15 @@ struct HuntView: View {
     }
 
 
+    /// The vehicle's own catches, for the Live Activity's sticker: asked of the store at the
+    /// tap, since HUNT keeps only the book's counts.
+    private func inBook(_ pin: WantedPin) -> [Sighting] {
+        let number = pin.vehicle.number, modelId = pin.model.id
+        return (try? context.fetch(FetchDescriptor<Sighting>(predicate: #Predicate { $0.number == number && $0.modelId == modelId }))) ?? []
+    }
+
     private func recompute(animated: Bool) {
-        guard onScreen else { return }
-        // Counted once for everything below, and kept for the card and the search.
-        let caught = sightings.stats
-        self.caught = caught
+        guard onScreen, bookRead else { return }
         let user = here
         guard let snapshot = live.snapshot, let center = mapCenter ?? user else { return }
         // Half the visible diagonal, and never less than the 3 km the list needs.
@@ -1654,7 +1688,7 @@ struct HuntView: View {
         let picked = targets
         let filtered = picked.isCityWide || filter == .starred
         var next = filtered
-            ? cityWide(caught: caught).filter { picked.matches($0) }
+            ? cityWide().filter { picked.matches($0) }
             : Wanted.pins(snapshot: snapshot, catalog: catalog, caught: caught,
                           lat: center.latitude, lon: center.longitude, within: max(Wanted.radius, visible),
                           from: user.map { ($0.latitude, $0.longitude) }, includeCaught: withCaught)
@@ -1785,7 +1819,7 @@ struct HuntView: View {
             }
             return PinCard.Track(state: .off(why))
         }
-        return PinCard.Track(state: .ready) { track.start(pin, plan: plan, sightings: sightings) }
+        return PinCard.Track(state: .ready) { track.start(pin, plan: plan, sightings: inBook(pin)) }
     }
 
     /// A bell in the stop list (#96): counts down to that stop rather than the one by you, so it
@@ -1800,7 +1834,7 @@ struct HuntView: View {
         guard let m = creeping(pin) ?? routeMatch(pin), let plan = TrackPlan.make(match: m, stop: stop) else {
             return String(localized: "It's already at that stop or past it.")
         }
-        track.start(pin, plan: plan, sightings: sightings)
+        track.start(pin, plan: plan, sightings: inBook(pin))
         return nil
     }
 

@@ -21,7 +21,9 @@ struct MeView: View {
     private let catalog = Fleet.catalog
 
     var body: some View {
-        let now = figures.of(sightings.map(\.record), catalog: catalog)
+        // Behind another tab the page isn't looked at: a save there (a catch has a few) keeps
+        // the last figures, and the pass that brings ME back on screen catches up.
+        let now = onScreen ? figures.of(sightings.map(\.record), catalog: catalog) : figures.last
         let stats = now.stats
         let trophies = now.trophies
 
@@ -279,6 +281,7 @@ private final class MeFigures {
     /// The streak ends at midnight without the book changing.
     private var day = Date.distantPast
     private var figures = Figures()
+    var last: Figures { figures }
 
     func of(_ records: [SightingRecord], catalog: FleetCatalog) -> Figures {
         let today = Calendar.current.startOfDay(for: Date())

@@ -50,8 +50,16 @@ struct BurstRevealView: View {
                 .transition(.opacity)
             }
         }
-        .onAppear { router.revealShown() }
-        .onDisappear { router.revealGone() }
+        .onAppear {
+            router.revealShown()
+            BookQuiet.begin()
+        }
+        // The summary's up (or the burst was left): what the catches still owe the book goes in.
+        .onChange(of: index >= current.count) { _, done in if done { BookQuiet.end() } }
+        .onDisappear {
+            BookQuiet.end()
+            router.revealGone()
+        }
     }
 
     private func next(_ draft: CatchDraft?) {

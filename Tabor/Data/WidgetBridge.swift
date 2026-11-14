@@ -7,38 +7,76 @@ enum WidgetBridge {
     /// The photo or sticker file last copied for the widget (once per launch at most).
     private static var imageSource: String??
 
-    static let recentCount = 6
-    static let pileCount = 24
+    nonisolated static let recentCount = 6
+    nonisolated static let pileCount = 24
 
-    static func publish(_ sightings: [Sighting], catalog: FleetCatalog = Fleet.catalog) async {
+    /// What was last published and for which day (`publishedKey`), so a launch with nothing
+    /// new skips the whole count.
+    private static let publishedKey = "widgetPublished"
+
+    /// A catch copied out of the book, so the counting can leave the main thread.
+    struct Row: PicturedCatch, Sendable {
+        let record: SightingRecord
+        let photoFile: String?
+        let stickerFile: String?
+        let cover: Bool?
+
+        var number: Int { record.number }
+        var modelId: String { record.modelId }
+        var date: Date { record.date }
+    }
+
+    /// `key` changes when what the widgets show could have (the caller's task id).
+    static func publish(_ sightings: [Sighting], key: String, catalog: FleetCatalog = Fleet.catalog) async {
         guard let imageURL = WidgetSnapshot.imageURL else { return } // no App Group entitlement
+        // The memories and the streak turn with the day, the totals with the fleet, the labels
+        // with the language, and a new build may draw the snapshot differently.
+        let version = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""
+        let day = Int(Calendar.current.startOfDay(for: .now).timeIntervalSinceReferenceDate)
+        let stamp = [key, String(day), catalog.fetched ?? "", version, Locale.app.identifier].joined(separator: "|")
+        guard stamp != UserDefaults.standard.string(forKey: publishedKey), !Task.isCancelled else { return }
         HangLog.mark("publish")
-        let latest = sightings.max { $0.date < $1.date }
+        // One pass over the book here; everything after it is off the main thread.
+        let rows = sightings.map { Row(record: $0.record, photoFile: $0.photoFile, stickerFile: $0.stickerFile, cover: $0.cover) }
+        let last = imageSource
+        let (snapshot, source) = await Task.detached(priority: .utility) {
+            build(rows, last: last, imageURL: imageURL, catalog: catalog)
+        }.value
+        guard !Task.isCancelled else { return }
+        imageSource = .some(source)
+        UserDefaults.standard.set(stamp, forKey: publishedKey)
+        guard let snapshot else { return }
+        snapshot.save()
+        WidgetSnapshot.bookKinds.forEach { WidgetCenter.shared.reloadTimelines(ofKind: $0) }
+    }
+
+    /// The snapshot, with its pictures written; nil when it's the one already saved. Also
+    /// the latest catch's picture file, to tell next time whether it changed.
+    nonisolated private static func build(_ rows: [Row], last: String??, imageURL: URL,
+                                          catalog: FleetCatalog) -> (WidgetSnapshot?, String?) {
+        let latest = rows.max { $0.date < $1.date }
         let model = latest.flatMap { catalog.model(id: $0.modelId) }
-        let sticker = latest.flatMap { sightings.sticker(number: $0.number, modelId: $0.modelId) }
-        let source = sticker ?? latest.flatMap { sightings.photo(number: $0.number, modelId: $0.modelId) }
+        let sticker = latest.flatMap { rows.sticker(number: $0.number, modelId: $0.modelId) }
+        let source = sticker ?? latest.flatMap { rows.photo(number: $0.number, modelId: $0.modelId) }
 
-        let imageChanged = imageSource != .some(source)
-        if imageChanged {
-            // Widgets have a tight memory budget: hand them a small PNG, not the full photo.
-            await Task.detached(priority: .utility) { writeImage(source, to: imageURL, maxPixel: 480) }.value
-            imageSource = .some(source)
-        }
+        let imageChanged = last != .some(source)
+        // Widgets have a tight memory budget: hand them a small PNG, not the full photo.
+        if imageChanged { writeImage(source, to: imageURL, maxPixel: 480) }
 
-        let deck = cards(sightings, catalog: catalog)
-        let records = sightings.map(\.record)
+        let records = rows.map(\.record)
+        let stats = CollectionStats(sightings: records)
+        let deck = cards(rows, stats: stats, catalog: catalog)
         let periods = PeriodSummaryKind.allCases.map { summary($0, records: records, deck: deck, catalog: catalog) }
-        let memories = memories(sightings, deck: deck, catalog: catalog)
+        let memories = memories(records, stats: stats, deck: deck, catalog: catalog)
         // Only the pictures some widget shows.
         let used = Set(deck.recent.map(\.image) + deck.pile.map(\.image) + periods.compactMap { $0.rarest?.image }
                        + memories.compactMap(\.image))
-        let files = deck.files.filter { used.contains($0.key) }
-        await Task.detached(priority: .utility) { syncCardImages(files) }.value
+        syncCardImages(deck.files.filter { used.contains($0.key) })
 
-        let stats = sightings.stats
+        let dates = records.map(\.date)
         let snapshot = WidgetSnapshot(
             caught: stats.fleetCaught(catalog: catalog), fleet: catalog.totalFleet,
-            streak: Streak.days(sightings.map(\.date)), lastCatch: latest?.date,
+            streak: Streak.days(dates), lastCatch: latest?.date,
             latestNumber: latest?.number, latestModel: latest.map { _ in model?.name ?? String(localized: "Unknown model") },
             latestTier: model?.tier.rawValue,
             hasImage: source != nil && FileManager.default.fileExists(atPath: imageURL.path),
@@ -46,11 +84,9 @@ enum WidgetBridge {
             recent: deck.recent, pile: deck.pile, tiers: tierCounts(stats, catalog: catalog),
             models: catalog.models.filter { m in m.regular && stats.ownedCount(modelId: m.id) > 0 }.count,
             modelsTotal: catalog.models.filter(\.regular).count,
-            bestStreak: Streak.best(sightings.map(\.date))?.days ?? 0,
+            bestStreak: Streak.best(dates)?.days ?? 0,
             periods: periods, memories: memories)
-        guard imageChanged || snapshot != WidgetSnapshot.load() else { return }
-        snapshot.save()
-        WidgetSnapshot.bookKinds.forEach { WidgetCenter.shared.reloadTimelines(ofKind: $0) }
+        return (imageChanged || snapshot != WidgetSnapshot.load() ? snapshot : nil, source)
     }
 
     /// Every caught vehicle that has a picture, as a card: the newest few, a pile that leans
@@ -63,7 +99,7 @@ enum WidgetBridge {
         var files: [String: String]
     }
 
-    private static func cards(_ sightings: [Sighting], catalog: FleetCatalog) -> Deck {
+    nonisolated private static func cards(_ sightings: [Row], stats: CollectionStats, catalog: FleetCatalog) -> Deck {
         struct Vehicle {
             var last: Date; var first: Date; var times: Int; var sticker: String?; var photo: String?
             var line: String?; var place: String?
@@ -79,23 +115,22 @@ enum WidgetBridge {
             e.v.first = s.date
             e.v.times += 1
             // Newest first, so these are the latest known.
-            e.v.line = e.v.line ?? s.line
-            e.v.place = e.v.place ?? s.district
+            e.v.line = e.v.line ?? s.record.line
+            e.v.place = e.v.place ?? s.record.district
             // Like the book: the picked sighting's picture, else the newest.
             if s.cover == true, s.hasPicture, !e.v.picked {
                 e.v.sticker = s.stickerFile
                 e.v.photo = s.photoFile ?? e.v.photo
-                e.v.wrap = s.wrap
+                e.v.wrap = s.record.wrap
                 e.v.picked = true
             } else if !e.v.picked {
-                if e.v.sticker == nil, e.v.photo == nil, s.hasPicture { e.v.wrap = s.wrap }
+                if e.v.sticker == nil, e.v.photo == nil, s.hasPicture { e.v.wrap = s.record.wrap }
                 e.v.sticker = e.v.sticker ?? s.stickerFile
                 e.v.photo = e.v.photo ?? s.photoFile
             }
             byKey[key] = e
         }
 
-        let stats = sightings.stats
         var files: [String: String] = [:]
         var all: [(card: WidgetSnapshot.Card, last: Date, fleet: Int)] = []
         for e in byKey.values {
@@ -125,7 +160,7 @@ enum WidgetBridge {
     typealias PeriodSummaryKind = WidgetSnapshot.PeriodSummary.Kind
 
     /// This month, this year or all time, boiled down for the Stats widget.
-    private static func summary(_ kind: PeriodSummaryKind, records: [SightingRecord], deck: Deck,
+    nonisolated private static func summary(_ kind: PeriodSummaryKind, records: [SightingRecord], deck: Deck,
                                 catalog: FleetCatalog, now: Date = .now) -> WidgetSnapshot.PeriodSummary {
         var cal = Calendar.current
         cal.locale = .app
@@ -170,16 +205,16 @@ enum WidgetBridge {
 
     /// A memory for today and each day of the next week, so the widget turns the page at
     /// midnight without the app.
-    private static func memories(_ sightings: [Sighting], deck: Deck, catalog: FleetCatalog) -> [WidgetSnapshot.MemoryCard] {
+    nonisolated private static func memories(_ sightings: [SightingRecord], stats: CollectionStats, deck: Deck,
+                                             catalog: FleetCatalog) -> [WidgetSnapshot.MemoryCard] {
         let cal = Calendar.current
         let catches = sightings.filter { $0.pairedWith == nil }
         guard let first = catches.min(by: { $0.date < $1.date }) else { return [] }
         let byDay = Dictionary(grouping: catches) { cal.startOfDay(for: $0.date) }
         let busiest = byDay.values.map(\.count).max() ?? 0
-        let stats = sightings.stats
-        func pictured(_ s: Sighting) -> WidgetSnapshot.Card? { deck.byKey["\(s.modelId)#\(s.number)"] }
+        func pictured(_ s: SightingRecord) -> WidgetSnapshot.Card? { deck.byKey["\(s.modelId)#\(s.number)"] }
 
-        func card(_ s: Sighting, showOn: Date, kind: WidgetSnapshot.MemoryCard.Kind) -> WidgetSnapshot.MemoryCard {
+        func card(_ s: SightingRecord, showOn: Date, kind: WidgetSnapshot.MemoryCard.Kind) -> WidgetSnapshot.MemoryCard {
             let model = catalog.model(id: s.modelId)
             let picture = pictured(s)
             let day = byDay[cal.startOfDay(for: s.date)]?.count ?? 1
@@ -193,7 +228,7 @@ enum WidgetBridge {
         }
 
         /// The day's catch worth remembering: one with a picture, rarest model first.
-        func best(_ list: [Sighting]) -> Sighting? {
+        func best(_ list: [SightingRecord]) -> SightingRecord? {
             list.min { a, b in
                 let pa = pictured(a) != nil, pb = pictured(b) != nil
                 if pa != pb { return pa }
@@ -222,7 +257,7 @@ enum WidgetBridge {
         }
     }
 
-    private static func tierCounts(_ stats: CollectionStats, catalog: FleetCatalog) -> [WidgetSnapshot.TierCount] {
+    nonisolated private static func tierCounts(_ stats: CollectionStats, catalog: FleetCatalog) -> [WidgetSnapshot.TierCount] {
         [Tier.legendary, .gold, .rare, .common].map { tier in
             let models = catalog.models.filter { $0.regular && $0.tier == tier }
             return WidgetSnapshot.TierCount(tier: tier.rawValue,
