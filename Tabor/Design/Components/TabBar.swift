@@ -34,17 +34,28 @@ struct TabBar: View {
     @Namespace private var glow
     /// Bumped when a tab becomes active, so only that icon bounces (not the one left behind).
     @State private var bounces: [AppTab: Int] = [:]
+    /// The tab just tapped, lit before the app has switched to it. A tab opened for the first
+    /// time takes a moment to build (over a second on an older phone), and with the bar waiting
+    /// for that the tap looked ignored, so people tapped again (#115).
+    @State private var tapped: AppTab?
+    private var lit: AppTab { tapped ?? selection }
     @Environment(\.wide) private var wide
     @Environment(\.tall) private var tall
 
     var body: some View {
         HStack(spacing: 0) {
             ForEach(AppTab.allCases, id: \.self) { tab in
-                let on = tab == selection
+                let on = tab == lit
                 Button {
                     guard tab != selection else { return onReselect(tab) }
                     HangLog.mark("tab \(tab.rawValue)")
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selection = tab }
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { tapped = tab }
+                    // The switch itself a frame later, so the bar is drawn lit first.
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(10))
+                        guard tapped == tab else { return }
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selection = tab }
+                    }
                 } label: {
                     VStack(spacing: 5) {
                         ZStack {
@@ -86,6 +97,7 @@ struct TabBar: View {
                 .ignoresSafeArea(edges: [.bottom, .horizontal])
         }
         // Also when the app switches tabs itself (a catch jumping to the book).
-        .onChange(of: selection) { _, new in bounces[new, default: 0] += 1 }
+        .onChange(of: lit) { _, new in bounces[new, default: 0] += 1 }
+        .onChange(of: selection) { tapped = nil }
     }
 }
