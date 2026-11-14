@@ -29,8 +29,10 @@ final class BurstQueue {
         let shot = Shot()
         let id = shot.id
         shots.append(shot)
+        // Made once, for the stack's thumbnail now and the card later.
+        let preview = Task { await CatchReader.preview(data) }
         Task {
-            let thumb = await CatchReader.preview(data)
+            let thumb = await preview.value
             update(id) { $0.thumb = thumb }
         }
         let previous = tail
@@ -40,7 +42,7 @@ final class BurstQueue {
                                            manual: manual)
             d.date = date
             d.geotag = geotag
-            d.preview = await CatchReader.preview(data)
+            d.preview = await preview.value
             update(id) { $0.draft = d }
         }
     }

@@ -1,3 +1,4 @@
+import CryptoKit
 import UIKit
 import WidgetKit
 
@@ -33,7 +34,9 @@ enum WidgetBridge {
         // with the language, and a new build may draw the snapshot differently.
         let version = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""
         let day = Int(Calendar.current.startOfDay(for: .now).timeIntervalSinceReferenceDate)
-        let stamp = [key, String(day), catalog.fetched ?? "", version, Locale.app.identifier].joined(separator: "|")
+        let all = [key, String(day), catalog.fetched ?? "", version, Locale.app.identifier].joined(separator: "|")
+        // The key lists every picked picture: kept as a digest (one that's the same next launch).
+        let stamp = SHA256.hash(data: Data(all.utf8)).map { String(format: "%02x", $0) }.joined()
         guard stamp != UserDefaults.standard.string(forKey: publishedKey), !Task.isCancelled else { return }
         HangLog.mark("publish")
         // One pass over the book here; everything after it is off the main thread.
