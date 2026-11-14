@@ -551,6 +551,114 @@ _BERLINKA = _note(
         "until November 1975.",
         _KMKM, "https://kmkm.waw.pl/k-403/2/")
 NOTES |= {("TRAM", _n): _BERLINKA for _n in (403, 445, 446)}
+# One vehicle's own story each (picked by the user from build/drafts/note-picks.md, 2026-11-14).
+# Pairs that run as one set share their note.
+_TRANSPHOTO = "transphoto.org"
+_105NG = _note(
+    "Jeden z dwóch jedynych wagonów 105Ng zbudowanych od nowa: mają numery fabryczne 1 i 2 (1993) i "
+    "jeżdżą razem, jako skład 1424+1423.",
+    "One of the only two 105Ng cars ever built new: they carry factory numbers 1 and 2 (1993) and run "
+    "together as set 1424+1423.",
+    _TRANSPHOTO, "https://transphoto.org/vehicle/8792/")
+_THREE_TYPES = _note(
+    "Ten skład zmieniał typ już dwa razy: zbudowano go w 1989 jako 105NT, w 2000 przerobiono na 105N-MW, "
+    "a w 2013 na 105Ni.",
+    "This set has changed type twice: built in 1989 as a 105NT, rebuilt as a 105N-MW in 2000 and as a "
+    "105Ni in 2013.",
+    _TRANSPHOTO, "https://transphoto.org/vehicle/91664/")
+_LAST_N2K = _note(
+    "Ostatni skład 105N2k, jaki wszedł do ruchu w Warszawie: 29 kwietnia 2000. Następne stopiątki były "
+    "już typu 105N2k/2000.",
+    "The last 105N2k set to enter service in Warsaw, on 29 April 2000. The 105s after it were the "
+    "105N2k/2000 type.",
+    _TRANSPHOTO, "https://transphoto.org/vehicle/94415/")
+NOTES |= {
+    ("TRAM", 4107): _note(
+        "W sierpniu 2026 przez dwa tygodnie woził pasażerów we Wrocławiu: tamtejsze MPK sprawdzało różne "
+        "tramwaje przed przetargiem na nawet 160 nowych.",
+        "In August 2026 it spent two weeks carrying passengers in Wrocław, where MPK was trying out trams "
+        "before tendering for up to 160 new ones.",
+        "wroclaw.pl", "https://www.wroclaw.pl/komunikacja/wroclawianie-testuja-warszawskiego-hultaja-zobaczcie-zdjecia"),
+    ("BUS", 959): _note(
+        "Demonstrator, który zwiedził Europę: Madryt, Kraków, Tallinn i trzy lata w szwajcarskim "
+        "Schaffhausen, a w 2026 Rzeszów, Lublin i Dębica, zanim przyjechał do Warszawy.",
+        "A demonstrator that has seen Europe: Madrid, Kraków, Tallinn and three years in Schaffhausen, "
+        "Switzerland, then Rzeszów, Lublin and Dębica in 2026 before coming to Warsaw.",
+        _TRANSPHOTO, "https://transphoto.org/vehicle/560376/"),
+    ("BUS", 5999): _note(
+        "Dwudziestotysięczny pojazd w historii Solarisa i zarazem ostatni ze 130 elektrycznych przegubowców "
+        "dla Warszawy. Wyjechał na ulice 15 grudnia 2020, na linię 503.",
+        "Solaris's 20,000th vehicle ever, and the last of Warsaw's 130 electric articulated buses. It took "
+        "to the streets on 15 December 2020, on line 503.",
+        "solarisbus.com", "https://solarisbus.com/en/press/20-000th-bus-rolls-off-solaris-production-line-1431"),
+    ("TRAM", 3601): _note(
+        "We wrześniu 2014 stał na targach InnoTrans w Berlinie jako warszawski Jazz Duo.",
+        "In September 2014 it stood at the InnoTrans fair in Berlin as Warsaw's Jazz Duo.",
+        _TRANSPHOTO, "https://transphoto.org/articles/4514/"),
+    ("TRAM", 3002): _note(
+        "Jedyny zbudowany 116N. Jesienią 2005 dostał akumulatory i na linii 12 przejeżdżał całe odcinki, np. "
+        "od placu Starynkiewicza do alei Zielenieckiej, ze złożonym pantografem: tak sprawdzano tramwaj bez "
+        "sieci na Trakt Królewski.",
+        "The only 116N ever built. In autumn 2005 it got batteries and on line 12 ran whole stretches, such "
+        "as pl. Starynkiewicza to al. Zieleniecka, with its pantograph down, a test for wire-free trams on "
+        "the Royal Route.",
+        _HTP, "https://www.htp.org.pl/konstal-116n-3002-z-tramwajow-warszawskich/"),
+    ("TRAM", 3001): _note(
+        "Jedyny zbudowany Konstal 112N, prototyp z 1995 roku i jeden z dwóch pierwszych polskich tramwajów z "
+        "kawałkiem niskiej podłogi: przy trzecich drzwiach, na 24% długości.",
+        "The only Konstal 112N ever built, a 1995 prototype and one of Poland's first two trams with any "
+        "low floor: a stretch by the third door, 24% of its length.",
+        "pl.wikipedia.org", "https://pl.wikipedia.org/wiki/Konstal_112N"),
+    ("TRAM", 1424): _105NG,
+    ("TRAM", 1423): _105NG,
+    ("TRAM", 2006): _THREE_TYPES,
+    ("TRAM", 2007): _THREE_TYPES,
+    ("TRAM", 2072): _LAST_N2K,
+    ("TRAM", 2073): _LAST_N2K,
+    # Black fronts as of 2026 (phototrans photos, the user's check): repaint and this goes stale.
+    ("TRAM", 3117): _note(
+        "Jeden z dwóch Swingów, które w 2026 wciąż mają czarne czoło, tak jak część pierwszych wagonów z "
+        "2010. Pozostałe dostały już czerwone.",
+        "One of the two Swings still black-fronted in 2026, like some of the first cars of 2010. The others "
+        "have since gone red.",
+        _TRANSPHOTO, "https://transphoto.org/vehicle/137769/"),
+    ("TRAM", 3119): _note(
+        "Jeden z dwóch Swingów, które w 2026 wciąż mają czarne czoło, tak jak część pierwszych wagonów z "
+        "2010. Pozostałe dostały już czerwone.",
+        "One of the two Swings still black-fronted in 2026, like some of the first cars of 2010. The others "
+        "have since gone red.",
+        _TRANSPHOTO, "https://transphoto.org/vehicle/139927/"),
+    ("BUS", 701): _note(
+        "Do końca 2024 jeździł w Mobilisie jako #9230: ostatnią służbę zrobił 31 grudnia 2024. Od 2025 wozi "
+        "pasażerów w Łomiankach.",
+        "Until the end of 2024 it ran for Mobilis as #9230, working its last duty on 31 December 2024. Since "
+        "2025 it has carried passengers in Łomianki.",
+        "phototrans.eu", "https://phototrans.eu/15,580036,0.html"),
+    ("BUS", 5715): _note(
+        "29 listopada 2013 na linii 705 wykonał ostatni pełny kurs Ikarusa w Warszawie. Zjechał wtedy do "
+        "zajezdni Stalowa, w której 16 lat wcześniej go zmontowano.",
+        "On 29 November 2013, on line 705, it made the last full Ikarus run in Warsaw, then drove into "
+        "Stalowa depot, where it had been assembled 16 years earlier.",
+        _HTP, "https://www.htp.org.pl/ikarus-280-70e-5715-z-kmkm-warszawa/"),
+    ("BUS", 6550): _note(
+        "Jeden z zaledwie sześciu zbudowanych Ikarusów 411.08: dwa trafiły do Warszawy, dwa do "
+        "Bielska-Białej. Silnik stoi w poprzek i sięga sufitu, więc nie ma tylnej szyby.",
+        "One of only six Ikarus 411.08s ever built: two went to Warsaw, two to Bielsko-Biała. Its engine "
+        "sits crosswise and reaches the ceiling, so there's no rear window.",
+        _HTP, "https://www.htp.org.pl/ikarus-411-08-6550-z-kmkm-warszawa/"),
+    ("BUS", 8058): _note(
+        "Spośród 30 socjalnych „ogórków” MZK z 1974 roku jako jedyny miał wiśniowe pasy. W latach 80. "
+        "uniknął kasacji, a w 1999 KMKM odkupił go od związku zawodowego, który chciał go zezłomować.",
+        "Of the 30 staff “ogórki” MZK bought in 1974, it was the only one with cherry stripes. It dodged "
+        "scrapping in the 1980s, and in 1999 KMKM bought it from the union that meant to scrap it.",
+        _HTP, "https://www.htp.org.pl/jelcz-043-8058-25-lecie-autobusu-w-kolekcji-kmkm-warszawa/"),
+    ("TRAM", 5): _note(
+        "Tak naprawdę poznaniak: przez 34 lata, do 2004, jeździł w Poznaniu, gdzie w 1983 jako pierwszy 102N "
+        "dostał wydzieloną kabinę motorniczego. Zamiast na przetop pojechał do warszawskiego KMKM.",
+        "A Poznań tram at heart: it ran there for 34 years until 2004, and in 1983 was the first 102N to get "
+        "a closed-off driver's cab. Instead of the scrapyard it went to Warsaw's KMKM.",
+        _HTP, "https://www.htp.org.pl/20-lecie-wagonu-102n-5-w-kolekcji-tramwajow-warszawskich/"),
+}
 # The colour codes the city's list gets right, by bus. Suburban (L) buses are blue, whole
 # models of them (confirmed on the street, 2026-09-28). RAL 1004+3003 is the old yellow and red
 # with a red band over the windows (the 2008-09 Urbinos #8890 and #1859 on phototrans,
