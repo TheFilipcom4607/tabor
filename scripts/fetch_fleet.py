@@ -1237,6 +1237,36 @@ def slug(s):
     return re.sub(r"[^a-z0-9]+", "-", s).strip("-")
 
 
+
+def laid_out(value, depth=0):
+    """JSON a diff can be read in: on one line, every nightly change was a 148 KB line.
+    Keys one per line, a space of indent per level; a list of words on one line; fleet numbers
+    in rows that break at each ten, so a bus leaving changes one short row and nothing after
+    it moves. Parsers don't care, so every build, the Worker and the site read it as before.
+    """
+    pad, inner = " " * depth, " " * (depth + 1)
+    plain = lambda v: json.dumps(v, ensure_ascii=False)
+    if isinstance(value, dict) and value:
+        rows = [f"{inner}{plain(k)}: {laid_out(v, depth + 1)}" for k, v in value.items()]
+        text = "{\n" + ",\n".join(rows) + f"\n{pad}}}"
+    elif isinstance(value, list) and value and all(type(v) is int for v in value):
+        rows = [[value[0]]]
+        for n in value[1:]:
+            if n // 10 == rows[-1][-1] // 10:
+                rows[-1].append(n)
+            else:
+                rows.append([n])
+        text = (plain(value) if len(rows) == 1
+                else "[\n" + ",\n".join(inner + ", ".join(map(str, row)) for row in rows) + f"\n{pad}]")
+    elif isinstance(value, list) and any(isinstance(v, (dict, list)) for v in value):
+        text = "[\n" + ",\n".join(inner + laid_out(v, depth + 1) for v in value) + f"\n{pad}]"
+    else:
+        text = plain(value)
+    if depth == 0:
+        assert json.loads(text) == value, "the laid-out fleet.json doesn't parse back to what was built"
+    return text
+
+
 def build(vehicles, city=None):
     city_rows = {(c["kind"], c["number"]): c for c in city["vehicles"]} if city else {}
     types = {(kind, t["idMarki"]): t for kind, ts in city["types"].items() for t in ts} if city else {}
@@ -1420,7 +1450,7 @@ def build(vehicles, city=None):
             print(f"refusing to write: model ids would disappear: {', '.join(sorted(gone))}\n"
                   "(rerun with --allow-drop if that's on purpose)", file=sys.stderr)
             sys.exit(1)
-    OUT.write_text(json.dumps({
+    OUT.write_text(laid_out({
         # ZTM is the base; the hand-kept lists above fill its gaps (new deliveries, trial
         # and club buses, names, build years).
         "source": f"Warsaw ZTM vehicle database (fetched {raw['fetched']}){city_en}, plus Warszawikia, "
@@ -1433,7 +1463,7 @@ def build(vehicles, city=None):
         "codedWorksModels": coded,
         "wraps": dressed,
         "depots": depots,
-    }, ensure_ascii=False, separators=(",", ":")))
+    }) + "\n")
     total = sum(m["fleet"] for m in models)
     print(f"wrote {OUT.relative_to(ROOT)}: {len(models)} models, {total} vehicles, {len(depots)} depots"
           f" (+ {len(works)} works models, {sum(m['fleet'] for m in works)} cars,"
