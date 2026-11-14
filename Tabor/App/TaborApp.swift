@@ -6,6 +6,7 @@ import SwiftUI
 struct TaborApp: App {
     init() {
         LaunchTiming.mark("app")
+        HangLog.start()
         // Every launch lands on CATCH: get the camera built while the first screen is.
         CameraModel.shared.prepare { LaunchTiming.mark("configured") }
     }

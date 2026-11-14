@@ -12,6 +12,7 @@ enum WidgetBridge {
 
     static func publish(_ sightings: [Sighting], catalog: FleetCatalog = Fleet.catalog) async {
         guard let imageURL = WidgetSnapshot.imageURL else { return } // no App Group entitlement
+        HangLog.mark("publish")
         let latest = sightings.max { $0.date < $1.date }
         let model = latest.flatMap { catalog.model(id: $0.modelId) }
         let sticker = latest.flatMap { sightings.sticker(number: $0.number, modelId: $0.modelId) }

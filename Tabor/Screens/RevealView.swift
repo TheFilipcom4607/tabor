@@ -1031,6 +1031,7 @@ struct RevealView: View {
         try? await Task.sleep(for: .milliseconds(240))
         // Slap: fly down into the book. Saving wakes every screen that shows the book, so it
         // waits until the flight is over: on a busy phone that work made it crawl at 2 fps.
+        HangLog.mark("stick")
         withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) { sticking = true }
         try? await Task.sleep(for: .milliseconds(480))
         save(model: model, number: number)
@@ -1051,6 +1052,7 @@ struct RevealView: View {
     }
 
     private func save(model: VehicleModel, number: Int) {
+        HangLog.mark("save")
         let line = draft.line?.trimmingCharacters(in: .whitespaces).nonEmpty
         let ext = PhotoStore.fileExtension(of: draft.photo)
         let s = Sighting(number: number, modelId: model.id, date: draft.date, line: line,

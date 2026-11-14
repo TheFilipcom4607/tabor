@@ -57,6 +57,7 @@ struct BurstRevealView: View {
     private func next(_ draft: CatchDraft?) {
         if let draft { stuck.append(draft) }
         let n = index + 1
+        HangLog.mark("card \(n + 1)")
         guard n < current.count || !stuck.isEmpty else { return dismiss() }
         // The book moved on with the last card: "NEW MODEL" and "your 3rd" count from where it is now.
         if n < current.count, draft != nil {

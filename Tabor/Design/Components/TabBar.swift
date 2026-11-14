@@ -43,6 +43,7 @@ struct TabBar: View {
                 let on = tab == selection
                 Button {
                     guard tab != selection else { return onReselect(tab) }
+                    HangLog.mark("tab \(tab.rawValue)")
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selection = tab }
                 } label: {
                     VStack(spacing: 5) {

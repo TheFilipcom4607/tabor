@@ -255,6 +255,7 @@ struct CatchView: View {
             rest.start()
         }
         .onDisappear {
+            HangLog.mark("leave CATCH")
             visible = false
             rest.stop()
             camera.rest(false)
