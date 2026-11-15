@@ -344,6 +344,10 @@ The notes on some vehicles' pages ("the demonstrator Solaris bought back in 2024
 shared with TABOR by kind permission. They aren't in this repo: the app asks for
 one vehicle's note when its page opens, and every note links back to czynaczas.pl.
 
+Which car each coupled tram usually runs with (`data/tramwar-sets.json`), Tramwaje
+Warszawskie's works cars and how the 105N family splits into types come from
+[tramwar.pl](https://tramwar.pl), used with its author's kind permission.
+
 > [!NOTE]
 > The live feed and the database don't always agree. The feed keeps some
 > vehicles' last positions for years, so anything older than three minutes is

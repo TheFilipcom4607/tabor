@@ -11139,6 +11139,16 @@
         }
       }
     },
+    "Coupled sets, works cars and tram types: [tramwar.pl](https://tramwar.pl), with thanks.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Składy wagonów, tabor techniczny i typy tramwajów: [tramwar.pl](https://tramwar.pl), z podziękowaniami."
+          }
+        }
+      }
+    },
     "Notes on vehicles: [czynaczas.pl](https://czynaczas.pl), with thanks.": {
       "localizations": {
         "pl": {
