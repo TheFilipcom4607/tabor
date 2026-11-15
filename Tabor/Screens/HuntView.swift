@@ -75,6 +75,49 @@ private struct FeedTap: View {
     }
 }
 
+/// Where you are, as HUNT last took it: the same idea as `HuntFeed`. Read from the service
+/// in HUNT's body, every fix worked the pins out again and sent the map through all of them
+/// behind whatever tab was up: the camera keeps a fix going, and a catch asks for a sharp one.
+@Observable @MainActor
+private final class HuntFix {
+    private(set) var latest: CLLocation?
+    private(set) var isDenied = false
+    private(set) var hasHeading = false
+
+    init() { take(LocationService.shared) }
+
+    func take(_ location: LocationService) {
+        if latest != location.latest { latest = location.latest }
+        if isDenied != location.isDenied { isDenied = location.isDenied }
+        if hasHeading != location.hasHeading { hasHeading = location.hasHeading }
+    }
+
+    /// `LocationService.recent`, of the fix kept here.
+    func recent(maxAge: TimeInterval = 60) -> CLLocation? {
+        guard let latest, latest.timestamp.timeIntervalSinceNow > -maxAge, latest.horizontalAccuracy < 250 else { return nil }
+        return latest
+    }
+}
+
+/// Watches your position for HUNT. Only in the view tree while HUNT is on screen.
+private struct FixTap: View {
+    let into: HuntFix
+    /// You've moved. Called in the pass that hands the fix over.
+    let moved: () -> Void
+    private let location = LocationService.shared
+
+    // Nothing on appearing: HUNT takes the fix itself as it comes on screen.
+    var body: some View {
+        Color.clear
+            .onChange(of: location.latest) {
+                into.take(location)
+                moved()
+            }
+            .onChange(of: location.isDenied) { into.take(location) }
+            .onChange(of: location.hasHeading) { into.take(location) }
+    }
+}
+
 /// Watches the book for HUNT, the way `FeedTap` watches the feed: only in the view tree while
 /// HUNT is on screen. With the query in HUNT itself, every save of a catch ran its whole body
 /// behind whatever tab was up, and every refresh and pan counted the book again.
@@ -106,7 +149,12 @@ private struct BookTap: View {
 /// overlap become one bubble with their count; filled means a model you're missing, outlined
 /// a model you already have. Colour is always rarity.
 /// A filter (rarities, models) narrows it to what you're after, anywhere in the city.
-struct HuntView: View {
+struct HuntView: View, Equatable {
+    /// Nothing is handed in from outside, so one HUNT is as good as another: without this,
+    /// every pass of `RootView` (each tab switch, twice at a stick-in) counted as a change,
+    /// ran this body behind the tab on screen and sent the map through all its pins again.
+    nonisolated static func == (a: HuntView, b: HuntView) -> Bool { true }
+
     @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
     @Environment(\.scenePhase) private var scenePhase
@@ -136,6 +184,8 @@ struct HuntView: View {
     /// the map behind whatever tab was up. `FeedTap` keeps it current while HUNT is on screen.
     @State private var live = HuntFeed()
     private let location = LocationService.shared
+    /// Your position as HUNT last took it. `FixTap` keeps it current while HUNT is on screen.
+    @State private var fix = HuntFix()
     private let routes = RoutesUpdater.shared
     private let track = TrackService.shared
     private let catalog = Fleet.catalog
@@ -231,6 +281,11 @@ struct HuntView: View {
                     // scrolled (#74): it waits for the list to settle.
                     if stopScroll.active { stopScroll.missed = true } else { recompute(animated: true) }
                 }
+                FixTap(into: fix) {
+                    centerOnceOnYou()
+                    service.locationMoved()
+                    recompute(animated: false)
+                }
                 BookTap { book in
                     caught = book
                     bookRead = true
@@ -248,6 +303,7 @@ struct HuntView: View {
             guard on else { return service.stop("hunt") }
             service.start("hunt")
             live.take(service)
+            fix.take(location)
             routes.prepare()
             centerOnceOnYou()
             // Models a fleet update dropped can't match anything; don't leave them as ghost chips.
@@ -267,11 +323,6 @@ struct HuntView: View {
         .onChange(of: facing) { _, on in
             guard !on, position.followsUserLocation, let camera = turn.camera else { return }
             position = .camera(camera)
-        }
-        .onChange(of: location.latest) {
-            centerOnceOnYou()
-            service.locationMoved()
-            recompute(animated: false)
         }
         .onChange(of: routes.book?.feed) { recompute(animated: false) }
         .task(id: onScreen ? selectedId : nil) { await creep() }
@@ -329,7 +380,7 @@ struct HuntView: View {
                     followButton(selected)
                         .transition(.scale(scale: 0.8, anchor: .trailing).combined(with: .opacity))
                 }
-                if here != nil, offDefaultView || facing || location.hasHeading {
+                if here != nil, offDefaultView || facing || fix.hasHeading {
                     locationButton
                         .transition(.scale(scale: 0.8, anchor: .trailing).combined(with: .opacity))
                 }
@@ -384,7 +435,7 @@ struct HuntView: View {
                         followButton(selected)
                             .transition(.scale(scale: 0.8, anchor: .trailing).combined(with: .opacity))
                     }
-                    if here != nil, offDefaultView || facing || location.hasHeading {
+                    if here != nil, offDefaultView || facing || fix.hasHeading {
                         locationButton
                             .transition(.scale(scale: 0.8, anchor: .trailing).combined(with: .opacity))
                     }
@@ -425,7 +476,7 @@ struct HuntView: View {
                         followButton(selected)
                             .transition(.scale(scale: 0.8, anchor: .trailing).combined(with: .opacity))
                     }
-                    if here != nil, offDefaultView || facing || location.hasHeading {
+                    if here != nil, offDefaultView || facing || fix.hasHeading {
                         locationButton
                             .transition(.scale(scale: 0.8, anchor: .trailing).combined(with: .opacity))
                     }
@@ -473,7 +524,7 @@ struct HuntView: View {
     /// hidden or the map is panned to where your dot isn't.
     private var wantsCompass: Bool {
         guard onScreen else { return false }
-        guard !facing, let r = mapRegion, let you = location.latest?.coordinate else { return true }
+        guard !facing, let r = mapRegion, let you = fix.latest?.coordinate else { return true }
         // A little past the edge, so the cone is already turning as the dot slides back in.
         return abs(you.latitude - r.center.latitude) < r.span.latitudeDelta * 0.6
             && abs(you.longitude - r.center.longitude) < r.span.longitudeDelta * 0.6
@@ -1101,7 +1152,7 @@ struct HuntView: View {
 
     /// The default view: you in the middle, the 3 km the list covers around you.
     private func defaultRegion() -> MKCoordinateRegion? {
-        guard let here = location.recent(maxAge: 300)?.coordinate ?? mapCenter else { return nil }
+        guard let here = fix.recent(maxAge: 300)?.coordinate ?? mapCenter else { return nil }
         guard framed, let mapBottom, let mapRight, mapRight > 0 else {
             return MKCoordinateRegion(center: here, latitudinalMeters: Wanted.radius * 2, longitudinalMeters: Wanted.radius * 2)
         }
@@ -1131,7 +1182,7 @@ struct HuntView: View {
     }
 
     private func centerOnceOnYou() {
-        guard !centered, let region = defaultRegion(), location.recent(maxAge: 300) != nil else { return }
+        guard !centered, let region = defaultRegion(), fix.recent(maxAge: 300) != nil else { return }
         centered = true
         position = .region(region)
     }
@@ -1549,7 +1600,7 @@ struct HuntView: View {
             }
         default: break
         }
-        if location.isDenied, mapCenter == nil {
+        if fix.isDenied, mapCenter == nil {
             return MessageCard(icon: "location.slash.fill", title: String(localized: "Location is off"),
                                text: String(localized: "Turn it on to see what's running around you — or pan the map to look anywhere."),
                                action: (String(localized: "Open Settings"), {
@@ -1574,7 +1625,7 @@ struct HuntView: View {
             // Nothing of the kind running here at all, caught or not: say that, rather than that
             // you've caught everything around you (what a tester in Bydgoszcz was told, #38).
             // Your actual position, even outside Warsaw: that's the case to explain.
-            let around = location.recent(maxAge: 300)?.coordinate ?? mapCenter
+            let around = fix.recent(maxAge: 300)?.coordinate ?? mapCenter
             let running = around.map { a in
                 live.snapshot?.nearby(lat: a.latitude, lon: a.longitude, within: Wanted.radius)
                     .contains { targets.kind == nil || $0.vehicle.kind == targets.kind } ?? true
@@ -1629,7 +1680,7 @@ struct HuntView: View {
     /// Bydgoszcz), HUNT works as it does without a fix: around where you're looking, with
     /// distances from there, rather than measuring 230 km to every bus.
     private var here: CLLocationCoordinate2D? {
-        guard let c = location.recent(maxAge: 300)?.coordinate else { return nil }
+        guard let c = fix.recent(maxAge: 300)?.coordinate else { return nil }
         let center = Self.warsaw.center
         return Geo.km((c.latitude, c.longitude), (center.latitude, center.longitude)) <= Self.feedReach ? c : nil
     }

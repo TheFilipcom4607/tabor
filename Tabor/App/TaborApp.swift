@@ -204,10 +204,12 @@ struct RootView: View {
     var body: some View {
         ZStack {
             // CATCH goes when you leave it: that's what turns the camera off.
+            // The others are compared by what they're handed (`equatable`), which is next to
+            // nothing: as plain views each counted as changed on every pass of this body.
             if router.tab == .catchTab { CatchView() }
-            if keeps(.hunt) { HuntView().tabLayer(on: router.tab == .hunt) }
-            if keeps(.book) { BookTab(tabBarHeight: tabBarHeight).tabLayer(on: router.tab == .book) }
-            if keeps(.me) { MeView().tabLayer(on: router.tab == .me) }
+            if keeps(.hunt) { HuntView().equatable().tabLayer(on: router.tab == .hunt) }
+            if keeps(.book) { BookTab(tabBarHeight: tabBarHeight).equatable().tabLayer(on: router.tab == .book) }
+            if keeps(.me) { MeView().equatable().tabLayer(on: router.tab == .me) }
         }
         .onChange(of: router.tab, initial: true) { _, tab in opened.insert(tab) }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -421,7 +423,9 @@ private struct BookChores: View {
     }
 }
 
-struct BookTab: View {
+struct BookTab: View, Equatable {
+    nonisolated static func == (a: BookTab, b: BookTab) -> Bool { a.tabBarHeight == b.tabBarHeight }
+
     /// The tab bar's inset stops at the NavigationStack, so each page gets it again here,
     /// or the end of every book list runs under the bar (#43).
     let tabBarHeight: CGFloat

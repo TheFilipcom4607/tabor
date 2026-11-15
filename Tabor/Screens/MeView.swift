@@ -3,8 +3,20 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct MeView: View {
-    @Query(sort: \Sighting.date, order: .reverse) private var sightings: [Sighting]
+struct MeView: View, Equatable {
+    /// Nothing is handed in from outside: see `HuntView`'s. Without it every pass of
+    /// `RootView` ran this body behind the tab on screen.
+    nonisolated static func == (a: MeView, b: MeView) -> Bool { true }
+
+    @Query(sort: \Sighting.date, order: .reverse) private var queried: [Sighting]
+    /// The book as the page shows it. Behind another tab that's the book as ME last saw it,
+    /// the very same array: a save there still runs this body (the query is here), but the
+    /// shelf, the log and the map are handed what they already have, and stay as they are.
+    /// Unless a catch was deleted meanwhile: one that's gone can't be read any more.
+    private var sightings: [Sighting] {
+        if onScreen || figures.book.contains(where: { $0.isDeleted || $0.modelContext == nil }) { figures.book = queried }
+        return figures.book
+    }
     @Environment(Router.self) private var router
     @Environment(\.wide) private var wide
     /// ME is the tab on screen. From the environment rather than the router's tab: reading
@@ -282,6 +294,8 @@ private final class MeFigures {
     private var day = Date.distantPast
     private var figures = Figures()
     var last: Figures { figures }
+    /// The book those figures are of (see `MeView.sightings`).
+    var book: [Sighting] = []
 
     func of(_ records: [SightingRecord], catalog: FleetCatalog) -> Figures {
         let today = Calendar.current.startOfDay(for: Date())
