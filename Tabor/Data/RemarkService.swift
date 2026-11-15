@@ -10,6 +10,16 @@ struct VehicleRemark: Hashable {
     let english: String?
     /// Set when the remark is the coupled set's, filed under the other car.
     let fromCar: Int?
+
+    /// The remark worth showing: not a word or two next to our own note (#43's "Stary." after a
+    /// paragraph on its 1906 build only reads like a joke).
+    static func shown(_ remark: VehicleRemark?, beside note: VehicleNote?) -> VehicleRemark? {
+        guard let remark else { return nil }
+        guard note != nil else { return remark }
+        return remark.isShort ? nil : remark
+    }
+
+    var isShort: Bool { text.split(whereSeparator: \.isWhitespace).count < 3 }
 }
 
 enum RemarkService {

@@ -11228,6 +11228,36 @@
           }
         }
       }
+    },
+    "THIS ONE HAS A STORY": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TEN MA SWOJĄ HISTORIĘ"
+          }
+        }
+      }
+    },
+    "This one has a story. Read its note": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ten pojazd ma swoją historię. Przeczytaj notkę"
+          }
+        }
+      }
+    },
+    "CLOSE": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ZAMKNIJ"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

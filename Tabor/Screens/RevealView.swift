@@ -60,6 +60,10 @@ struct RevealView: View {
     @State private var placeKnown = false
     /// The wrap's own sparkle: on when the reveal lands in a wrap, or the chip adds one.
     @State private var foilBurst = 0
+    /// czynaczas.pl's remark on the caught vehicle, once it's in. With our own note it makes the
+    /// banner that says this one has a story: nobody knew to open the vehicle page for it.
+    @State private var remark: VehicleRemark?
+    @State private var readingNote = false
 
     private let catalog = Fleet.catalog
     private let holdDuration = 0.55
@@ -186,6 +190,16 @@ struct RevealView: View {
                     .opacity(landed ? 1 : 0)
                     .offset(y: landed ? 0 : 16)
                     .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.14), value: landed)
+                }
+
+                if let story = story(model: model, number: number) {
+                    noteBanner(story)
+                        .padding(.top, 12)
+                        .padding(.horizontal, 26)
+                        .opacity(landed ? 1 : 0)
+                        .offset(y: landed ? 0 : 16)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.16), value: landed)
+                        .transition(.opacity)
                 }
 
                 // A trailer is another model's: it doesn't count toward this one.
@@ -373,6 +387,18 @@ struct RevealView: View {
                                 .flatMap { stats.owned(modelId: $0.id).map(\.number) }),
                              partner: $draft.partner)
             }
+        }
+        .sheet(isPresented: $readingNote) {
+            if let model, let number, let story = story(model: model, number: number) {
+                NoteSheet(title: model.name(of: number), number: number, note: story.note, remark: story.remark)
+            }
+        }
+        // Fixing the number asks again: the note belongs to the vehicle, not the photo.
+        .task(id: "\(draft.modelId ?? "")/\(draft.number.map(String.init) ?? "")") {
+            remark = nil
+            guard let model, let number = draft.number else { return }
+            let found = await RemarkService.remark(kind: model.kind, number: number, model: model)
+            withAnimation(.easeOut(duration: 0.25)) { remark = found }
         }
         .fullScreenCover(isPresented: $cropping) {
             CropSheet(photo: draft.photo, preview: draft.preview) { region in
@@ -594,6 +620,51 @@ struct RevealView: View {
         draft.partnerSuggestions = CoupledSet.suggestions(for: number, model: model, photoNumbers: photoNumbers,
                                                           nearby: draft.nearby, catalog: catalog)
         draft.partner = secondCar(model: model, number: number)?.number
+    }
+
+    /// The caught vehicle's note and czynaczas.pl's remark, when it has either. A remark of a word
+    /// or two on its own ("Stary.") isn't a story worth a banner.
+    private func story(model: VehicleModel, number: Int) -> (note: VehicleNote?, remark: VehicleRemark?)? {
+        let note = model.note(of: number)
+        let shown = VehicleRemark.shown(remark, beside: note)
+        guard note != nil || shown?.isShort == false else { return nil }
+        return (note, shown)
+    }
+
+    /// "THIS ONE HAS A STORY" and the note's first line; a tap opens the whole note.
+    private func noteBanner(_ story: (note: VehicleNote?, remark: VehicleRemark?)) -> some View {
+        let teaser = story.note?.text ?? story.remark.map { AppLanguage.polish ? $0.text : $0.english ?? $0.text } ?? ""
+        return Button {
+            Haptics.shared.tick()
+            readingNote = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "text.book.closed.fill")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Palette.bg)
+                    .frame(width: 30, height: 30)
+                    .background(Palette.yellow, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                VStack(alignment: .leading, spacing: 3) {
+                    Mono("THIS ONE HAS A STORY", size: 10.5, weight: 700, spacing: 0.12, color: Palette.yellow)
+                    Text(teaser)
+                        .font(TaborFont.grotesk(13))
+                        .foregroundStyle(Palette.routeInk)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Palette.sub)
+            }
+            .padding(.vertical, 10)
+            .padding(.leading, 10)
+            .padding(.trailing, 14)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.yellow.opacity(0.35)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("This one has a story. Read its note"))
     }
 
     /// "+ 5897 · ALSO IN SHOT" for another vehicle read in the photo; tap to add it as a catch

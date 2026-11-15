@@ -167,7 +167,7 @@ struct VehicleView: View {
                 if note != nil || remark != nil {
                     VStack(alignment: .leading, spacing: 9) {
                         SectionLabel(text: String(localized: "NOTE"))
-                        NotesCard(note: note, remark: shownRemark(beside: note)).id(number)
+                        NotesCard(note: note, remark: VehicleRemark.shown(remark, beside: note)).id(number)
                     }
                     .padding(.top, 18)
                     .padding(.horizontal, 22)
@@ -407,14 +407,6 @@ struct VehicleView: View {
     }
 
     /// Most recent line first, no repeats.
-    /// czynaczas.pl's remark, unless it's a word or two next to our own note: #43's "Stary."
-    /// after a paragraph on its 1906 build only reads like a joke.
-    private func shownRemark(beside note: VehicleNote?) -> VehicleRemark? {
-        guard let remark else { return nil }
-        guard note != nil else { return remark }
-        return remark.text.split(whereSeparator: \.isWhitespace).count < 3 ? nil : remark
-    }
-
     private func orderedLines(_ list: [Sighting]) -> [String] {
         var seen = Set<String>()
         return list.compactMap(\.line).filter { seen.insert($0).inserted }
@@ -496,7 +488,8 @@ private struct WantedSlot: View {
 /// The vehicle page's note: TABOR's own background, then czynaczas.pl's remark, read as one
 /// text. The footer credits each source with a chip that opens it, and IN POLISH flips both.
 /// The remark stays word for word czynaczas's, never blended into ours: that's the deal.
-private struct NotesCard: View {
+/// The reveal's note sheet shows the same card.
+struct NotesCard: View {
     let note: VehicleNote?
     let remark: VehicleRemark?
     @State private var inPolish = false
