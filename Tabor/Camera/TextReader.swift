@@ -76,7 +76,7 @@ enum TextReader {
                 }
                 report.pass = "\(pass) \(done)/\(NumberExtractor.tiles.count)"
             }
-            (report.candidates, report.live) = LiveHints.adjust(report.candidates, nearby: nearby, catalog: Fleet.catalog)
+            (report.candidates, report.live) = LiveHints.adjust(report.candidates, nearby: nearby, catalog: Fleet.catalog, mode: mode)
             report.number = report.candidates.max { $0.score < $1.score }?.number
             if report.number == nil { report.pass = "none" }
             report.duration = Date().timeIntervalSince(start)

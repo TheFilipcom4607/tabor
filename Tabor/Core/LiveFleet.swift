@@ -162,20 +162,29 @@ public enum LiveHints {
     /// its set's lead car is: the feed only reports one car of a set, and the other car's
     /// number is one digit off it, so it would otherwise be "rescued" into the wrong car.
     public static func adjust(_ candidates: [(number: Int, score: Double)], nearby: [NearbyVehicle],
-                              catalog: FleetCatalog) -> (candidates: [(number: Int, score: Double)], adjustment: Adjustment) {
+                              catalog: FleetCatalog, mode: CatchMode = .auto)
+        -> (candidates: [(number: Int, score: Double)], adjustment: Adjustment) {
         guard !nearby.isEmpty else { return (candidates, Adjustment()) }
         let close = Set(nearby.filter { $0.distance <= boostRadius }.map(\.vehicle.number))
+        // A number on both a bus and a tram ranks lower in AUTO mode, its model being a guess.
+        // With the feed saying which one is here it's no guess, so it gets that back (#118).
+        func settled(_ n: Int) -> Double {
+            guard mode == .auto, catalog.match(number: n).candidates.count > 1,
+                  case .certain = resolve(catalog.match(number: n), number: n, nearby: nearby, catalog: catalog)
+            else { return 0 }
+            return NumberExtractor.guessPenalty
+        }
         let rescuers = nearby.filter { $0.distance <= rescueRadius }
         var out: [(number: Int, score: Double)] = []
         var adj = Adjustment()
         for c in candidates {
             if close.contains(c.number) {
-                out.append((c.number, c.score + boost))
+                out.append((c.number, c.score + boost + settled(c.number)))
                 if !adj.boosted.contains(c.number) { adj.boosted.append(c.number) }
                 continue
             }
             if let set = CoupledSet.partner(of: c.number, catalog: catalog, nearby: nearby) {
-                out.append((c.number, c.score + boost))
+                out.append((c.number, c.score + boost + settled(c.number)))
                 if !adj.partners.contains(where: { $0.number == c.number }) {
                     adj.partners.append(Partner(number: c.number, lead: set.lead.number))
                 }

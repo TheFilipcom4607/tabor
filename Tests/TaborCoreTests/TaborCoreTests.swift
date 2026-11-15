@@ -2451,3 +2451,37 @@ private let shelfStats = CollectionStats(sightings: (1...100).map {
     let found = evalIn([any(u15.id, number: 8731)])["urbino-one"]!
     #expect(found.earned && found.proof == [Achievement.Proof(modelId: u15.id, number: 8731, note: "URBINO I")])
 }
+
+// #118: 105Ni #2028 filled the frame, and Alstom 116Na #3020 waited behind it on the 7. Both
+// were read cleanly and both were on the feed; 2028 is a Solbus's number too, and that alone
+// put the tram at the back in the lead.
+@Test func theBigNumberLeadsOverOneBehindIt() {
+    let obs = [TextObservation(text: "2028", confidence: 1, height: 0.034),
+               TextObservation(text: "3020", confidence: 1, height: 0.012)]
+    let read = NumberExtractor.candidates(in: obs, mode: .auto, catalog: catalog)
+    func best(_ c: [(number: Int, score: Double)]) -> Int? { c.max { $0.score < $1.score }?.number }
+    // An import, with no feed.
+    #expect(best(read) == 2028)
+    // Its set on the feed under either car, 3020 right there too.
+    for lead in [2028, 2029] {
+        let around = nearby([live(lead, .tram, line: "1", metres: 40), live(3020, .tram, line: "7", metres: 70)])
+        #expect(best(LiveHints.adjust(read, nearby: around, catalog: catalog).candidates) == 2028)
+    }
+    // A slightly less sure read of the big one still leads.
+    let unsure = [TextObservation(text: "2028", confidence: 0.8, height: 0.034),
+                  TextObservation(text: "3020", confidence: 1, height: 0.012)]
+    let around = nearby([live(2028, .tram, line: "1", metres: 40), live(3020, .tram, line: "7", metres: 70)])
+    #expect(best(LiveHints.adjust(NumberExtractor.candidates(in: unsure, mode: .auto, catalog: catalog),
+                                  nearby: around, catalog: catalog).candidates) == 2028)
+}
+
+@Test func theFeedGivesBackWhatAGuessedModelLost() {
+    // Tram 2028 right there: no guess. A bus 2028 and a tram 2028 both there: still one.
+    let one = LiveHints.adjust([(2028, 2.0)], nearby: nearby([live(2028, .tram)]), catalog: catalog)
+    #expect(abs(one.candidates[0].score - (2.0 + LiveHints.boost + NumberExtractor.guessPenalty)) < 1e-9)
+    let both = LiveHints.adjust([(2028, 2.0)], nearby: nearby([live(2028, .tram), live(2028, .bus)]), catalog: catalog)
+    #expect(abs(both.candidates[0].score - (2.0 + LiveHints.boost)) < 1e-9)
+    // BUS and TRAM mode never took it away.
+    let tram = LiveHints.adjust([(2028, 2.0)], nearby: nearby([live(2028, .tram)]), catalog: catalog, mode: .tram)
+    #expect(abs(tram.candidates[0].score - (2.0 + LiveHints.boost)) < 1e-9)
+}

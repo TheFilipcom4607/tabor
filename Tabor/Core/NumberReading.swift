@@ -54,7 +54,7 @@ public enum NumberExtractor {
     /// Every plausible number in the frame with its score; `best` picks the top one.
     public static func candidates(in observations: [TextObservation], mode: CatchMode,
                                   catalog: FleetCatalog) -> [(number: Int, score: Double)] {
-        var scored: [(number: Int, score: Double, digits: Int)] = []
+        var scored: [(number: Int, score: Double, digits: Int, height: Double, known: Bool)] = []
         for obs in observations {
             let tokens = digitTokens(obs.text).map { (value: $0.value, digits: $0.digits, lookalike: false) }
                 + lookalikeTokens(obs.text).map { (value: $0.value, digits: $0.digits, lookalike: true) }
@@ -74,15 +74,28 @@ public enum NumberExtractor {
                 if lookalike { score -= 0.5 }
                 // On a bus and a tram alike (2022): its model is a guess, so a number of about
                 // the same size whose model is certain leads.
-                if knownHere, catalog.match(number: value, kind: mode.kind).candidates.count > 1 { score -= 0.3 }
-                scored.append((value, score, digits))
+                if knownHere, catalog.match(number: value, kind: mode.kind).candidates.count > 1 { score -= guessPenalty }
+                scored.append((value, score, digits, obs.height, knownAnywhere))
             }
         }
         // A display's line is big, and can be a fleet number too (the 503 is a 13N tram's): next
         // to a known 4-digit number, a 3-digit one is the line.
         let longKnown = scored.contains { $0.digits >= 4 && catalog.isKnown(number: $0.number) }
-        return scored.map { ($0.number, longKnown && $0.digits == 3 ? $0.score - 1.5 : $0.score) }
+        // Between real numbers, the one you pointed at is the big one: a tram waiting behind
+        // #2028 had its small number read just as surely, and led the catch (#118).
+        let tallest = scored.filter { $0.digits >= 4 && $0.known }.map(\.height).max() ?? 0
+        return scored.map {
+            var score = longKnown && $0.digits == 3 ? $0.score - 1.5 : $0.score
+            if tallest > 0, $0.digits >= 4, $0.known { score += sizeLead * $0.height / tallest }
+            return ($0.number, score)
+        }
     }
+
+    /// What a number on both a bus and a tram loses in AUTO mode, its model being a guess.
+    /// `LiveHints.adjust` gives it back when the feed says which one is here.
+    public static let guessPenalty = 0.3
+    /// What the tallest real number gains; smaller ones gain their share of its height.
+    static let sizeLead = 0.5
 
     /// Whether a whole-photo read should be followed by a closer one (tiles). Yes when it found
     /// nothing, and also when it found only short numbers: a display's big line number ("716"
