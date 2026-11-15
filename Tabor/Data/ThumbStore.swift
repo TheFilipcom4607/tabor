@@ -16,8 +16,9 @@ import UniformTypeIdentifiers
 /// the picture itself, on first view or by `fill`.
 enum ThumbStore {
     /// Pictures asked for bigger than this come straight from the file: they're one to a
-    /// screen (a vehicle's page, a share card), not a list's worth.
-    static let limit = 600
+    /// screen (a vehicle's page, a share card), not a list's worth. ME's big trophy (900) is
+    /// under it: from the file it was a quarter of the wait for ME to open, every launch.
+    static let limit = 900
 
     /// The sizes the book's lists ask for, which `fill` gets ready ahead of time: a row of the
     /// catch log, a row of the index, a sticker on a model's page.
