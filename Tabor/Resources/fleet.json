@@ -1,7 +1,7 @@
 {
  "source": "Warsaw ZTM vehicle database (fetched 2026-09-22) and the city's open data (fetched 2026-11-12), plus Warszawikia, the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
  "sourcePl": "Baza pojazdów ZTM Warszawa (stan z 2026-09-22) i otwarte dane miasta (stan z 2026-11-12), a także Warszawikia, klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
- "fetched": "2026-11-16 14:51 UTC",
+ "fetched": "2026-11-16 14:55 UTC",
  "models": [
   {
    "id": "bus-solaris-urbino-18",
@@ -4110,6 +4110,14 @@
    "trialPl": "NA TESTACH OD LIS 2026",
    "generations": {
     "4": [960]
+   },
+   "notes": {
+    "960": {
+     "pl": "To właśnie ten egzemplarz Solaris wystawił na oficjalnej polskiej premierze modelu, na targach Transexpo w Kielcach w październiku 2026. Wcześniej, we wrześniu, jeździł na testach w Grodzisku Mazowieckim.",
+     "en": "This is the very bus Solaris put on show at the model's official Polish premiere, at the Transexpo fair in Kielce in October 2026. Before that, in September, it ran on trial in Grodzisk Mazowiecki.",
+     "source": "phototrans.eu",
+     "url": "https://phototrans.eu/15,994176,0.html"
+    }
    }
   },
   {

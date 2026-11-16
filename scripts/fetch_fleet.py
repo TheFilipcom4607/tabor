@@ -585,6 +585,17 @@ NOTES |= {
         "A demonstrator that has seen Europe: Madrid, Kraków, Tallinn and three years in Schaffhausen, "
         "Switzerland, then Rzeszów, Lublin and Dębica in 2026 before coming to Warsaw.",
         _TRANSPHOTO, "https://transphoto.org/vehicle/560376/"),
+    # phototrans: its photos at Transexpo (15 Oct 2026, "official Polish premiere"), and in Grodzisk
+    # Mazowiecki and Milanówek on 24-26 Sep (line 17). Transphoto (vehicle 652089) has the same
+    # Grodzisk trial, 21-28 Sep. phototrans names the operator PKS Gostynin, transphoto PKS
+    # Grodzisk, so the note names only the town (issue #120).
+    ("BUS", 960): _note(
+        "To właśnie ten egzemplarz Solaris wystawił na oficjalnej polskiej premierze modelu, na targach "
+        "Transexpo w Kielcach w październiku 2026. Wcześniej, we wrześniu, jeździł na testach w Grodzisku "
+        "Mazowieckim.",
+        "This is the very bus Solaris put on show at the model's official Polish premiere, at the Transexpo "
+        "fair in Kielce in October 2026. Before that, in September, it ran on trial in Grodzisk Mazowiecki.",
+        "phototrans.eu", "https://phototrans.eu/15,994176,0.html"),
     ("BUS", 5999): _note(
         "Dwudziestotysięczny pojazd w historii Solarisa i zarazem ostatni ze 130 elektrycznych przegubowców "
         "dla Warszawy. Wyjechał na ulice 15 grudnia 2020, na linię 503.",
