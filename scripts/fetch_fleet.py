@@ -596,6 +596,22 @@ NOTES |= {
         "This is the very bus Solaris put on show at the model's official Polish premiere, at the Transexpo "
         "fair in Kielce in October 2026. Before that, in September, it ran on trial in Grodzisk Mazowiecki.",
         "phototrans.eu", "https://phototrans.eu/15,994176,0.html"),
+    # phototrans vehicle 15,930290 (KRA NL08, later 7979 MSZ and KRA NT05; VIN UA411AE1ZM1016084):
+    # built 2024, owned by Wanicki of Mogilany (Irizar's Polish dealer), registered in Spain
+    # 17.07.2024 and in Poland 25.09.2024. Trials: MZA 27.09-31.10.2024 (its first), Kalisz Nov 2024,
+    # Rzeszów 21.11-9.12.2024 (as #011), Wałbrzych Mar 2026, Świdnica May, UTJ Wołoszka Jul (A 025),
+    # Niedyszyna Aug, PWiK Jarosław Aug-Sep, Dębica Sep (#245), Wieliczka from 8 Oct 2026. ZTM's press
+    # release (16 Nov 2026, "Irizar ponownie w Warszawie") confirms it's the same bus as in 2024.
+    ("BUS", 956): _note(
+        "Demonstrator polskiego dealera Irizara, który jeździ od miasta do miasta. Fabrycznie nowy, prosto "
+        "z Hiszpanii, zaczął właśnie od Warszawy: jesienią 2024 testowało go MZA, między innymi na linii 178. "
+        "Potem był w Kaliszu i Rzeszowie, a w 2026 w Wałbrzychu, Świdnicy, Jarosławiu, Dębicy i Wieliczce, "
+        "zanim wrócił do Warszawy.",
+        "A demonstrator for Irizar's Polish dealer that goes from town to town. Brand new from Spain, it "
+        "started out in Warsaw: MZA tried it in autumn 2024, on line 178 among others. Then came Kalisz and "
+        "Rzeszów, and in 2026 Wałbrzych, Świdnica, Jarosław, Dębica and Wieliczka, before it came back to "
+        "Warsaw.",
+        "phototrans.eu", "https://phototrans.eu/15,930290,13299.html"),
     ("BUS", 5999): _note(
         "Dwudziestotysięczny pojazd w historii Solarisa i zarazem ostatni ze 130 elektrycznych przegubowców "
         "dla Warszawy. Wyjechał na ulice 15 grudnia 2020, na linię 503.",

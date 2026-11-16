@@ -283,6 +283,8 @@ private func sampleModel() -> VehicleModel {
     #expect(solaris?.name(of: 960) == "Solaris Urbino 10.5 IV electric")
     let irizar = catalog.match(number: 956, kind: .bus).suggested
     #expect(irizar?.name == "Irizar ie bus 12" && irizar?.tier == .onTest)
+    // Back for a second trial: the dealer's demonstrator MZA first tried in autumn 2024.
+    #expect(irizar?.note(of: 956)?.en.contains("autumn 2024") == true)
     // Still running, so no end date yet, and outside the fleet % like every test bus.
     for m in [solaris, irizar] {
         #expect(m?.trialOver == false && m?.regular == false)

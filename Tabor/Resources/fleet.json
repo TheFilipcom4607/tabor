@@ -1,7 +1,7 @@
 {
  "source": "Warsaw ZTM vehicle database (fetched 2026-09-22) and the city's open data (fetched 2026-11-12), plus Warszawikia, the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
  "sourcePl": "Baza pojazdów ZTM Warszawa (stan z 2026-09-22) i otwarte dane miasta (stan z 2026-11-12), a także Warszawikia, klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
- "fetched": "2026-11-16 14:55 UTC",
+ "fetched": "2026-11-16 15:10 UTC",
  "models": [
   {
    "id": "bus-solaris-urbino-18",
@@ -3752,7 +3752,15 @@
    "runs": "MAINLY LINES 118 & 171 · 3–4 WEEKS FROM 16 NOV 2026",
    "trial": "ON TRIAL FROM NOV 2026",
    "runsPl": "GŁÓWNIE LINIE 118 I 171 · 3–4 TYGODNIE OD 16 LIS 2026",
-   "trialPl": "NA TESTACH OD LIS 2026"
+   "trialPl": "NA TESTACH OD LIS 2026",
+   "notes": {
+    "956": {
+     "pl": "Demonstrator polskiego dealera Irizara, który jeździ od miasta do miasta. Fabrycznie nowy, prosto z Hiszpanii, zaczął właśnie od Warszawy: jesienią 2024 testowało go MZA, między innymi na linii 178. Potem był w Kaliszu i Rzeszowie, a w 2026 w Wałbrzychu, Świdnicy, Jarosławiu, Dębicy i Wieliczce, zanim wrócił do Warszawy.",
+     "en": "A demonstrator for Irizar's Polish dealer that goes from town to town. Brand new from Spain, it started out in Warsaw: MZA tried it in autumn 2024, on line 178 among others. Then came Kalisz and Rzeszów, and in 2026 Wałbrzych, Świdnica, Jarosław, Dębica and Wieliczka, before it came back to Warsaw.",
+     "source": "phototrans.eu",
+     "url": "https://phototrans.eu/15,930290,13299.html"
+    }
+   }
   },
   {
    "id": "bus-irizar-ie-tram-12",
