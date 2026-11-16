@@ -35,6 +35,18 @@ private func sampleModel() -> VehicleModel {
     #expect(Tier.of(fleet: 186) == .common)
 }
 
+@Test func aTestBusesPlannedLinesGiveWayToTheLiveOne() {
+    func model(_ runs: String) -> VehicleModel {
+        VehicleModel(id: "t", name: "T", make: "T", kind: .bus, operators: ["MZA"], fleet: 1, firstYear: 2026,
+                     lastYear: 2026, batches: [Batch(year: 2026, depotCode: "R-1", depotName: "Woronicza", numbers: [960])],
+                     onTest: true, runs: runs)
+    }
+    #expect(model("MAINLY LINE 107 · 3–4 WEEKS FROM 16 NOV 2026").whereToFindBesidesLines == "3–4 WEEKS FROM 16 NOV 2026")
+    #expect(model("GŁÓWNIE LINIE 118 I 171 · 3–4 TYGODNIE").whereToFindBesidesLines == "3–4 TYGODNIE")
+    #expect(model("3–4 WEEKS FROM 16 NOV 2026").whereToFindBesidesLines == "3–4 WEEKS FROM 16 NOV 2026")
+    #expect(model("LINE 106").whereToFindBesidesLines == nil)
+}
+
 @Test func vintageStockIsItsOwnTierAndOutsideTheFleet() {
     let vintage = catalog.models.filter(\.vintage)
     #expect(vintage.contains { $0.id == "tram-falkenried-a" })

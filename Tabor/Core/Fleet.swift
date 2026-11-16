@@ -283,6 +283,16 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
         return onTest ? (AppLanguage.polish ? runsPl ?? runs : runs) : nil
     }
 
+    /// `whereToFind` without the lines a test vehicle was meant to run on, for while the live
+    /// feed shows the one it's really on: ZTM put #956 on 118 and 171, and it ran 251 and 519.
+    /// Nil if nothing's left.
+    public var whereToFindBesidesLines: String? {
+        let kept = (whereToFind ?? "").components(separatedBy: " · ").filter {
+            !$0.isEmpty && $0.range(of: #"\bLINE|\bLINI"#, options: .regularExpression) == nil
+        }
+        return kept.isEmpty ? nil : kept.joined(separator: " · ")
+    }
+
     public func batch(containing number: Int) -> Batch? {
         batches.first { $0.numbers.contains(number) }
     }
