@@ -1248,7 +1248,8 @@ EXTRA_BUSES = [
 # "Testujemy elektryczne autobusy" (ztm.waw.pl, Informacje prasowe, 16 Nov 2026). Both from MZA's
 # R-1 Woronicza from 16 November for about 3-4 weeks, #960 mainly on 107, #956 mainly on 118 and
 # 171. #956 is the same Irizar MZA tried from R-2 Kleszczowa in autumn 2024 (line 178, among
-# others). Both seen live on 2026-11-16 (#960 on 107, #956 on 251; issue #120).
+# others). Both seen live on 2026-11-16 (#960 on 107, #956 on 251, then 519; issue #120). #956 never
+# kept to ZTM's 118 and 171, so its row names no line: the app shows the one it's on now.
 TEST_BUSES = [
     ("Irizar", "ie tram 12", 959, "MZA", 'R-4 "Stalowa" (R-13)',
      "TRIAL ENDED 23 OCT 2026 · NO LONGER RUNNING", "TRIAL ENDED OCT 2026",
@@ -1259,8 +1260,8 @@ TEST_BUSES = [
      "GŁÓWNIE LINIA 107 · 3–4 TYGODNIE OD 16 LIS 2026",
      "NA TESTACH OD LIS 2026"),
     ("Irizar", "ie bus 12", 956, "MZA", 'R-1 "Woronicza" (R-07)',
-     "MAINLY LINES 118 & 171 · 3–4 WEEKS FROM 16 NOV 2026", "ON TRIAL FROM NOV 2026",
-     "GŁÓWNIE LINIE 118 I 171 · 3–4 TYGODNIE OD 16 LIS 2026",
+     "3–4 WEEKS FROM 16 NOV 2026", "ON TRIAL FROM NOV 2026",
+     "3–4 TYGODNIE OD 16 LIS 2026",
      "NA TESTACH OD LIS 2026"),
 ]
 TRIALS = {(make, model): t for make, model, _, _, _, *t in TEST_BUSES}

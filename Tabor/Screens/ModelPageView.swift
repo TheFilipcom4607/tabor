@@ -123,13 +123,16 @@ struct ModelPageView: View {
             .padding(.bottom, 14)
 
             if let place = model.whereToFind {
-                // Wraps rather than shrinking away: a test bus's lines and dates run long.
-                Mono(place, size: 10.5, spacing: 0.1, color: model.tier.color)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 22)
-                    .padding(.top, -6)
-                    .padding(.bottom, 12)
+                VStack(alignment: .leading, spacing: 5) {
+                    if model.onTest, !model.trialOver { TrialLiveLine(model: model) }
+                    // Wraps rather than shrinking away: a test bus's lines and dates run long.
+                    Mono(place, size: 10.5, spacing: 0.1, color: model.tier.color)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 22)
+                .padding(.top, -6)
+                .padding(.bottom, 12)
             }
 
             HStack(spacing: 11) {
@@ -449,6 +452,28 @@ struct ModelPageView: View {
         switch sort {
         case .number: return have.sorted() + rest.sorted()
         case .date: return have.sorted { owned[$0]!.lastSeen > owned[$1]!.lastSeen } + rest.sorted()
+        }
+    }
+}
+
+/// The line a test bus is on right now. ZTM's press release names the lines it's meant for,
+/// but #956 spent its first day on 251 and 519, never on 118 or 171. Its own view, so a
+/// poll redraws this line, not the page; and off screen it doesn't read the feed at all.
+private struct TrialLiveLine: View {
+    let model: VehicleModel
+    @Environment(\.tabActive) private var tabActive
+
+    var body: some View {
+        // Off CATCH and HUNT the feed stops after a minute: an older snapshot says nothing about now.
+        let feed = tabActive ? LiveFleetService.shared.fresh(maxAge: 120) : nil
+        let lines = Array(Set(model.numbers.compactMap { feed?.vehicle(number: $0, kind: model.kind)?.line })).sorted()
+        if !lines.isEmpty {
+            HStack(spacing: 6) {
+                Image(systemName: "dot.radiowaves.left.and.right").font(.system(size: 10, weight: .bold))
+                Mono("ON LINE \(lines.joined(separator: ", ")) NOW", size: 10.5, weight: 700, spacing: 0.1, color: Palette.radar)
+                    .lineLimit(1)
+            }
+            .foregroundStyle(Palette.radar)
         }
     }
 }
