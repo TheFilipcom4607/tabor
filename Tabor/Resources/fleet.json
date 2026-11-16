@@ -1,7 +1,7 @@
 {
  "source": "Warsaw ZTM vehicle database (fetched 2026-09-22) and the city's open data (fetched 2026-11-12), plus Warszawikia, the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
  "sourcePl": "Baza pojazdów ZTM Warszawa (stan z 2026-09-22) i otwarte dane miasta (stan z 2026-11-12), a także Warszawikia, klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
- "fetched": "2026-11-16 15:10 UTC",
+ "fetched": "2026-11-16 15:21 UTC",
  "models": [
   {
    "id": "bus-solaris-urbino-18",
@@ -4842,6 +4842,12 @@
     "1389": "lastRedYellow"
    },
    "notes": {
+    "1381": {
+     "pl": "Urodził się jako 105Nb. Gdy wiosną 2004 przebudowano go na 105Na, dostał nowy pulpit, aparaturę i napędy drzwi (pasażerowie przestali sami otwierać drzwi), ale siedzenia zostawiono mu wtedy stare, z 105Nb (dziś już ich nie ma).",
+     "en": "It was born a 105Nb. When it was rebuilt as a 105Na in spring 2004 it got a new driver's desk, electrics and door drives (passengers could no longer open the doors themselves), but kept its old 105Nb seats at the time (they've since gone).",
+     "source": "tramwar.pl",
+     "url": "https://www.tramwar.pl/twstopiatki.html"
+    },
     "1423": {
      "pl": "Jeden z dwóch jedynych wagonów 105Ng zbudowanych od nowa: mają numery fabryczne 1 i 2 (1993) i jeżdżą razem, jako skład 1424+1423.",
      "en": "One of the only two 105Ng cars ever built new: they carry factory numbers 1 and 2 (1993) and run together as set 1424+1423.",
@@ -5346,6 +5352,18 @@
     }
    ],
    "notes": {
+    "2062": {
+     "pl": "Pierwsza stopiątka z piasecznicami, choć długo uważano, że w stopiątkach nie da się ich zamontować. Czeskie piasecznice Di-Elcomu dostała próbnie w październiku 2006, a 2066 w grudniu takie od Knorra.",
+     "en": "The first 105 with sanders, though it was long thought they couldn't be fitted to 105s. It got Czech Di-Elcom sanders on trial in October 2006, and #2066 got Knorr ones in December.",
+     "source": "tramwar.pl",
+     "url": "https://www.tramwar.pl/tw-piasecznice.html"
+    },
+    "2066": {
+     "pl": "Jeden z dwóch wagonów, na których w 2006 próbowano piasecznic w stopiątkach (długo uważano, że się nie da): ten dostał w grudniu piasecznice Knorra, a 2062 dwa miesiące wcześniej czeskie Di-Elcomu.",
+     "en": "One of two cars that tried out sanders on a 105 in 2006 (long thought impossible): this one got Knorr's in December, and #2062 got Czech Di-Elcom ones two months earlier.",
+     "source": "tramwar.pl",
+     "url": "https://www.tramwar.pl/tw-piasecznice.html"
+    },
     "2072": {
      "pl": "Ostatni skład 105N2k, jaki wszedł do ruchu w Warszawie: 29 kwietnia 2000. Następne stopiątki były już typu 105N2k/2000.",
      "en": "The last 105N2k set to enter service in Warsaw, on 29 April 2000. The 105s after it were the 105N2k/2000 type.",
@@ -5445,6 +5463,20 @@
      ]
     }
    ],
+   "notes": {
+    "2136": {
+     "pl": "Pierwsza para 123N: przyjechała 13–14 stycznia 2007, a pasażerów woziła od 24 stycznia na linii 24. Bez piasecznic i na sztywnych wózkach (jedno i drugie zmieniono w kwietniu), a do tego w jednym wagonie świeciło się zimne, niebieskawe światło, w drugim ciepłe, żółtawe.",
+     "en": "The first 123N pair: they arrived on 13–14 January 2007 and carried passengers from 24 January, on line 24. No sanders and rigid bogies (both changed in April), and on top of that one car was lit cold and bluish, the other warm and yellowish.",
+     "source": "tramwar.pl",
+     "url": "https://www.tramwar.pl/tw123n.html"
+    },
+    "2137": {
+     "pl": "Pierwsza para 123N: przyjechała 13–14 stycznia 2007, a pasażerów woziła od 24 stycznia na linii 24. Bez piasecznic i na sztywnych wózkach (jedno i drugie zmieniono w kwietniu), a do tego w jednym wagonie świeciło się zimne, niebieskawe światło, w drugim ciepłe, żółtawe.",
+     "en": "The first 123N pair: they arrived on 13–14 January 2007 and carried passengers from 24 January, on line 24. No sanders and rigid bogies (both changed in April), and on top of that one car was lit cold and bluish, the other warm and yellowish.",
+     "source": "tramwar.pl",
+     "url": "https://www.tramwar.pl/tw123n.html"
+    }
+   },
    "coupled": true,
    "pairs": [
     [2136, 2137],
@@ -5507,6 +5539,14 @@
     "places": 132,
     "airCon": true,
     "floor": "LF"
+   },
+   "notes": {
+    "3801": {
+     "pl": "Pierwszy 134N. Pasażerów woził od 30 lipca 2015 (linia 13), ale Tramwaje Warszawskie przyjęły go na stan dopiero 29 października, ponad pół roku po zgłoszeniu do odbioru: tyle trwało usuwanie niezgodności z zamówieniem.",
+     "en": "The first 134N. It carried passengers from 30 July 2015 (line 13), but Tramwaje Warszawskie only took it onto their books on 29 October, more than six months after it was offered for acceptance: that's how long it took to fix what didn't match the order.",
+     "source": "tramwar.pl",
+     "url": "https://www.tramwar.pl/tw134n.html"
+    }
    }
   },
   {
@@ -5582,6 +5622,18 @@
      "en": "The first 116Na in today's livery: it got it in January 2010.",
      "source": "Warszawikia",
      "url": "https://warszawa.fandom.com/wiki/Konstal_116N"
+    },
+    "3017": {
+     "pl": "Pierwszy niskopodłogowy tramwaj w Warszawie z piasecznicami. Dostał je jesienią 2004, po serii poślizgów i zderzeń stoszesnastek, a w ciągu dwóch lat miały je już wszystkie.",
+     "en": "Warsaw's first low-floor tram with sanders. It got them in autumn 2004, after a run of skids and collisions among the 116s, and within two years they all had them.",
+     "source": "tramwar.pl",
+     "url": "https://www.tramwar.pl/tw-piasecznice.html"
+    },
+    "3030": {
+     "pl": "Jedyny wagon 116Na/1, który przyszedł z fabryki z lusterkami ustawianymi z pulpitu motorniczego (reszta dostała je w latach 2003–04). Był też pierwszym tramwajem z napędem na prąd przemienny na Żoliborzu (20 maja 2000) i jedynym takim wagonem w tej zajezdni, aż w 2003 przeniesiono go na Mokotów.",
+     "en": "The only 116Na/1 delivered with mirrors the driver adjusts from the desk (the rest got them in 2003–04). It was also Żoliborz depot's first AC-drive tram (20 May 2000), and its only 116 until it moved to Mokotów in 2003.",
+     "source": "tramwar.pl",
+     "url": "https://www.tramwar.pl/tw116na1.html"
     }
    }
   },
@@ -5732,6 +5784,12 @@
      "en": "In November 2022 it ran as a LEGO advert, with Santa on its side.",
      "source": "wgkm.waw.pl",
      "url": "https://wgkm.waw.pl"
+    },
+    "2029": {
+     "pl": "Razem z 2028 to pierwszy tramwaj w Warszawie z silnikami prądu przemiennego: od 30 grudnia 1997 jeździł z Pragi jako nietypowy „105Nz”. Przy modernizacji w sierpniu 2016 wrócił do zwykłych silników prądu stałego.",
+     "en": "With #2028, Warsaw's first tram with AC motors: from 30 December 1997 it ran out of Praga depot as the odd \"105Nz\". When it was modernised in August 2016 it went back to ordinary DC motors.",
+     "source": "tramwar.pl",
+     "url": "https://www.tramwar.pl/twpiost.html"
     }
    },
    "formerly": ["tram-alstom-konstal-105n", "tram-konstal-105n"],
@@ -5794,6 +5852,14 @@
     "places": 160,
     "airCon": true,
     "floor": "LF"
+   },
+   "notes": {
+    "4001": {
+     "pl": "Pierwszy 142N w Warszawie. Przyjechał 13 maja 2021, ale na pasażerów czekał dwa lata: homologację dostał w lipcu 2022, a odbiory ciągnęły się do maja 2023. Zadebiutował 22 maja 2023 na linii 28.",
+     "en": "Warsaw's first 142N. It arrived on 13 May 2021 but waited two years for passengers: type approval came in July 2022, and acceptance dragged on until May 2023. It made its debut on 22 May 2023, on line 28.",
+     "source": "tramwar.pl",
+     "url": "https://www.tramwar.pl/tw142n.html"
+    }
    }
   },
   {
@@ -5899,10 +5965,10 @@
      "url": "https://warszawa.fandom.com/wiki/PESA_120N"
     },
     "3103": {
-     "pl": "Jeden z piętnastu wagonów kupionych dla linii 9 po remoncie torów w Alejach Jerozolimskich. Pierwszy kurs z pasażerami: 20 sierpnia 2007.",
-     "en": "One of fifteen cars bought for line 9 after the tracks on Aleje Jerozolimskie were rebuilt. First run with passengers: 20 August 2007.",
-     "source": "Warszawikia",
-     "url": "https://warszawa.fandom.com/wiki/PESA_120N"
+     "pl": "Latem 2009 przymierzał nowe barwy: 27 lipca wrócił z lakierni z żółtymi burtami i czołami, czerwonym dachem i ciemnoszarymi drzwiami. Ostatecznie wszystkie 120N dostały barwy czerwono-żółte.",
+     "en": "In summer 2009 it tried on new colours: on 27 July it came back from the paint shop with yellow sides and ends, a red roof and dark grey doors. In the end every 120N went red and yellow.",
+     "source": "tramwar.pl",
+     "url": "https://www.tramwar.pl/tw120n.html"
     },
     "3104": {
      "pl": "Jeden z piętnastu wagonów kupionych dla linii 9 po remoncie torów w Alejach Jerozolimskich. Pierwszy kurs z pasażerami: 20 sierpnia 2007.",
@@ -6077,10 +6143,10 @@
    },
    "notes": {
     "3501": {
-     "pl": "Jeden z sześciu dwukierunkowych Swingów, zamówionych na „kryzysową” trasę na Tarchomin przez most Północny. Pierwszy wyjechał 15 października 2012.",
-     "en": "One of six two-way Swings, ordered for the stopgap route to Tarchomin over the Północny bridge. The first entered service on 15 October 2012.",
-     "source": "Warszawikia",
-     "url": "https://warszawa.fandom.com/wiki/PESA_120Na"
+     "pl": "Pierwszy raz Swing Duo pojechał w obu kierunkach w nocy z 19 na 20 grudnia 2012: o 1:45 ten wagon wjechał na nową trasę na Tarchomin, żeby sprawdzić zwrotnice, i w niecałe pięć minut dotarł do Starych Świdrów. Był też pierwszym Duo z pasażerami (15 października 2012, linia 1).",
+     "en": "A Swing Duo first drove both ways on the night of 19–20 December 2012: at 1:45 am this car rolled onto the new Tarchomin tracks to test the points and reached Stare Świdry in under five minutes. It was also the first Duo with passengers (15 October 2012, line 1).",
+     "source": "tramwar.pl",
+     "url": "https://www.tramwar.pl/tw120naduo.html"
     },
     "3502": {
      "pl": "Jeden z sześciu dwukierunkowych Swingów, zamówionych na „kryzysową” trasę na Tarchomin przez most Północny. Pierwszy wyjechał 15 października 2012.",
@@ -6190,6 +6256,18 @@
     }
    ],
    "notes": {
+    "1000": {
+     "pl": "Razem z 1001 pierwsze 105N w Warszawie: na trasę wyjechały z Woli 13 października 1975. To te same wagony, które dziś jeżdżą jako zabytki KMKM.",
+     "en": "With #1001, Warsaw's first 105Ns: they set out from Wola depot on 13 October 1975. They're the very cars KMKM runs as heritage trams today.",
+     "source": "tramwar.pl",
+     "url": "https://www.tramwar.pl/twpiost.html"
+    },
+    "1001": {
+     "pl": "Razem z 1000 pierwsze 105N w Warszawie: na trasę wyjechały z Woli 13 października 1975. To te same wagony, które dziś jeżdżą jako zabytki KMKM.",
+     "en": "With #1000, Warsaw's first 105Ns: they set out from Wola depot on 13 October 1975. They're the very cars KMKM runs as heritage trams today.",
+     "source": "tramwar.pl",
+     "url": "https://www.tramwar.pl/twpiost.html"
+    },
     "1006": {
      "pl": "Tramwaj turystyczny z szafą w kształcie pianina, na którym można grać w czasie jazdy. To nie jest pierwotny #1006: tamten w 1990 trafił do Wrocławia, a Konstal przysłał nowy wagon, który przejął numer.",
      "en": "A tourist tram with a piano-shaped cabinet that can be played during the ride. It isn't the original #1006: that car went to Wrocław in 1990, and Konstal sent a new one that took over the number.",

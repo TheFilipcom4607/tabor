@@ -805,7 +805,7 @@ struct SettingsSheet: View {
                         Text("New deliveries show up without an app update: TABOR checks GitHub for a fresher ZTM snapshot once a day.")
                         Text("District outlines for the badges: © OpenStreetMap contributors.")
                         Text("Notes on vehicles: [czynaczas.pl](https://czynaczas.pl), with thanks.")
-                        Text("Coupled sets, works cars and tram types: [tramwar.pl](https://tramwar.pl), with thanks.")
+                        Text("Coupled sets, works cars, tram types and notes on trams: [tramwar.pl](https://tramwar.pl), with thanks.")
                     }
                 }
                 Section {

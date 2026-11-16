@@ -686,6 +686,114 @@ NOTES |= {
         "a closed-off driver's cab. Instead of the scrapyard it went to Warsaw's KMKM.",
         _HTP, "https://www.htp.org.pl/20-lecie-wagonu-102n-5-w-kolekcji-tramwajow-warszawskich/"),
 }
+# tramwar.pl's facts, in our own words, by its author's leave (mkm101, 2026-11-15: credited notes,
+# each linking the page its fact comes from; no copied text, tables or photos). He saw these texts
+# first and answered the three questions they raised (build/drafts/tramwar-notes.md). They replace
+# the Warszawikia batch notes on #3103 and #3501. #1006's roof breaker waits until notes can stack:
+# it has the piano note.
+_TRAMWAR = "tramwar.pl"
+_TW = "https://www.tramwar.pl/"
+_FIRST_123N = _note(
+    "Pierwsza para 123N: przyjechała 13–14 stycznia 2007, a pasażerów woziła od 24 stycznia na linii 24. "
+    "Bez piasecznic i na sztywnych wózkach (jedno i drugie zmieniono w kwietniu), a do tego w jednym "
+    "wagonie świeciło się zimne, niebieskawe światło, w drugim ciepłe, żółtawe.",
+    "The first 123N pair: they arrived on 13–14 January 2007 and carried passengers from 24 January, on "
+    "line 24. No sanders and rigid bogies (both changed in April), and on top of that one car was lit "
+    "cold and bluish, the other warm and yellowish.",
+    _TRAMWAR, _TW + "tw123n.html")
+NOTES |= {
+    ("TRAM", 3017): _note(
+        "Pierwszy niskopodłogowy tramwaj w Warszawie z piasecznicami. Dostał je jesienią 2004, po serii "
+        "poślizgów i zderzeń stoszesnastek, a w ciągu dwóch lat miały je już wszystkie.",
+        "Warsaw's first low-floor tram with sanders. It got them in autumn 2004, after a run of skids and "
+        "collisions among the 116s, and within two years they all had them.",
+        _TRAMWAR, _TW + "tw-piasecznice.html"),
+    ("TRAM", 4001): _note(
+        "Pierwszy 142N w Warszawie. Przyjechał 13 maja 2021, ale na pasażerów czekał dwa lata: homologację "
+        "dostał w lipcu 2022, a odbiory ciągnęły się do maja 2023. Zadebiutował 22 maja 2023 na linii 28.",
+        "Warsaw's first 142N. It arrived on 13 May 2021 but waited two years for passengers: type approval "
+        "came in July 2022, and acceptance dragged on until May 2023. It made its debut on 22 May 2023, on "
+        "line 28.",
+        _TRAMWAR, _TW + "tw142n.html"),
+    ("TRAM", 3801): _note(
+        "Pierwszy 134N. Pasażerów woził od 30 lipca 2015 (linia 13), ale Tramwaje Warszawskie przyjęły go "
+        "na stan dopiero 29 października, ponad pół roku po zgłoszeniu do odbioru: tyle trwało usuwanie "
+        "niezgodności z zamówieniem.",
+        "The first 134N. It carried passengers from 30 July 2015 (line 13), but Tramwaje Warszawskie only "
+        "took it onto their books on 29 October, more than six months after it was offered for acceptance: "
+        "that's how long it took to fix what didn't match the order.",
+        _TRAMWAR, _TW + "tw134n.html"),
+    # Also twpiost.html (the Żoliborz first); one link per note, so the page with most of it.
+    ("TRAM", 3030): _note(
+        "Jedyny wagon 116Na/1, który przyszedł z fabryki z lusterkami ustawianymi z pulpitu motorniczego "
+        "(reszta dostała je w latach 2003–04). Był też pierwszym tramwajem z napędem na prąd przemienny na "
+        "Żoliborzu (20 maja 2000) i jedynym takim wagonem w tej zajezdni, aż w 2003 przeniesiono go na "
+        "Mokotów.",
+        "The only 116Na/1 delivered with mirrors the driver adjusts from the desk (the rest got them in "
+        "2003–04). It was also Żoliborz depot's first AC-drive tram (20 May 2000), and its only 116 until it "
+        "moved to Mokotów in 2003.",
+        _TRAMWAR, _TW + "tw116na1.html"),
+    ("TRAM", 3103): _note(
+        "Latem 2009 przymierzał nowe barwy: 27 lipca wrócił z lakierni z żółtymi burtami i czołami, "
+        "czerwonym dachem i ciemnoszarymi drzwiami. Ostatecznie wszystkie 120N dostały barwy czerwono-żółte.",
+        "In summer 2009 it tried on new colours: on 27 July it came back from the paint shop with yellow "
+        "sides and ends, a red roof and dark grey doors. In the end every 120N went red and yellow.",
+        _TRAMWAR, _TW + "tw120n.html"),
+    ("TRAM", 3501): _note(
+        "Pierwszy raz Swing Duo pojechał w obu kierunkach w nocy z 19 na 20 grudnia 2012: o 1:45 ten wagon "
+        "wjechał na nową trasę na Tarchomin, żeby sprawdzić zwrotnice, i w niecałe pięć minut dotarł do "
+        "Starych Świdrów. Był też pierwszym Duo z pasażerami (15 października 2012, linia 1).",
+        "A Swing Duo first drove both ways on the night of 19–20 December 2012: at 1:45 am this car rolled "
+        "onto the new Tarchomin tracks to test the points and reached Stare Świdry in under five minutes. "
+        "It was also the first Duo with passengers (15 October 2012, line 1).",
+        _TRAMWAR, _TW + "tw120naduo.html"),
+    # "All of Warsaw", not just Praga: his answer. #2028 keeps its LEGO note. The modernisation is
+    # from tw105ni.html.
+    ("TRAM", 2029): _note(
+        "Razem z 2028 to pierwszy tramwaj w Warszawie z silnikami prądu przemiennego: od 30 grudnia 1997 "
+        "jeździł z Pragi jako nietypowy „105Nz”. Przy modernizacji w sierpniu 2016 wrócił do zwykłych "
+        "silników prądu stałego.",
+        "With #2028, Warsaw's first tram with AC motors: from 30 December 1997 it ran out of Praga depot as "
+        "the odd \"105Nz\". When it was modernised in August 2016 it went back to ordinary DC motors.",
+        _TRAMWAR, _TW + "twpiost.html"),
+    ("TRAM", 2062): _note(
+        "Pierwsza stopiątka z piasecznicami, choć długo uważano, że w stopiątkach nie da się ich zamontować. "
+        "Czeskie piasecznice Di-Elcomu dostała próbnie w październiku 2006, a 2066 w grudniu takie od Knorra.",
+        "The first 105 with sanders, though it was long thought they couldn't be fitted to 105s. It got "
+        "Czech Di-Elcom sanders on trial in October 2006, and #2066 got Knorr ones in December.",
+        _TRAMWAR, _TW + "tw-piasecznice.html"),
+    ("TRAM", 2066): _note(
+        "Jeden z dwóch wagonów, na których w 2006 próbowano piasecznic w stopiątkach (długo uważano, że się "
+        "nie da): ten dostał w grudniu piasecznice Knorra, a 2062 dwa miesiące wcześniej czeskie Di-Elcomu.",
+        "One of two cars that tried out sanders on a 105 in 2006 (long thought impossible): this one got "
+        "Knorr's in December, and #2062 got Czech Di-Elcom ones two months earlier.",
+        _TRAMWAR, _TW + "tw-piasecznice.html"),
+    ("TRAM", 2136): _FIRST_123N,
+    ("TRAM", 2137): _FIRST_123N,
+    # The seats are gone today (his answer). The seats themselves: twsiedz105.html.
+    ("TRAM", 1381): _note(
+        "Urodził się jako 105Nb. Gdy wiosną 2004 przebudowano go na 105Na, dostał nowy pulpit, aparaturę i "
+        "napędy drzwi (pasażerowie przestali sami otwierać drzwi), ale siedzenia zostawiono mu wtedy stare, "
+        "z 105Nb (dziś już ich nie ma).",
+        "It was born a 105Nb. When it was rebuilt as a 105Na in spring 2004 it got a new driver's desk, "
+        "electrics and door drives (passengers could no longer open the doors themselves), but kept its old "
+        "105Nb seats at the time (they've since gone).",
+        _TRAMWAR, _TW + "twstopiatki.html"),
+    # KMKM's 1000+1001 are the 1975 cars: his answer.
+    ("TRAM", 1000): _note(
+        "Razem z 1001 pierwsze 105N w Warszawie: na trasę wyjechały z Woli 13 października 1975. To te same "
+        "wagony, które dziś jeżdżą jako zabytki KMKM.",
+        "With #1001, Warsaw's first 105Ns: they set out from Wola depot on 13 October 1975. They're the very "
+        "cars KMKM runs as heritage trams today.",
+        _TRAMWAR, _TW + "twpiost.html"),
+    ("TRAM", 1001): _note(
+        "Razem z 1000 pierwsze 105N w Warszawie: na trasę wyjechały z Woli 13 października 1975. To te same "
+        "wagony, które dziś jeżdżą jako zabytki KMKM.",
+        "With #1000, Warsaw's first 105Ns: they set out from Wola depot on 13 October 1975. They're the very "
+        "cars KMKM runs as heritage trams today.",
+        _TRAMWAR, _TW + "twpiost.html"),
+}
+BATCH_NOTED -= {("TRAM", 3103), ("TRAM", 3501)}
 # The colour codes the city's list gets right, by bus. Suburban (L) buses are blue, whole
 # models of them (confirmed on the street, 2026-09-28). RAL 1004+3003 is the old yellow and red
 # with a red band over the windows (the 2008-09 Urbinos #8890 and #1859 on phototrans,

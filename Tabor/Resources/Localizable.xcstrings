@@ -11139,12 +11139,12 @@
         }
       }
     },
-    "Coupled sets, works cars and tram types: [tramwar.pl](https://tramwar.pl), with thanks.": {
+    "Coupled sets, works cars, tram types and notes on trams: [tramwar.pl](https://tramwar.pl), with thanks.": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Składy wagonów, tabor techniczny i typy tramwajów: [tramwar.pl](https://tramwar.pl), z podziękowaniami."
+            "value": "Składy wagonów, tabor techniczny, typy tramwajów i ciekawostki o tramwajach: [tramwar.pl](https://tramwar.pl), z podziękowaniami."
           }
         }
       }
