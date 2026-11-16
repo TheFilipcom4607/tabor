@@ -1,0 +1,79 @@
+name: Look for buses on trial
+
+# Buses on trial never reach the city's list. Warsaw numbers them 9xx, so scripts/trial_buses.py
+# lists every 9xx the live feed has seen in the last week, with its model if fleet.json has one
+# and "?" if not (those go in TEST_BUSES once a source names them), in the issue "Autobusy na
+# testach". It used to run once a night in fleet.yml, which missed a trial bus whose GPS came on
+# in the day (#956 on 16 Nov 2026, while #960 was already listed); hourly, a new bus shows within
+# the hour. One call to the feed and one issue edit an hour, through the day only: trial buses
+# run in service hours.
+on:
+  schedule:
+    # 05:23-23:23 in Warsaw in winter, 06:23-00:23 in summer (cron is UTC). Off the hour: GitHub
+    # delays runs scheduled for :00.
+    - cron: "23 4-22 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: trials
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  TRIALS_TITLE: "Autobusy na testach"
+
+jobs:
+  trials:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          sparse-checkout: |
+            scripts/trial_buses.py
+            Tabor/Resources/fleet.json
+          sparse-checkout-cone-mode: false
+
+      # A feed that can't be read leaves no marker, so the issue is left as it is.
+      - name: Look for buses on trial in the live feed
+        continue-on-error: true
+        run: |
+          python3 scripts/trial_buses.py trials.md
+          touch trials-checked
+
+      # A trial can be over in a few weeks, so a bus that joins an open issue gets a comment
+      # (which notifies) as well as the silent edit. Editing an issue's text sends no
+      # notification, so the list stays current without pinging anyone every hour: only a new
+      # bus or opening it does. The edit is skipped when nothing in the list changed.
+      - name: Open, update or close the trials issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ ! -f trials-checked ]; then
+            echo "The live feed couldn't be read; leaving the issue as it is."
+            exit 0
+          fi
+          number=$(gh issue list --state open --search "in:title \"$TRIALS_TITLE\"" --json number,title \
+            --jq "map(select(.title == \"$TRIALS_TITLE\")) | .[0].number // empty")
+          if [ -f trials.md ]; then
+            if [ -n "$number" ]; then
+              body=$(gh issue view "$number" --json body --jq .body)
+              buses() { grep -o '^| #9[0-9][0-9]' | sed 's/^| //' | sort || true; }
+              added=$(comm -13 <(buses <<< "$body") <(buses < trials.md) | paste -sd ' ' -)
+              [ "$body" = "$(cat trials.md)" ] || gh issue edit "$number" --body-file trials.md
+              [ -z "$added" ] || gh issue comment "$number" --body "Nowe: $added"
+            else
+              gh issue create --title "$TRIALS_TITLE" --body-file trials.md --label BOT
+            fi
+          elif [ -n "$number" ]; then
+            gh issue close "$number" --reason completed --comment "Nic nie zostało."
+          fi

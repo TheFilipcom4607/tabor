@@ -14,15 +14,14 @@ name: Refresh fleet data
 #   closes it.
 # - Vehicles of a type no model has yet are left out of the book, and listed in one issue
 #   ("Fleet: vehicles waiting for a model") that closes itself once they're placed.
-# - Buses on trial never reach the city's list at all. Warsaw numbers them 9xx, so any 9xx
-#   the live feed has seen in the last week that fleet.json lacks goes in a second issue
-#   ("Fleet: buses on trial"), for a human to add to TEST_BUSES once a source names them.
+# - Buses on trial never reach the city's list at all: trials.yml looks for them every hour.
 # - Event wraps (a Christmas bus, a Valentine's bus) aren't in any list either. Vehicles on an
 #   event line in the live feed, fresh MZA posts about them and czynaczas.pl's special vehicles
 #   (as codes only: his terms) go in a third issue ("Fleet: possible event wraps"), for a human
 #   to add to WRAPS once a source names the bus. Closing that issue as not planned dismisses its
-#   hints for good. Trials and wraps run in the hints job, which runs even when the fleet build
-#   fails, so a broken city list can't blind them for days.
+#   hints for good. Wraps run in the hints job, which runs even when the fleet build fails, so a
+#   broken city list can't blind them for days.
+# Every issue and PR the bot opens carries the BOT label.
 # The tests run here because a push or PR made with the workflow's own token starts no
 # other workflow.
 #
@@ -60,7 +59,6 @@ env:
   # The issues carry only their hints; what they mean is explained on thefilip.com/tabor/boty,
   # one section per issue, linked at the bottom of each.
   ISSUE_TITLE: "Pojazdy bez modelu"
-  TRIALS_TITLE: "Autobusy na testach"
   WRAPS_TITLE: "Możliwe oklejone pojazdy"
   # The wraps issue's name until 2026-10-30: hints dismissed under it stay dismissed.
   OLD_WRAPS_TITLE: "Fleet: possible event wraps"
@@ -183,11 +181,11 @@ jobs:
             waiting.md
           if-no-files-found: ignore
 
-  # Trials, wraps and czynaczas.pl run apart from the fleet build, so a broken city list (a
-  # 502, a sanity gate, a vanished model id) doesn't blind them for days, as it did on
-  # 2026-11-06–09. They read main's fleet.json: a fresh build would only tell them about
-  # vehicles already placed, and fetch_fleet.py writes its file only once it passes, so
-  # main's copy is what a failed build leaves behind anyway.
+  # Wraps and czynaczas.pl run apart from the fleet build, so a broken city list (a 502, a
+  # sanity gate, a vanished model id) doesn't blind them for days, as it did on 2026-11-06–09
+  # (trials have their own hourly workflow, trials.yml). They read main's fleet.json: a fresh
+  # build would only tell them about vehicles already placed, and fetch_fleet.py writes its
+  # file only once it passes, so main's copy is what a failed build leaves behind anyway.
   hints:
     needs: build
     if: always()
@@ -213,14 +211,7 @@ jobs:
           ROUTES_UPLOAD_TOKEN: ${{ secrets.ROUTES_UPLOAD_TOKEN }}
         run: python3 scripts/czynaczas.py sync "$RUNNER_TEMP/czynaczas-special.json"
 
-      # A feed that can't be read leaves no marker, so the trials issue is left as it is.
-      - name: Look for buses on trial in the live feed
-        continue-on-error: true
-        run: |
-          python3 scripts/trial_buses.py trials.md
-          touch trials-checked
-
-      # The same for event wraps: nothing read leaves the issue as it is. Hints in an issue a
+      # Nothing read leaves no marker, so the wraps issue is left as it is. Hints in an issue a
       # human closed stay dismissed, or the next run would only open a new issue with the same
       # posts. It goes by who closed it, not the reason: closing with a comment makes it
       # "completed" (#112 came back as #113). The bot's own close dismisses nothing.
@@ -247,34 +238,6 @@ jobs:
           python3 scripts/possible_wraps.py wraps.md --skip skip.txt --special "$RUNNER_TEMP/czynaczas-special.json"
           touch wraps-checked
 
-      # A trial can be over in a few weeks, so a bus that joins an open issue gets a comment
-      # (which notifies) as well as the silent edit. Editing an issue's text sends no
-      # notification, so the list stays current without pinging anyone every night: only
-      # opening it does.
-      - name: Open, update or close the trials issue
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          if [ ! -f trials-checked ]; then
-            echo "The live feed couldn't be read; leaving the issue as it is."
-            exit 0
-          fi
-          number=$(gh issue list --state open --search "in:title \"$TRIALS_TITLE\"" --json number,title \
-            --jq "map(select(.title == \"$TRIALS_TITLE\")) | .[0].number // empty")
-          if [ -f trials.md ]; then
-            if [ -n "$number" ]; then
-              buses() { grep -o '^| #9[0-9][0-9]' | sed 's/^| //' | sort || true; }
-              added=$(comm -13 <(gh issue view "$number" --json body --jq .body | buses) <(buses < trials.md) | paste -sd ' ' -)
-              gh issue edit "$number" --body-file trials.md
-              [ -z "$added" ] || gh issue comment "$number" --body "Nowe: $added"
-            else
-              gh issue create --title "$TRIALS_TITLE" --body-file trials.md
-            fi
-          elif [ -n "$number" ]; then
-            gh issue close "$number" --reason completed --comment "Nic nie zostało."
-          fi
-
       # A wrap is out for a few weeks at most, so something new in an open issue gets a comment
       # (which notifies) as well as the silent edit.
       - name: Open, update or close the event wraps issue
@@ -299,7 +262,7 @@ jobs:
               [ -z "$added" ] || gh issue comment "$number" --body "Nowe:
           $added"
             else
-              gh issue create --title "$WRAPS_TITLE" --body-file wraps.md
+              gh issue create --title "$WRAPS_TITLE" --body-file wraps.md --label BOT
             fi
           elif [ -n "$number" ]; then
             gh issue close "$number" --reason completed --comment "Nic nie zostało."
@@ -386,7 +349,7 @@ jobs:
           if [ "$(gh pr view "$BRANCH" --json state --jq .state 2>/dev/null)" = "OPEN" ]; then
             gh pr edit "$BRANCH" --title "$title" --body-file pr-body.md
           else
-            gh pr create --base main --head "$BRANCH" --title "$title" --body-file pr-body.md
+            gh pr create --base main --head "$BRANCH" --title "$title" --body-file pr-body.md --label BOT
           fi
 
   close:
@@ -408,8 +371,8 @@ jobs:
           fi
 
   # Editing an issue's text sends no notification, so the list stays current without pinging
-  # anyone every night: only opening it does. Trials and wraps live in the hints job, which
-  # runs even when this build fails.
+  # anyone every night: only opening it does. Wraps live in the hints job, which runs
+  # even when this build fails, and trials in trials.yml.
   waiting:
     needs: build
     runs-on: ubuntu-latest
@@ -429,7 +392,7 @@ jobs:
             if [ -n "$number" ]; then
               gh issue edit "$number" --body-file waiting.md
             else
-              gh issue create --title "$ISSUE_TITLE" --body-file waiting.md
+              gh issue create --title "$ISSUE_TITLE" --body-file waiting.md --label BOT
             fi
           elif [ -n "$number" ]; then
             gh issue close "$number" --reason completed --comment "Wszystkie mają już model."
