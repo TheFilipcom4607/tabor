@@ -26,7 +26,7 @@ struct RapidArt: View {
     private static let board = CGSize(width: 340, height: 230)
     private static let phoneAt = CGPoint(x: 92, y: 115)
     /// The developer's own catches: a common Urbino 18 (#8517), a rare Solcity 12 (#1075), and
-    /// the Irizar that was on trial last, as the rarest.
+    /// the Irizar ie tram that was on trial in autumn 2026, as the rarest.
     private static let stickers = ["IntroStickerCommon", "IntroStickerRare", "IntroStickerTest"]
 
     var body: some View {

@@ -1106,11 +1106,24 @@ EXTRA_BUSES = [
 # Irizar ie tram 12 #959: MZA's trial from R-4 Stalowa, mid to end of September 2026 (TransInfo, Polskie Radio 24), seen live on line 106 on
 # 2026-09-25 (api.um.warszawa.pl). MZA's press office (email, 2026-10-02): extended to 23 October, mainly
 # on 106 until 7 October (122 on 3 Oct, 166 on 4 Oct). Trial over on 23 Oct (2026-11-07: still showed as running).
+# Solaris Urbino 10,5 electric #960 and Irizar ie bus 12 electric #956: ZTM's press release
+# "Testujemy elektryczne autobusy" (ztm.waw.pl, Informacje prasowe, 16 Nov 2026). Both from MZA's
+# R-1 Woronicza from 16 November for about 3-4 weeks, #960 mainly on 107, #956 mainly on 118 and
+# 171. #956 is the same Irizar MZA tried from R-2 Kleszczowa in autumn 2024 (line 178, among
+# others). Both seen live on 2026-11-16 (#960 on 107, #956 on 251; issue #120).
 TEST_BUSES = [
     ("Irizar", "ie tram 12", 959, "MZA", 'R-4 "Stalowa" (R-13)',
      "TRIAL ENDED 23 OCT 2026 · NO LONGER RUNNING", "TRIAL ENDED OCT 2026",
      "TESTY ZAKOŃCZONE 23 PAŹ 2026 · JUŻ NIE JEŹDZI",
      "TESTY ZAKOŃCZONE PAŹ 2026"),
+    ("Solaris", "Urbino 10.5 electric", 960, "MZA", 'R-1 "Woronicza" (R-07)',
+     "MAINLY LINE 107 · 3–4 WEEKS FROM 16 NOV 2026", "ON TRIAL FROM NOV 2026",
+     "GŁÓWNIE LINIA 107 · 3–4 TYGODNIE OD 16 LIS 2026",
+     "NA TESTACH OD LIS 2026"),
+    ("Irizar", "ie bus 12", 956, "MZA", 'R-1 "Woronicza" (R-07)',
+     "MAINLY LINES 118 & 171 · 3–4 WEEKS FROM 16 NOV 2026", "ON TRIAL FROM NOV 2026",
+     "GŁÓWNIE LINIE 118 I 171 · 3–4 TYGODNIE OD 16 LIS 2026",
+     "NA TESTACH OD LIS 2026"),
 ]
 TRIALS = {(make, model): t for make, model, _, _, _, *t in TEST_BUSES}
 # Trials that are over, by (make, model): the day each ended. The row stays (see above), but the

@@ -275,6 +275,20 @@ private func sampleModel() -> VehicleModel {
     #expect(Wanted.huntRank(.onTest) == Tier.legendary.rank)
 }
 
+@Test func runningTrialBusesSayWhereToFindThem() {
+    // ZTM's two trial buses from 16 Nov 2026, both from R-1 Woronicza (issue #120).
+    let solaris = catalog.match(number: 960, kind: .bus).suggested
+    #expect(solaris?.name == "Solaris Urbino 10.5 electric" && solaris?.tier == .onTest)
+    #expect(solaris?.whereToFind?.contains("LINE 107") == true)
+    let irizar = catalog.match(number: 956, kind: .bus).suggested
+    #expect(irizar?.name == "Irizar ie bus 12" && irizar?.tier == .onTest)
+    // Still running, so no end date yet, and outside the fleet % like every test bus.
+    for m in [solaris, irizar] {
+        #expect(m?.trialOver == false && m?.regular == false)
+        #expect(m?.batches.first?.depotCode == "R-1")
+    }
+}
+
 @Test func worksCarsAreTheirOwnTierOutsideTheFleet() {
     // TW's overhead-line measurement car: a 13N, in neither of ZTM's lists.
     let m = catalog.match(number: 388, kind: .tram).suggested

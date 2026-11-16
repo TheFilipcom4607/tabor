@@ -1,7 +1,7 @@
 {
  "source": "Warsaw ZTM vehicle database (fetched 2026-09-22) and the city's open data (fetched 2026-11-12), plus Warszawikia, the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
  "sourcePl": "Baza pojazdów ZTM Warszawa (stan z 2026-09-22) i otwarte dane miasta (stan z 2026-11-12), a także Warszawikia, klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
- "fetched": "2026-11-14 17:26 UTC",
+ "fetched": "2026-11-16 14:40 UTC",
  "models": [
   {
    "id": "bus-solaris-urbino-18",
@@ -3729,6 +3729,32 @@
    }
   },
   {
+   "id": "bus-irizar-ie-bus-12",
+   "name": "Irizar ie bus 12",
+   "make": "Irizar",
+   "code": "Irizar ie bus 12",
+   "kind": "BUS",
+   "operators": ["MZA"],
+   "fleet": 1,
+   "firstYear": null,
+   "lastYear": null,
+   "batches": [
+    {
+     "year": null,
+     "depotCode": "R-1",
+     "depotName": "Woronicza",
+     "operator": "MZA",
+     "numbers": [956]
+    }
+   ],
+   "vintage": false,
+   "onTest": true,
+   "runs": "MAINLY LINES 118 & 171 · 3–4 WEEKS FROM 16 NOV 2026",
+   "trial": "ON TRIAL FROM NOV 2026",
+   "runsPl": "GŁÓWNIE LINIE 118 I 171 · 3–4 TYGODNIE OD 16 LIS 2026",
+   "trialPl": "NA TESTACH OD LIS 2026"
+  },
+  {
    "id": "bus-irizar-ie-tram-12",
    "name": "Irizar ie tram 12",
    "make": "Irizar",
@@ -4056,6 +4082,32 @@
    ],
    "vintage": true,
    "onTest": false
+  },
+  {
+   "id": "bus-solaris-urbino-10-5-electric",
+   "name": "Solaris Urbino 10.5 electric",
+   "make": "Solaris",
+   "code": "Solaris Urbino 10.5 electric",
+   "kind": "BUS",
+   "operators": ["MZA"],
+   "fleet": 1,
+   "firstYear": null,
+   "lastYear": null,
+   "batches": [
+    {
+     "year": null,
+     "depotCode": "R-1",
+     "depotName": "Woronicza",
+     "operator": "MZA",
+     "numbers": [960]
+    }
+   ],
+   "vintage": false,
+   "onTest": true,
+   "runs": "MAINLY LINE 107 · 3–4 WEEKS FROM 16 NOV 2026",
+   "trial": "ON TRIAL FROM NOV 2026",
+   "runsPl": "GŁÓWNIE LINIA 107 · 3–4 TYGODNIE OD 16 LIS 2026",
+   "trialPl": "NA TESTACH OD LIS 2026"
   },
   {
    "id": "bus-solaris-urbino-12-vintage",
