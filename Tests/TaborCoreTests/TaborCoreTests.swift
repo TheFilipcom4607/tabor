@@ -280,6 +280,7 @@ private func sampleModel() -> VehicleModel {
     let solaris = catalog.match(number: 960, kind: .bus).suggested
     #expect(solaris?.name == "Solaris Urbino 10.5 electric" && solaris?.tier == .onTest)
     #expect(solaris?.whereToFind?.contains("LINE 107") == true)
+    #expect(solaris?.name(of: 960) == "Solaris Urbino 10.5 IV electric")
     let irizar = catalog.match(number: 956, kind: .bus).suggested
     #expect(irizar?.name == "Irizar ie bus 12" && irizar?.tier == .onTest)
     // Still running, so no end date yet, and outside the fleet % like every test bus.

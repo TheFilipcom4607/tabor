@@ -714,6 +714,9 @@ SOLARIS_GENERATIONS = {
         *_span(7700, 7759),                                         # MZA Urbino 18 CNG
         *_span(721, 728), *_span(772, 779),                         # Łomianki Urbino 12 (electric)
         *_span(9901, 9955),                                         # ReloBus Urbino 18 CNG
+        # Solaris's Urbino 10,5 electric demonstrator, on trial with MZA: "Solaris Urbino IV" on
+        # phototrans (15,994176) and transphoto (vehicle 652089), and the IV front in ZTM's photo.
+        960,
     ],
 }
 GENERATION = {n: g for g, ns in SOLARIS_GENERATIONS.items() for n in ns}

@@ -1,7 +1,7 @@
 {
  "source": "Warsaw ZTM vehicle database (fetched 2026-09-22) and the city's open data (fetched 2026-11-12), plus Warszawikia, the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
  "sourcePl": "Baza pojazdów ZTM Warszawa (stan z 2026-09-22) i otwarte dane miasta (stan z 2026-11-12), a także Warszawikia, klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
- "fetched": "2026-11-16 14:40 UTC",
+ "fetched": "2026-11-16 14:51 UTC",
  "models": [
   {
    "id": "bus-solaris-urbino-18",
@@ -4107,7 +4107,10 @@
    "runs": "MAINLY LINE 107 · 3–4 WEEKS FROM 16 NOV 2026",
    "trial": "ON TRIAL FROM NOV 2026",
    "runsPl": "GŁÓWNIE LINIA 107 · 3–4 TYGODNIE OD 16 LIS 2026",
-   "trialPl": "NA TESTACH OD LIS 2026"
+   "trialPl": "NA TESTACH OD LIS 2026",
+   "generations": {
+    "4": [960]
+   }
   },
   {
    "id": "bus-solaris-urbino-12-vintage",
