@@ -41,25 +41,31 @@ final class CameraRest {
     /// Someone touched a control, or came back to the screen.
     func poke() {
         lastUsed = Date()
-        settle()
+        settle("touched")
     }
 
     private func look() {
+        var why = "idle"
         if let a = motion.accelerometerData?.acceleration {
             let now = RestPlan.Gravity(x: a.x, y: a.y, z: a.z)
             if let held, RestPlan.moved(from: held, to: now) {
                 self.held = now
                 lastUsed = Date()
+                why = "moved"
             } else if held == nil {
                 held = now
             }
         }
-        if busy { lastUsed = Date() }
-        settle()
+        if busy { lastUsed = Date(); why = "busy" }
+        settle(why)
     }
 
-    private func settle() {
-        let next = RestPlan.level(idle: Date().timeIntervalSince(lastUsed), lowPower: LowPower.shared.on)
-        if next != level { level = next }
+    /// `why` is only for the camera diary.
+    private func settle(_ why: String) {
+        let idle = Date().timeIntervalSince(lastUsed)
+        let next = RestPlan.level(idle: idle, lowPower: LowPower.shared.on)
+        guard next != level else { return }
+        CameraLog.note("rest \(level) → \(next): \(why)\(LowPower.shared.on ? ", Low Power" : "")")
+        level = next
     }
 }

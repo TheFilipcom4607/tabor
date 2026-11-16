@@ -89,6 +89,8 @@ struct CatchView: View {
     private let live = LiveFleetService.shared
     /// Lets the camera slow down, then stop, while nobody's using it.
     @State private var rest = CameraRest()
+    /// Checks a picture comes through after each start (`startCamera`).
+    @State private var watchdog: Task<Void, Never>?
     @State private var mode: CatchMode = .auto
     @State private var draft: CatchDraft?
     @State private var flash = false
@@ -241,13 +243,14 @@ struct CatchView: View {
         .environment(\.overCamera, true)
         .onAppear {
             LaunchTiming.mark("catch")
+            CameraLog.note("CATCH on screen")
             visible = true
             Haptics.shared.warmUp()
         }
         .task {
             camera.mode = mode
             live.start("camera")
-            await camera.start()
+            await startCamera("CATCH opened")
             LaunchTiming.mark("running")
             catches = (try? context.fetchCount(FetchDescriptor<Sighting>())) ?? 0
             // Ask for location now, while spotting — never in the middle of a reveal.
@@ -256,7 +259,9 @@ struct CatchView: View {
         }
         .onDisappear {
             HangLog.mark("leave CATCH")
+            CameraLog.note("CATCH off screen")
             visible = false
+            watchdog?.cancel()
             rest.stop()
             camera.rest(false)
             camera.stop()
@@ -276,7 +281,9 @@ struct CatchView: View {
                 // Locking the phone wakes it too (not active counts as busy), but starting the
                 // camera on the way out raced the background's stop: coming back is what starts it.
                 live.start("camera")
-                Task { await camera.start() }
+                Task { await startCamera("woke from a rest") }
+            } else if old == .asleep {
+                CameraLog.note("woke from a rest, no start: visible \(visible), reveal \(draft != nil || cards != nil), scene \(scenePhase)")
             }
         }
         // Using a control is using the camera.
@@ -299,14 +306,16 @@ struct CatchView: View {
             }
         }
         .onChange(of: scenePhase) { _, phase in
+            CameraLog.note("scene \(phase)")
             if phase == .active, visible { live.start("camera") }
             if phase == .active, draft == nil, visible {
                 Task {
-                    await camera.start()
+                    await startCamera("back to the app")
                     LaunchTiming.mark("running")
                 }
             }
             if phase == .background {
+                watchdog?.cancel()
                 camera.stop()
                 live.stop("camera")
             }
@@ -350,7 +359,7 @@ struct CatchView: View {
             }
         }
         .fullScreenCover(item: $cards, onDismiss: {
-            if visible { Task { await camera.start() } }
+            if visible { Task { await startCamera("reveal closed") } }
             takeShared()
         }) { c in
             BurstRevealView(cards: c, reread: { old, cropped in await reread(old, cropped: cropped) })
@@ -358,7 +367,7 @@ struct CatchView: View {
         }
         .fullScreenCover(item: $draft, onDismiss: {
             frozen = nil
-            if visible { Task { await camera.start() } }
+            if visible { Task { await startCamera("reveal closed") } }
             // Shared while this reveal was up.
             takeShared()
         }) { d in
@@ -407,6 +416,40 @@ struct CatchView: View {
         }
     }
 
+    /// Starts the camera and makes sure a picture comes through. Once (2026-11-16) a camera
+    /// woken from a rest came back with its light on and the viewfinder black, and stayed so
+    /// until CATCH was left. If nothing's drawn a few seconds on, the session is built again
+    /// from scratch; if that draws nothing either, CATCH says the camera stopped (with Try
+    /// again) instead of showing black.
+    private func startCamera(_ why: String) async {
+        HangLog.mark("camera: \(why)")
+        CameraLog.note("start: \(why)")
+        watch()
+        await camera.start()
+    }
+
+    private func watch(rebuilt: Bool = false) {
+        watchdog?.cancel()
+        watchdog = Task {
+            try? await Task.sleep(for: .seconds(5))
+            guard !Task.isCancelled, !camera.previewing, wantsPicture else { return }
+            if rebuilt {
+                camera.noPicture()
+            } else {
+                watch(rebuilt: true)
+                await camera.rebuild(because: "no picture 5 s after a start (status \(camera.status))")
+            }
+        }
+    }
+
+    /// The viewfinder should be showing the camera now. Idle counts, for a start stuck before
+    /// it could say how it went; not while the camera permission prompt waits on someone.
+    private var wantsPicture: Bool {
+        visible && scenePhase == .active && draft == nil && cards == nil && rest.level != .asleep
+            && (camera.status == .running || camera.status == .idle)
+            && AVCaptureDevice.authorizationStatus(for: .video) == .authorized
+    }
+
     /// The camera stopped itself after a while of nobody using it; a tap or a lift wakes it.
     private var asleep: Bool { rest.level == .asleep && camera.status == .running }
 
@@ -442,7 +485,7 @@ struct CatchView: View {
         case .running where asleep:
             resting
         case .running:
-            CameraPreview(session: camera.session) { point, devicePoint in
+            CameraPreview(session: camera.session, onTap: { point, devicePoint in
                 // Only inside the brackets: a hurried tap that just misses the shutter or a
                 // zoom button used to refocus on whatever was behind it and spoil the shot.
                 let brackets = bracketGlobal.offsetBy(dx: -finderFrame.minX, dy: -finderFrame.minY)
@@ -453,7 +496,10 @@ struct CatchView: View {
                     try? await Task.sleep(for: .seconds(0.9))
                     withAnimation(.easeOut) { focusPoint = nil }
                 }
-            }
+            }, onPreviewing: { on in
+                if on != camera.previewing { CameraLog.note(on ? "picture on screen" : "picture gone") }
+                camera.previewing = on
+            })
             .simultaneousGesture(MagnifyGesture()
                 .onChanged { v in
                     let start = pinchStart ?? camera.zoom

@@ -16,7 +16,9 @@ final class CameraModel: NSObject, @unchecked Sendable {
     /// `failed` is a session that died and wouldn't come back.
     enum Status { case idle, running, denied, unavailable, interrupted, failed }
 
-    private(set) var status: Status = .idle
+    private(set) var status: Status = .idle {
+        didSet { if status != oldValue { trace("status \(oldValue) → \(status)") } }
+    }
     private(set) var torchOn = false
     /// Zoom as the Camera app shows it: 1 = main lens, 0.5 = ultra-wide, 5 = telephoto.
     private(set) var zoom: CGFloat = 1
@@ -79,6 +81,18 @@ final class CameraModel: NSObject, @unchecked Sendable {
     var lastCaptureError: String? { lock.withLock { _lastCaptureError } }
     /// The camera's heat level (for debug mode).
     var pressure: String { lock.withLock { _pressure } }
+    /// The viewfinder is drawing frames (`CameraPreview`'s `onPreviewing`), for CATCH's
+    /// watchdog. Main thread only.
+    @ObservationIgnored var previewing = false
+
+    /// Debug builds' camera diary (`CameraLog`); nothing in release or on the Lock Screen.
+    private func trace(_ what: @autoclosure () -> String) {
+        #if DEBUG && !CAPTURE_EXTENSION
+        CameraLog.note(what())
+        #endif
+    }
+
+    private static func ms(since start: Date) -> Int { Int(Date().timeIntervalSince(start) * 1000) }
 
     // MARK: - Lifecycle
 
@@ -101,8 +115,15 @@ final class CameraModel: NSObject, @unchecked Sendable {
         // anyway, or writing this start's "running" over the stop, left a black viewfinder
         // with the shutter lit.
         func current() -> Bool { lock.withLock { _turn == turn } }
+        let asked = Date()
         let result: Status? = await withCheckedContinuation { cont in
-            sessionQueue.async { cont.resume(returning: current() ? self.startSession() : nil) }
+            sessionQueue.async {
+                let began = Date()
+                let result = current() ? self.startSession() : nil
+                self.trace("start #\(turn): queued \(Self.ms(since: asked) - Self.ms(since: began)) ms, "
+                    + (result.map { "took \(Self.ms(since: began)) ms → \($0)" } ?? "a stop overtook it"))
+                cont.resume(returning: result)
+            }
         }
         if let result, current() { status = result }
         return turn
@@ -128,14 +149,21 @@ final class CameraModel: NSObject, @unchecked Sendable {
             _turn += 1
             return true
         }
-        guard mine else { return }
-        sessionQueue.async { if self.session.isRunning { self.session.stopRunning() } }
+        guard mine else { return trace("stop: a newer start keeps it") }
+        let asked = Date()
+        sessionQueue.async {
+            guard self.session.isRunning else { return self.trace("stop: wasn't running") }
+            let began = Date()
+            self.session.stopRunning()
+            self.trace("stop: queued \(Self.ms(since: asked) - Self.ms(since: began)) ms, took \(Self.ms(since: began)) ms")
+        }
         Task { @MainActor in self.torchOn = false }
     }
 
     /// Try again after the camera stopped: build the session from scratch.
     @MainActor
     func retry() async {
+        trace("retry: building the session again")
         status = .idle
         await withCheckedContinuation { cont in
             sessionQueue.async {
@@ -144,6 +172,22 @@ final class CameraModel: NSObject, @unchecked Sendable {
             }
         }
         await start()
+    }
+
+    /// CATCH's watchdog saw no picture come through after a start: build it all again.
+    @MainActor
+    func rebuild(because why: String) async {
+        record(why)
+        await retry()
+    }
+
+    /// …and none after the rebuild either: say so (THE CAMERA STOPPED, with Try again)
+    /// rather than leave a black viewfinder with the shutter lit. A start that comes good
+    /// late still puts it back to running.
+    @MainActor
+    func noPicture() {
+        record("still no picture after a rebuild")
+        status = .failed
     }
 
     /// Called on sessionQueue.
@@ -225,12 +269,12 @@ final class CameraModel: NSObject, @unchecked Sendable {
             let reason = (note.userInfo?[AVCaptureSessionInterruptionReasonKey] as? Int)
                 .flatMap(AVCaptureSession.InterruptionReason.init(rawValue:))
             // Going to the background interrupts it too, after CATCH has let go: not news.
-            guard wantsRunning else { return }
+            guard wantsRunning else { return self.trace("interrupted while let go: \(reason.map(Self.describe) ?? "unknown reason")") }
             record("interrupted: \(reason.map(Self.describe) ?? "unknown reason")")
             Task { @MainActor in self.status = .interrupted }
         }
         center.addObserver(forName: AVCaptureSession.interruptionEndedNotification, object: session, queue: nil) { [weak self] _ in
-            guard let self, wantsRunning else { return }
+            guard let self, wantsRunning else { return self?.trace("interruption ended while let go") ?? () }
             record("interruption ended")
             sessionQueue.async {
                 guard self.wantsRunning else { return }
@@ -238,6 +282,14 @@ final class CameraModel: NSObject, @unchecked Sendable {
                 Task { @MainActor in self.status = status }
             }
         }
+        #if DEBUG && !CAPTURE_EXTENSION
+        center.addObserver(forName: AVCaptureSession.didStartRunningNotification, object: session, queue: nil) { [weak self] _ in
+            self?.trace("session running")
+        }
+        center.addObserver(forName: AVCaptureSession.didStopRunningNotification, object: session, queue: nil) { [weak self] _ in
+            self?.trace("session stopped")
+        }
+        #endif
     }
 
     /// Called on sessionQueue.
@@ -261,6 +313,7 @@ final class CameraModel: NSObject, @unchecked Sendable {
     /// tester's ZIP has it next time the camera dies.
     private func record(_ what: String) {
         log.error("\(what, privacy: .public)")
+        trace("trouble: \(what)")
         // The Lock Screen camera has no debug mode: it can't see the app's settings.
         #if !CAPTURE_EXTENSION
         DebugRecord.begin(source: "camera", mode: mode)?.update { $0.error = what }
@@ -282,6 +335,7 @@ final class CameraModel: NSObject, @unchecked Sendable {
     /// Called on sessionQueue.
     private func configure() -> Bool {
         if configured { return true }
+        trace("building the session")
         // The main lens on its own: it starts in about half the time the multi-lens camera
         // takes (0.6 s against 1.05 s on an iPhone 16 Pro, #107), and a bus doesn't wait.
         // `addLenses` brings in the others once it's running.
@@ -323,6 +377,7 @@ final class CameraModel: NSObject, @unchecked Sendable {
         }
         session.addInput(input)
         session.commitConfiguration()
+        trace("multi-lens camera in")
         // The new camera starts on its own frame rate.
         slowed = nil
         use(cam)
@@ -389,6 +444,7 @@ final class CameraModel: NSObject, @unchecked Sendable {
 
     /// Called on sessionQueue.
     private func throttle(_ level: AVCaptureDevice.SystemPressureState.Level) {
+        if level.rawValue != pressure { trace("heat \(level.rawValue)") }
         lock.withLock {
             _pressure = level.rawValue
             _hot = level == .serious || level == .critical || level == .shutdown
@@ -408,6 +464,7 @@ final class CameraModel: NSObject, @unchecked Sendable {
         let slow = lock.withLock { _hot || _resting }
         guard slow != slowed, let d = device, (try? d.lockForConfiguration()) != nil else { return }
         slowed = slow
+        trace(slow ? "frame rate 15" : "frame rate usual")
         let fps: Int32 = 15
         if slow, d.activeFormat.videoSupportedFrameRateRanges.contains(where: { $0.minFrameRate <= Double(fps) }) {
             // Longer frames would let the camera expose for longer in poor light, and blur a
@@ -554,11 +611,16 @@ struct CameraPreview: UIViewRepresentable {
     let session: AVCaptureSession
     /// The tap in the view's own points, and the same spot as a device point for focusing.
     var onTap: ((_ point: CGPoint, _ devicePoint: CGPoint) -> Void)? = nil
+    /// Frames are reaching the screen, or stopped (and false once the view goes): the session
+    /// saying it runs isn't proof, a black viewfinder with the camera light on said so.
+    var onPreviewing: ((Bool) -> Void)? = nil
 
     final class PreviewView: UIView {
         override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
         var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
         var onTap: ((CGPoint, CGPoint) -> Void)?
+        var onPreviewing: ((Bool) -> Void)?
+        var previewingWatch: NSKeyValueObservation?
 
         @objc func tapped(_ g: UITapGestureRecognizer) {
             let p = g.location(in: self)
@@ -572,11 +634,24 @@ struct CameraPreview: UIViewRepresentable {
         v.previewLayer.videoGravity = .resizeAspectFill
         v.backgroundColor = .black
         v.addGestureRecognizer(UITapGestureRecognizer(target: v, action: #selector(PreviewView.tapped)))
+        v.onPreviewing = onPreviewing
+        if onPreviewing != nil {
+            v.previewingWatch = v.previewLayer.observe(\.isPreviewing, options: [.initial, .new]) { [weak v] layer, _ in
+                let on = layer.isPreviewing
+                DispatchQueue.main.async { v?.onPreviewing?(on) }
+            }
+        }
         return v
     }
 
     func updateUIView(_ v: PreviewView, context: Context) {
         v.onTap = onTap
+        v.onPreviewing = onPreviewing
+    }
+
+    static func dismantleUIView(_ v: PreviewView, coordinator: ()) {
+        v.previewingWatch = nil
+        v.onPreviewing?(false)
     }
 }
 
