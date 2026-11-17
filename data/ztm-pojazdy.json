@@ -1,5 +1,5 @@
 {
-"fetched": "2026-11-12",
+"fetched": "2026-11-17",
 "source": "https://dane.um.warszawa.pl/api/action/get_ztm_pojazdy",
 "vehicles": [
 {
@@ -176,15 +176,6 @@
 {
 "kind": "BUS",
 "number": "1020",
-"idMarki": 38,
-"year": 2011,
-"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-1 \"Woronicza\" (R-07)",
-"colour": "RAL 1003+3020"
-},
-{
-"kind": "BUS",
-"number": "1021",
 "idMarki": 38,
 "year": 2011,
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
@@ -1349,7 +1340,7 @@
 "idMarki": 37,
 "year": 2011,
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-4 \"Stalowa\" (R-13)",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
 "colour": "RAL 1003+3020"
 },
 {
@@ -1358,7 +1349,7 @@
 "idMarki": 37,
 "year": 2011,
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-4 \"Stalowa\" (R-13)",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
 "colour": "RAL 1003+3020"
 },
 {
@@ -1367,7 +1358,7 @@
 "idMarki": 37,
 "year": 2011,
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-4 \"Stalowa\" (R-13)",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
 "colour": "RAL 1003+3020"
 },
 {
@@ -1385,7 +1376,7 @@
 "idMarki": 37,
 "year": 2011,
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-4 \"Stalowa\" (R-13)",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
 "colour": "RAL 1003+3020"
 },
 {
@@ -1621,33 +1612,6 @@
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
 "depot": "R-4 \"Stalowa\" (R-13)",
 "colour": "RAL 1004+3020"
-},
-{
-"kind": "BUS",
-"number": "1855",
-"idMarki": 25,
-"year": 2008,
-"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-3 \"Ostrobramska\" (R-10)",
-"colour": "RAL 1004+3003"
-},
-{
-"kind": "BUS",
-"number": "1858",
-"idMarki": 25,
-"year": 2008,
-"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-3 \"Ostrobramska\" (R-10)",
-"colour": "RAL 1004+3003"
-},
-{
-"kind": "BUS",
-"number": "1859",
-"idMarki": 25,
-"year": 2008,
-"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
-"depot": "R-3 \"Ostrobramska\" (R-10)",
-"colour": "RAL 1004+3003"
 },
 {
 "kind": "BUS",
@@ -26816,6 +26780,18 @@
 "zasilanie": "Hybryda równoległa ON-EV",
 "liczMiejscSiedzacychTab": 40,
 "liczMiejscTab": 152,
+"klimatyzacja": true,
+"podloga": "LF"
+},
+{
+"idMarki": 6073,
+"marka": "Solaris",
+"typ": "Urbino 10.5E",
+"dlugosc": 12000,
+"rodzajZasilania": "EV",
+"zasilanie": "EV",
+"liczMiejscSiedzacychTab": 29,
+"liczMiejscTab": 85,
 "klimatyzacja": true,
 "podloga": "LF"
 }

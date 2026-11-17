@@ -1,7 +1,7 @@
 {
- "source": "Warsaw ZTM vehicle database (fetched 2026-09-22) and the city's open data (fetched 2026-11-12), plus Warszawikia, the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
- "sourcePl": "Baza pojazdów ZTM Warszawa (stan z 2026-09-22) i otwarte dane miasta (stan z 2026-11-12), a także Warszawikia, klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
- "fetched": "2026-11-16 17:41 UTC",
+ "source": "Warsaw ZTM vehicle database (fetched 2026-09-22) and the city's open data (fetched 2026-11-17), plus Warszawikia, the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
+ "sourcePl": "Baza pojazdów ZTM Warszawa (stan z 2026-09-22) i otwarte dane miasta (stan z 2026-11-17), a także Warszawikia, klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
+ "fetched": "2026-11-17 09:05 UTC",
  "models": [
   {
    "id": "bus-solaris-urbino-18",
@@ -622,7 +622,7 @@
    "code": "Solaris Urbino 12",
    "kind": "BUS",
    "operators": ["MZA", "PKS Grodzisk", "KM Łomianki"],
-   "fleet": 134,
+   "fleet": 131,
    "firstYear": 2008,
    "lastYear": 2025,
    "batches": [
@@ -718,8 +718,8 @@
      "depotName": "Ostrobramska",
      "operator": "MZA",
      "numbers": [
-      1520, 1521, 1522, 1523, 1524,
-      1530, 1532, 1534, 1535, 1536, 1537, 1538, 1539,
+      1520, 1521, 1522, 1523, 1524, 1527, 1528, 1529,
+      1530, 1531, 1532, 1534, 1535, 1536, 1537, 1538, 1539,
       1540, 1541, 1542, 1543, 1544, 1545, 1546, 1548, 1549,
       1550
      ]
@@ -730,8 +730,7 @@
      "depotName": "Stalowa",
      "operator": "MZA",
      "numbers": [
-      1525, 1526, 1527, 1528, 1529,
-      1531,
+      1525, 1526,
       1551, 1552, 1553, 1554, 1555
      ]
     },
@@ -750,10 +749,7 @@
      "depotCode": "R-3",
      "depotName": "Ostrobramska",
      "operator": "MZA",
-     "numbers": [
-      1855, 1858, 1859,
-      1862, 1863
-     ]
+     "numbers": [1862, 1863]
     }
    ],
    "vintage": false,
@@ -896,16 +892,10 @@
       "places": 92,
       "seats": 27
      },
-     "numbers": [
-      1855, 1858, 1859,
-      1862, 1863
-     ]
+     "numbers": [1862, 1863]
     }
    ],
    "liveries": {
-    "1855": "oldYellowRed",
-    "1858": "oldYellowRed",
-    "1859": "oldYellowRed",
     "1862": "oldYellowRed",
     "1863": "oldYellowRed"
    },
@@ -922,7 +912,6 @@
      1530, 1531, 1532, 1534, 1535, 1536, 1537, 1538, 1539,
      1540, 1541, 1542, 1543, 1544, 1545, 1546, 1548, 1549,
      1550, 1551, 1552, 1553, 1554, 1555,
-     1855, 1858, 1859,
      1862, 1863,
      9311, 9312, 9313, 9314, 9315, 9316, 9317, 9318, 9319,
      9320, 9321, 9322, 9323, 9324, 9325, 9326, 9327, 9328, 9329,
@@ -1342,7 +1331,7 @@
    "code": "Solbus SM12",
    "kind": "BUS",
    "operators": ["MZA"],
-   "fleet": 64,
+   "fleet": 63,
    "firstYear": 2011,
    "lastYear": 2013,
    "batches": [
@@ -1383,7 +1372,7 @@
      "depotName": "Woronicza",
      "operator": "MZA",
      "numbers": [
-      1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029,
+      1020, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029,
       1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038, 1039
      ]
     }
@@ -1409,7 +1398,7 @@
       "seats": 26
      },
      "numbers": [
-      1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029,
+      1020, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029,
       1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038, 1039
      ]
     },
