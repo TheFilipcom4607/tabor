@@ -1,12 +1,14 @@
 name: Look for buses on trial
 
 # Buses on trial never reach the city's list. Warsaw numbers them 9xx, so scripts/trial_buses.py
-# lists every 9xx the live feed has seen in the last week, with its model if fleet.json has one
-# and "?" if not (those go in TEST_BUSES once a source names them), in the issue "Autobusy na
-# testach". It used to run once a night in fleet.yml, which missed a trial bus whose GPS came on
-# in the day (#956 on 16 Nov 2026, while #960 was already listed); hourly, a new bus shows within
-# the hour. One call to the feed and one issue edit an hour, through the day only: trial buses
-# run in service hours.
+# lists every 9xx the live feed has seen in the last week that fleet.json doesn't have yet ("?")
+# in the issue "Autobusy na testach" — the to-do list for TEST_BUSES. The feed forgets a vehicle
+# a few hours after its last report (a trial bus parks overnight), so the script also gets the
+# issue's current body and keeps each bus listed until its last sighting is a week old: the list
+# no longer flickers with the service day, and "Nowe:" fires only when a number joins it. It
+# used to run once a night in fleet.yml, which missed a trial bus whose GPS came on in the day
+# (#956 on 16 Nov 2026); hourly, a new bus shows within the hour. One call to the feed, one
+# issue read and one edit an hour, through the day only: trial buses run in service hours.
 on:
   schedule:
     # 05:23-23:23 in Warsaw in winter, 06:23-00:23 in summer (cron is UTC). Off the hour: GitHub
@@ -46,7 +48,12 @@ jobs:
       - name: Look for buses on trial in the live feed
         continue-on-error: true
         run: |
-          python3 scripts/trial_buses.py trials.md
+          number=$(gh issue list --state open --search "in:title \"$TRIALS_TITLE\"" --json number,title \
+            --jq "map(select(.title == \"$TRIALS_TITLE\")) | .[0].number // empty" || true)
+          if [ -n "$number" ]; then
+            gh issue view "$number" --json body --jq .body > previous.md 2>/dev/null || rm -f previous.md
+          fi
+          python3 scripts/trial_buses.py trials.md previous.md
           touch trials-checked
 
       # A trial can be over in a few weeks, so a bus that joins an open issue gets a comment
