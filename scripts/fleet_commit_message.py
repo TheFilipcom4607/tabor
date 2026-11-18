@@ -187,7 +187,11 @@ def message(old, new, old_city=None, new_city=None):
     for key in ov.keys() - nv.keys():
         gone_keys.append(key[:2])
         v = ov[key]
-        gone[(key[0], v["name"] + (f" ({v['operator']})" if v["operator"] else ""), "")].append(key[1])
+        # The generation rides on the name, as the app writes it: "Solaris Urbino 12 III".
+        gen = f" {v['generation']}" if v["solaris"] and v["generation"] != "none" else ""
+        about = ", ".join(str(x) for x in (v["operator"], v["year built"],
+                                           "no generation yet" if v["solaris"] and not gen else None) if x)
+        gone[(key[0], v["name"] + gen + (f" ({about})" if about else ""), "")].append(key[1])
     for key in nv.keys() & ov.keys():
         a, b = ov[key], nv[key]
         if a["id"] != b["id"]:
