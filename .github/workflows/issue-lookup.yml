@@ -1,0 +1,66 @@
+name: Look up the numbers in a new issue
+
+# When a tester opens a misread issue (label "odczyt numeru") or a vehicle issue ("pojazd"),
+# scripts/issue_lookup.py comments with what we know about each number in the form: the app's
+# model, czynaczas.pl's name, whether it's on the live map now, and a phototrans search. It saves
+# looking each one up by hand before answering. It reads only the form's number fields, and
+# only digits from them, so nothing a tester writes ends up in the comment or a command.
+# A manual run takes an issue number, to redo or try it on an older issue.
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Issue number
+        required: true
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: issue-lookup-${{ github.event.issue.number || inputs.issue }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  lookup:
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || contains(github.event.issue.labels.*.name, 'odczyt numeru')
+      || contains(github.event.issue.labels.*.name, 'pojazd')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          sparse-checkout: |
+            scripts/issue_lookup.py
+            scripts/czynaczas.py
+            scripts/phototrans.py
+            Tabor/Resources/fleet.json
+          sparse-checkout-cone-mode: false
+
+      # Without it the comment just goes without czynaczas's names.
+      - name: Get czynaczas.pl's names
+        continue-on-error: true
+        env:
+          ROUTES_UPLOAD_TOKEN: ${{ secrets.ROUTES_UPLOAD_TOKEN }}
+        run: python3 scripts/czynaczas.py hints "$RUNNER_TEMP/czynaczas.json"
+
+      # The issue's text goes through a file, never into the command line.
+      - name: Comment with what we know
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number || inputs.issue }}
+        run: |
+          [[ "$ISSUE" =~ ^[0-9]+$ ]] || { echo "not an issue number"; exit 1; }
+          gh issue view "$ISSUE" --json body --jq .body > "$RUNNER_TEMP/body.md"
+          python3 scripts/issue_lookup.py "$RUNNER_TEMP/body.md" comment.md --czynaczas "$RUNNER_TEMP/czynaczas.json"
+          [ ! -f comment.md ] || gh issue comment "$ISSUE" --body-file comment.md
