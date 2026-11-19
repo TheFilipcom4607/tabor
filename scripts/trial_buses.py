@@ -34,6 +34,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 from czynaczas import name  # noqa: E402
+from phototrans import Phototrans  # noqa: E402
 FEED = "https://taborapi.thefilip.com/v1/vehicles?type=1"
 # Trials run for weeks, but not every day.
 WINDOW = timedelta(days=7)
@@ -57,6 +58,7 @@ if "--czynaczas" in args:
 cars = hints.get("vehicles", {})
 
 fleet = json.loads((ROOT / "Tabor/Resources/fleet.json").read_text())
+photo = Phototrans(fleet)
 in_book = {n for m in fleet["models"] if m["kind"] == "BUS"
            for b in m["batches"] for n in b["numbers"]}
 
@@ -130,16 +132,16 @@ def model(n):
 # The number stays the first column: the workflow finds new buses by "| #9xx" at a row's start,
 # and the Ostatnio column fourth, which previous() reads back (a "–" there is dropped and comes
 # back from his list).
-rows = {n: f"| #{n} | {model(n)} | {line or '?'} | {stamp[:16]} | {entry(n)} |"
+rows = {n: f"| #{n} | {model(n)} | {line or '?'} | {stamp[:16]} | {entry(n)} | {photo.link('BUS', n)} |"
         for n, (_, line, stamp) in last.items()}
-rows |= {n: f"| #{n} | {model(n)} | – | – | {entry(n)} |" for n in coming}
+rows |= {n: f"| #{n} | {model(n)} | – | – | {entry(n)} | {photo.link('BUS', n)} |" for n in coming}
 lines = [rows[n] for n in sorted(rows)]
 print("\n".join(lines))
 credit = "Model i opis: [czynaczas.pl](https://czynaczas.pl) · " if cars or special else ""
 # Only the hints: thefilip.com/tabor/boty#testy explains them.
 Path(args[0]).write_text(
-    "| Numer | Model | Linia | Ostatnio | czynaczas.pl |\n"
-    "|---|---|---|---|---|\n" + "\n".join(lines) + "\n"
+    "| Numer | Model | Linia | Ostatnio | czynaczas.pl | Sprawdź |\n"
+    "|---|---|---|---|---|---|\n" + "\n".join(lines) + "\n"
     "\n"
     f"<sub>{credit}[Nie wiesz, co to?](https://thefilip.com/tabor/boty#testy)</sub>\n"
 )

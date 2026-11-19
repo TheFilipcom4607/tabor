@@ -274,16 +274,19 @@ def main():
             notes += [f"#{n}" for n in numbers[:5]]
             out.append(f"- {d:%d.%m.%Y} [{t}]({u})" + (" · " + ", ".join(notes) if notes else ""))
         out.append("")
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from phototrans import Phototrans
+    photo = Phototrans(fleet)
     if lines:
-        out += ["**Na nietypowej linii**", "", "| Pojazd | Linia | Ostatnio |", "|---|---|---|"]
-        out += [f"| {k} #{n} | {l} | {t} |" for k, n, l, t in lines]
+        out += ["**Na nietypowej linii**", "", "| Pojazd | Linia | Ostatnio | Sprawdź |", "|---|---|---|---|"]
+        out += [f"| {k} #{n} | {l} | {t} | {photo.link(k, n)} |" for k, n, l, t in lines]
         out.append("")
     if special:
         # A table like the feed's, so the workflow dismisses and diffs it the same way: by the
         # first two cells, the vehicle and his text.
         out += ["**Pojazdy specjalne w [czynaczas.pl](https://czynaczas.pl)**", "",
-                "| Pojazd | Opis | Kiedy |", "|---|---|---|"]
-        out += [f"| {k} #{n} | {t} | {d} |" for k, n, t, d in special]
+                "| Pojazd | Opis | Kiedy | Sprawdź |", "|---|---|---|---|"]
+        out += [f"| {k} #{n} | {t} | {d} | {photo.link(k, n)} |" for k, n, t, d in special]
         out.append("")
     if failed:
         out += ["Nie udało się odczytać: " + "; ".join(failed) + ".", ""]

@@ -188,8 +188,14 @@ def annotate(path):
     """The waiting issue's "- typ 5909 (autobusy): 9001, 9006, ..." lines, each with the name his
     data gives most of the type's numbers: a type is one model, so a stray row can't mislead."""
     cars = json.loads(Path(path).read_text())["vehicles"] if Path(path).exists() else {}
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from phototrans import Phototrans
+    photo = Phototrans(json.loads((ROOT / "Tabor/Resources/fleet.json").read_text()))
     for line in sys.stdin.read().splitlines():
         m = re.match(r"- typ \d+ \((autobusy|tramwaje)\): (.*)", line)
+        # The first number's phototrans search: one look at it usually tells the whole type.
+        first = m and re.search(r"\d+", m.group(2))
+        tail = f" · {photo.link('BUS' if m.group(1) == 'autobusy' else 'TRAM', first.group())}" if first else ""
         if m and cars:
             kind = "3" if m.group(1) == "autobusy" else "0"
             rows = [cars[k] for n in re.findall(r"\d+", m.group(2)) if (k := f"{kind}/{n}") in cars]
@@ -199,7 +205,7 @@ def annotate(path):
                 years = sorted({r["year"] for r, n in zip(rows, names) if n == best and r.get("year")})
                 span = f", {years[0]}" + (f"–{years[-1]}" if len(years) > 1 else "") if years else ""
                 line += f" · [czynaczas.pl](https://czynaczas.pl): {best}{span}"
-        print(line)
+        print(line + tail)
 
 
 def todo():
