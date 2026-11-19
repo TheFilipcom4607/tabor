@@ -336,6 +336,12 @@ public struct WantedPin: Hashable, Sendable, Identifiable {
     public var wrap: Wrap? = nil
 
     public var id: String { "\(vehicle.kind.rawValue)#\(vehicle.number)" }
+
+    /// Its last day in Warsaw, if its batch is leaving (a contract ending, a sale).
+    public var leaving: String? { model.leaving(of: vehicle.number) }
+
+    /// Still out though it's off the city's list or past its last day: LAST RUNS.
+    public var lastRuns: Bool { model.isRetired(vehicle.number) || leaving.map { Leaving.isPast($0) } == true }
 }
 
 public enum Wanted {
@@ -374,8 +380,8 @@ public enum Wanted {
         }
         // A wrap is out for a few weeks at most: above even the legendaries.
         return Array(pins.sorted { a, b in
-            (a.wrap == nil ? 1 : 0, a.kind == .newModel ? 0 : 1, huntRank(a.model.tier), a.distance)
-                < (b.wrap == nil ? 1 : 0, b.kind == .newModel ? 0 : 1, huntRank(b.model.tier), b.distance)
+            (a.wrap == nil ? 1 : 0, a.kind == .newModel ? 0 : 1, huntRank(a), a.distance)
+                < (b.wrap == nil ? 1 : 0, b.kind == .newModel ? 0 : 1, huntRank(b), b.distance)
         }.prefix(limit))
     }
 
@@ -417,6 +423,11 @@ public enum Wanted {
     /// running is as rare a sight as anything: rank it with the legendaries.
     static func huntRank(_ tier: Tier) -> Int {
         tier == .vintage || tier == .onTest || tier == .works ? Tier.legendary.rank : tier.rank
+    }
+
+    /// And so is one about to leave Warsaw for good, or on its last runs.
+    static func huntRank(_ pin: WantedPin) -> Int {
+        pin.leaving != nil || pin.lastRuns ? Tier.legendary.rank : huntRank(pin.model.tier)
     }
 }
 

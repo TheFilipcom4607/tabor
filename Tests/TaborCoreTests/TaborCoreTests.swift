@@ -53,9 +53,9 @@ private func sampleModel() -> VehicleModel {
     #expect(vintage.allSatisfy { $0.tier == .vintage })
     // The 112N prototype still runs on regular lines: a real legendary, not vintage.
     #expect(catalog.model(id: "tram-konstal-112n")?.tier == .legendary)
-    let all = catalog.models.reduce(0) { $0 + $1.fleet }
+    let all = catalog.models.reduce(0) { $0 + $1.inService }
     let extras = catalog.models.filter { !$0.regular }
-    #expect(catalog.totalFleet == all - extras.reduce(0) { $0 + $1.fleet })
+    #expect(catalog.totalFleet == all - extras.reduce(0) { $0 + $1.inService })
     let stats = CollectionStats(sightings: [SightingRecord(number: 43, modelId: "tram-falkenried-a", date: .now)])
     #expect(stats.fleetShare(catalog: catalog) == 0)
 }
@@ -1577,8 +1577,9 @@ private func drive(from lon0: Double, step: Double, fixes: Int, lat: Double = ro
     #expect(e18.livery(of: 5869) == nil)
     // The hand-kept LIVERIES sit on vehicles the book has: a car off the city's list for a
     // workshop visit doesn't emit its entry, so the check goes through the models' numbers.
+    // #8398, retired, was never grey.
     let hybrid = catalog.model(id: "bus-solaris-urbino-18h")
-    #expect(hybrid.map { m in !m.numbers.isEmpty && m.numbers.allSatisfy { m.livery(of: $0) == .greyRed } } == true)
+    #expect(hybrid.map { m in !m.numbersInService.isEmpty && m.numbersInService.allSatisfy { m.livery(of: $0) == .greyRed } } == true)
     #expect(catalog.model(id: "bus-autosan-m18lf")?.livery(of: 7890) == .autosanPrototype
             || !catalog.model(id: "bus-autosan-m18lf")!.numbers.contains(7890))
     #expect(catalog.model(id: "bus-autosan-m18lf")?.livery(of: 7800) == nil)

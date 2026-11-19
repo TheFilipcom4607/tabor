@@ -143,8 +143,8 @@ enum WidgetBridge {
             files[name] = source
             all.append((WidgetSnapshot.Card(number: e.number, modelId: e.modelId, model: model.name(of: e.number),
                                             tier: model.tier.rawValue, image: name, cutout: e.v.sticker != nil,
-                                            firstSeen: e.v.first, times: e.v.times, fleet: model.fleet,
-                                            owned: stats.ownedCount(modelId: model.id), lastSeen: e.v.last,
+                                            firstSeen: e.v.first, times: e.v.times, fleet: model.progressFleet,
+                                            owned: stats.progress(model: model), lastSeen: e.v.last,
                                             line: e.v.line, place: e.v.place,
                                             wrap: e.v.wrap.flatMap(catalog.wrap(id:))?.nameDisplay),
                         e.v.last, model.fleet))
@@ -264,8 +264,8 @@ enum WidgetBridge {
         [Tier.legendary, .gold, .rare, .common].map { tier in
             let models = catalog.models.filter { $0.regular && $0.tier == tier }
             return WidgetSnapshot.TierCount(tier: tier.rawValue,
-                                            caught: models.reduce(0) { $0 + stats.ownedCount(modelId: $1.id) },
-                                            fleet: models.reduce(0) { $0 + $1.fleet })
+                                            caught: models.reduce(0) { $0 + stats.progress(model: $1) },
+                                            fleet: models.reduce(0) { $0 + $1.inService })
         }
     }
 

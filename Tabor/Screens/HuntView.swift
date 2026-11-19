@@ -1210,7 +1210,7 @@ struct HuntView: View, Equatable {
                 searchCard(HuntSearch.results(for: query, snapshot: live.snapshot, catalog: catalog))
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             } else if let selected {
-                PinCard(pin: selected, owned: caught.ownedCount(modelId: selected.model.id),
+                PinCard(pin: selected, owned: caught.progress(model: selected.model),
                         mine: caught.vehicle(number: selected.vehicle.number, modelId: selected.model.id),
                         showDistance: hasFix, motion: motion(of: selected),
                         nextStops: creeping(selected)?.upcoming(stops: 3).stops.map(\.name) ?? [],
@@ -1971,6 +1971,14 @@ private extension WantedPin {
 
     var accent: Color { wrap != nil ? Palette.foilInk : model.tier.mapColor }
 
+    /// "LEAVING 30 NOV" while its batch's last day is ahead, "LAST RUNS" once it's past or the
+    /// city's list has dropped it.
+    var departureTag: String? {
+        if lastRuns { return String(localized: "LAST RUNS") }
+        guard let until = leaving.flatMap(Leaving.date) else { return nil }
+        return String(localized: "LEAVING \(until.formatted(.dateTime.day().month(.abbreviated).locale(.app)).uppercased(with: .app))")
+    }
+
     func subtitle(showDistance: Bool, showKind: Bool = true) -> String {
         [showKind ? vehicle.kind.name : nil, "#\(vehicle.number)", vehicle.line.isEmpty ? nil : String(localized: "LINE \(vehicle.line)"),
          showDistance ? HuntDistance.text(distance) : nil]
@@ -2393,14 +2401,49 @@ private struct PinCard: View {
         motion.map { (text: $0.text, color: $0.color) } ?? (text: String(localized: "WATCHING WHICH WAY IT GOES…"), color: Palette.faint)
     }
 
+    /// The kind, the tier (or the wrap) and, for a vehicle leaving Warsaw, LEAVING or LAST RUNS.
+    private func tags(compact: Bool) -> some View {
+        HStack(spacing: 7) {
+            KindTag(kind: pin.vehicle.kind)
+            if let wrap = pin.wrap {
+                WrapTag(wrap: wrap, animated: true)
+            } else {
+                TierPill(tier: pin.model.tier, fleet: pin.model.fleet)
+            }
+            if let going = pin.departureTag, let info = DepartureInfo.vehicle(pin.model, number: pin.vehicle.number) {
+                DepartureInfoButton(info: info) { departureCapsule(going, compact: compact) }
+            }
+        }
+    }
+
+    /// LEAVING 30 NOV or LAST RUNS, or just its hourglass where there's no room.
+    private func departureCapsule(_ going: String, compact: Bool) -> some View {
+        Group {
+            if compact {
+                Image(systemName: "hourglass")
+                    .font(.system(size: 10.5, weight: .bold))
+                    .foregroundStyle(Palette.bg)
+                    .padding(.horizontal, 2)
+            } else {
+                Mono(going, size: 10.5, weight: 700, spacing: 0.1, color: Palette.bg)
+                    .lineLimit(1)
+            }
+        }
+        .fixedSize()
+        .padding(.vertical, 4)
+        .padding(.horizontal, 9)
+        .background(Palette.hiVis, in: Capsule())
+        .accessibilityLabel(Text(verbatim: going))
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 7) {
-                KindTag(kind: pin.vehicle.kind)
-                if let wrap = pin.wrap {
-                    WrapTag(wrap: wrap, animated: true)
-                } else {
-                    TierPill(tier: pin.model.tier, fleet: pin.model.fleet)
+                // On a 390 pt phone in Polish, OSTATNIE KURSY squeezed AUTOBUS to a sliver: the
+                // departure tag gives way to its icon first.
+                ViewThatFits(in: .horizontal) {
+                    tags(compact: false)
+                    tags(compact: true)
                 }
                 Spacer()
                 StarButton(modelId: pin.model.id)
@@ -2480,10 +2523,14 @@ private struct PinCard: View {
                         Text("Due out in its \(wrap.nameDisplay) wrap until \(until.formatted(.dateTime.day().month().locale(.app))). Catch it in it for a form of its own.")
                     } else if let mine {
                         Text("In your book since \(mine.firstSeen.formatted(.dateTime.day().month().locale(.app))) · seen \(mine.timesSeen)×")
+                    } else if pin.lastRuns {
+                        Text("On its last runs before it leaves Warsaw for good. Catch it while you can.")
+                    } else if let until = pin.leaving.flatMap(Leaving.date) {
+                        Text("Its batch leaves Warsaw on \(until.formatted(.dateTime.day().month().locale(.app))). Catch it while you can.")
                     } else if pin.kind == .newModel {
                         Text("Not in your book yet — catching it opens a new page.")
                     } else {
-                        Text("You have \(owned) of \(pin.model.fleet). This one isn't among them.")
+                        Text("You have \(owned) of \(pin.model.progressFleet). This one isn't among them.")
                     }
                 }
                 .font(TaborFont.grotesk(13))

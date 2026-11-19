@@ -11268,6 +11268,244 @@
           }
         }
       }
+    },
+    "ALL RETIRED · NO LONGER RUNNING": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WSZYSTKIE WYCOFANE · JUŻ NIE JEŻDŻĄ"
+          }
+        }
+      }
+    },
+    "Caught on its last runs — it's leaving Warsaw. A keepsake now.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Złapany na ostatnich kursach — kończy kursowanie w Warszawie. Teraz pamiątka."
+          }
+        }
+      }
+    },
+    "Its days in Warsaw are numbered — this batch is leaving soon. Good timing.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jego dni w Warszawie są policzone — ta dostawa niedługo kończy kursowanie. Dobre wyczucie."
+          }
+        }
+      }
+    },
+    "of %lld retired": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z %lld wycofanych"
+          }
+        }
+      }
+    },
+    "RETIRED · LEFT WARSAW": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WYCOFANE · OPUŚCIŁY WARSZAWĘ"
+          }
+        }
+      }
+    },
+    "%lld LEAVING WARSAW ON %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld LEAVING WARSAW ON %2$@"
+          }
+        },
+        "pl": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld KOŃCZY KURSOWANIE %2$@"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld KOŃCZĄ KURSOWANIE %2$@"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld KOŃCZY KURSOWANIE %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld KOŃCZY KURSOWANIE %2$@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "RETIRED": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WYCOFANE"
+          }
+        }
+      }
+    },
+    "NO LONGER IN WARSAW · NOT PART OF THE FLEET %": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JUŻ NIE W WARSZAWIE · NIE LICZY SIĘ DO % TABORU"
+          }
+        }
+      }
+    },
+    "LAST RUNS": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OSTATNIE KURSY"
+          }
+        }
+      }
+    },
+    "LEAVING %@": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DO %@"
+          }
+        }
+      }
+    },
+    "On its last runs before it leaves Warsaw for good. Catch it while you can.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ostatnie kursy przed końcem kursowania w Warszawie. Łap, póki możesz."
+          }
+        }
+      }
+    },
+    "Its batch leaves Warsaw on %@. Catch it while you can.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ta dostawa kończy kursowanie w Warszawie %@. Łap, póki możesz."
+          }
+        }
+      }
+    },
+    "vehicle.retired": {
+      "comment": "Vehicle page tag: it has left Warsaw",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "RETIRED"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WYCOFANY"
+          }
+        }
+      }
+    },
+    "%lld ON THEIR LAST RUNS · LEAVING WARSAW SOON": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld NA OSTATNICH KURSACH · WKRÓTCE KONIEC KURSOWANIA"
+          }
+        }
+      }
+    },
+    "SOURCE: %@": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ŹRÓDŁO: %@"
+          }
+        }
+      }
+    },
+    "#%@ is gone from the city's list of vehicles in service: it has left Warsaw. It stays in your book for good.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "#%@ zniknął z miejskiej listy pojazdów w służbie: już nie jeździ po Warszawie. Zostaje w twoim albumie na zawsze."
+          }
+        }
+      }
+    },
+    "Some are still out on their last runs. Catch one while you can: once it's gone, it stays in your book, marked retired.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niektóre wciąż jeżdżą na ostatnich kursach. Łap, póki możesz: kiedy zniknie, zostanie w twoim albumie jako wycofany."
+          }
+        }
+      }
+    },
+    "Until %@ they still run on their lines. Catch one while you can: once it's gone, it stays in your book, marked retired.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Do %@ wciąż jeżdżą na swoich liniach. Łap, póki możesz: kiedy zniknie, zostanie w twoim albumie jako wycofany."
+          }
+        }
+      }
+    },
+    "These have gone from the city's list of vehicles in service: they've left Warsaw. The ones you caught stay in your book for good; the rest are hidden.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Te zniknęły z miejskiej listy pojazdów w służbie: już nie jeżdżą po Warszawie. Złapane zostają w twoim albumie na zawsze, reszta jest ukryta."
+          }
+        }
+      }
+    },
+    "The fleet % and the sets count only what's still running, so you can still complete the model without the ones that left. Its rarity doesn't change.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "% taboru i komplety liczą tylko to, co wciąż jeździ, więc model da się skompletować bez tych, które odeszły. Jego rzadkość się nie zmienia."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

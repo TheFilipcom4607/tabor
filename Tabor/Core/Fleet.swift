@@ -44,6 +44,39 @@ public struct Batch: Codable, Hashable, Sendable {
     }
 }
 
+/// Vehicles whose time in Warsaw ends on a known day (a contract ending, a sale), from a
+/// hand-kept, sourced list in fetch_fleet.py: HUNT tags them LEAVING, then LAST RUNS.
+public struct Leaving: Codable, Hashable, Sendable {
+    /// Their last day (ISO date), e.g. "2026-11-30".
+    public let until: String
+    public let numbers: [Int]
+    /// Whose batch it is, e.g. "ReloBus": what retired vehicles of the same batch go by.
+    public let `operator`: String?
+    /// Why they're leaving, as a source says it, in English and Polish, and the source.
+    public let about: String?
+    public let aboutPl: String?
+    public let source: String?
+
+    public init(until: String, numbers: [Int], operator: String? = nil, about: String? = nil,
+                aboutPl: String? = nil, source: String? = nil) {
+        self.until = until
+        self.numbers = numbers
+        self.operator = `operator`
+        self.about = about
+        self.aboutPl = aboutPl
+        self.source = source
+    }
+
+    /// `about` in the app's language.
+    public var aboutDisplay: String? { AppLanguage.polish ? aboutPl ?? about : about }
+
+    /// The last day has gone by (in Warsaw): what's still running is on its LAST RUNS.
+    public static func isPast(_ until: String, now: Date = Date()) -> Bool { Wrap.day(now) > until }
+
+    /// The last day as a date (noon in Warsaw), for showing.
+    public static func date(_ until: String) -> Date? { Wrap.parse(until) }
+}
+
 /// Something worth knowing about one vehicle ("spent two weeks in Berlin in 2016"), written by
 /// TABOR from a source it links. Not czynaczas.pl's remarks: those are theirs and come from the proxy.
 public struct VehicleNote: Codable, Hashable, Sendable {
@@ -76,7 +109,8 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
     public let code: String?
     public let kind: VehicleKind
     public let operators: [String]
-    /// Vehicles of this model in the ZTM database.
+    /// Every vehicle of this model the book has had, retired ones included: the tier goes by it,
+    /// so stickers keep their colour as a model dwindles. Today's fleet is `inService`.
     public let fleet: Int
     public let firstYear: Int?
     public let lastYear: Int?
@@ -129,6 +163,13 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
     /// Ids its numbers had before a model was split, e.g. the 120N Tramicus was part of
     /// `tram-pesa-120n`: catches filed under one of them move here (`FleetCatalog.moved`).
     public let formerly: [String]
+    /// Vehicles that have left (gone from the city's list): in `batches`, `numbers` and `fleet`
+    /// here, so the people who caught them keep them, but no longer part of today's fleet.
+    /// fleet.json carries them apart, under "retiredBatches", so apps from before them never see
+    /// them; decoding puts them back into their batches.
+    public let retired: Set<Int>
+    /// Batches with a known last day in Warsaw. Older fleet files lack it.
+    public let leaving: [Leaving]
 
     public init(id: String, name: String, namePl: String? = nil, make: String, code: String? = nil, kind: VehicleKind,
                 operators: [String], fleet: Int, firstYear: Int?, lastYear: Int?, batches: [Batch],
@@ -138,7 +179,8 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
                 variants: [SpecVariant] = [],
                 liveries: [String: String]? = nil, generations: [String: [Int]] = [:], notes: [String: VehicleNote] = [:],
                 coupled: Bool = false, sets: [[Int]] = [], pairs: [[Int]] = [],
-                trailers: [Int] = [], tows: Bool = false, formerly: [String] = []) {
+                trailers: [Int] = [], tows: Bool = false, formerly: [String] = [],
+                retired: Set<Int> = [], leaving: [Leaving] = []) {
         self.id = id
         self.name = name
         self.namePl = namePl
@@ -169,12 +211,17 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
         self.trailers = trailers
         self.tows = tows
         self.formerly = formerly
+        self.retired = retired
+        self.leaving = leaving
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, name, namePl, make, code, kind, operators, fleet, firstYear, lastYear, batches, vintage, onTest, works, runs, trial,
-             runsPl, trialPl, trialEnded, specs, variants, liveries, generations, notes, coupled, sets, pairs, trailers, tows, formerly
+             runsPl, trialPl, trialEnded, specs, variants, liveries, generations, notes, coupled, sets, pairs, trailers, tows, formerly,
+             retired, leaving
     }
+
+    private enum RetiredKeys: String, CodingKey { case retiredBatches }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -186,10 +233,27 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
         code = try c.decodeIfPresent(String.self, forKey: .code)
         kind = try c.decode(VehicleKind.self, forKey: .kind)
         operators = try c.decode([String].self, forKey: .operators)
-        fleet = try c.decode(Int.self, forKey: .fleet)
+        let inService = try c.decode(Int.self, forKey: .fleet)
         firstYear = try c.decodeIfPresent(Int.self, forKey: .firstYear)
         lastYear = try c.decodeIfPresent(Int.self, forKey: .lastYear)
-        batches = try c.decode([Batch].self, forKey: .batches)
+        // Retired vehicles back into their batches (one of the same year, depot and operator),
+        // or batches of their own.
+        var batches = try c.decode([Batch].self, forKey: .batches)
+        let gone = (try? decoder.container(keyedBy: RetiredKeys.self)
+            .decodeIfPresent([Batch].self, forKey: .retiredBatches)) ?? []
+        for g in gone {
+            if let i = batches.firstIndex(where: { $0.year == g.year && $0.depotCode == g.depotCode
+                                                   && $0.depotName == g.depotName && $0.operator == g.operator }) {
+                let b = batches[i]
+                batches[i] = Batch(year: b.year, depotCode: b.depotCode, depotName: b.depotName, operator: b.operator,
+                                   numbers: (b.numbers + g.numbers).sorted())
+            } else {
+                batches.append(g)
+            }
+        }
+        self.batches = batches
+        retired = Set(gone.flatMap(\.numbers))
+        fleet = inService + retired.count
         works = (try? c.decodeIfPresent(Bool.self, forKey: .works)) ?? false
         vintage = try (c.decodeIfPresent(Bool.self, forKey: .vintage) ?? false) && !works
         onTest = try c.decodeIfPresent(Bool.self, forKey: .onTest) ?? false
@@ -210,6 +274,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
         trailers = (try? c.decodeIfPresent([Int].self, forKey: .trailers)) ?? []
         tows = (try? c.decodeIfPresent(Bool.self, forKey: .tows)) ?? false
         formerly = (try? c.decodeIfPresent([String].self, forKey: .formerly)) ?? []
+        leaving = (try? c.decodeIfPresent([Leaving].self, forKey: .leaving)) ?? []
     }
 
     /// A special paint job, if this vehicle has one.
@@ -251,7 +316,8 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
                      runs: runs, trial: trial, runsPl: runsPl, trialPl: trialPl, trialEnded: trialEnded,
                      specs: specs, variants: variants,
                      liveries: liveries, generations: generations, notes: notes.merging(more.notes) { a, _ in a },
-                     coupled: coupled, sets: sets, pairs: pairs, trailers: trailers, tows: tows, formerly: formerly)
+                     coupled: coupled, sets: sets, pairs: pairs, trailers: trailers, tows: tows, formerly: formerly,
+                     retired: retired.union(more.retired), leaving: leaving + more.leaving)
     }
 
     public var yearsDisplay: String? {
@@ -266,8 +332,55 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
     public var trialOver: Bool { onTest && trialEnded != nil }
 
     /// Regular service stock: what the fleet %, the set badges and the rarity tiers are
-    /// about. Vintage, test and works vehicles are extras on the side.
-    public var regular: Bool { !vintage && !onTest && !works }
+    /// about. Vintage, test and works vehicles are extras on the side, and so is a model
+    /// that has left Warsaw altogether.
+    public var regular: Bool { serviceStock && !retiredOut }
+
+    /// Built for passenger service: not vintage, test or works stock, whether or not it has
+    /// left Warsaw since (a retired Urbino still counts as a veteran).
+    public var serviceStock: Bool { !vintage && !onTest && !works }
+
+    // MARK: Retired vehicles
+
+    /// This vehicle has left: gone from the city's list.
+    public func isRetired(_ number: Int) -> Bool { retired.contains(number) }
+
+    /// Today's fleet: the vehicles still in service.
+    public var inService: Int { fleet - retired.count }
+
+    /// Every vehicle of it has left Warsaw: BOOK puts it on the RETIRED shelf.
+    public var retiredOut: Bool { !retired.isEmpty && inService <= 0 }
+
+    public var numbersInService: [Int] { numbers.filter { !retired.contains($0) } }
+
+    /// A batch's vehicles still in service.
+    public func inService(_ batch: Batch) -> [Int] { batch.numbers.filter { !retired.contains($0) } }
+
+    /// What "you have n of …" counts against: today's fleet, or, for a model that has left
+    /// altogether, every vehicle it had.
+    public var progressFleet: Int { retiredOut ? fleet : inService }
+
+    /// What completing these vehicles (a model's, a batch's) takes: the ones still in service,
+    /// plus the retired ones you caught, so a retirement never undoes a set you had. Once all
+    /// of them have left, every one of them: two catches on the last day aren't the whole set.
+    public func needed(_ numbers: [Int], mine: Set<Int>) -> [Int] {
+        guard numbers.contains(where: { !retired.contains($0) }) else { return numbers }
+        return numbers.filter { !retired.contains($0) || mine.contains($0) }
+    }
+
+    /// Whether a catch of this vehicle counts toward `progressFleet`.
+    public func counts(_ number: Int) -> Bool { retiredOut || !retired.contains(number) }
+
+    /// The last day in Warsaw (ISO date) of a vehicle whose batch is leaving, if it is.
+    public func leaving(of number: Int) -> String? { departure(of: number)?.until }
+
+    /// Why this vehicle's batch is leaving or has left: its own entry, or, for one already
+    /// retired, the entry of its batch's operator ("ReloBus's contract ended…").
+    public func departure(of number: Int) -> Leaving? {
+        if let own = leaving.first(where: { $0.numbers.contains(number) }) { return own }
+        guard isRetired(number), let op = batch(containing: number)?.operator else { return nil }
+        return leaving.first { $0.operator == op }
+    }
 
     /// Vintage, test and works stock get their own tier whatever their size: they aren't rare,
     /// they're seasonal, passing through, or not for passengers.
@@ -275,6 +388,7 @@ public struct VehicleModel: Codable, Hashable, Sendable, Identifiable {
 
     /// Where to find a vintage, test or works vehicle, e.g. "TOURIST LINES T & 36 · SUMMER WEEKENDS".
     public var whereToFind: String? {
+        if retiredOut { return String(localized: "ALL RETIRED · NO LONGER RUNNING") }
         if works { return String(localized: "TRACK AND WIRE WORK · NO TIMETABLE") }
         if vintage {
             return kind == .tram ? String(localized: "TOURIST LINES T & 36 · SUMMER WEEKENDS")
@@ -595,6 +709,9 @@ public struct FleetData: Codable, Sendable {
     public var codedWorksModels: [VehicleModel]? = nil
     /// Event wraps (`Wrap`). Older builds ignore the key.
     public var wraps: [Wrap]? = nil
+    /// Models that have all left Warsaw, kept for the people who caught them. Apart so older
+    /// builds, which don't know retired vehicles, see them gone.
+    public var retiredModels: [VehicleModel]? = nil
     public let depots: [Depot]
 
     public init(source: String, sourcePl: String? = nil, fetched: String?, models: [VehicleModel],

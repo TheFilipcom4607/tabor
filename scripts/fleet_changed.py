@@ -30,7 +30,7 @@ if not new.get("fetched") or len(new["models"]) < 40 or total(new) < 0.9 * total
     print(f"refusing: {len(new['models'])} models, {total(new)} vehicles (was {total(old)})", file=sys.stderr)
     sys.exit(2)
 # A model id that vanishes takes everyone's catches of it out of the book.
-every = lambda d: d["models"] + d.get("worksModels", []) + d.get("codedWorksModels", [])
+every = lambda d: d["models"] + d.get("worksModels", []) + d.get("codedWorksModels", []) + d.get("retiredModels", [])
 gone = {m["id"] for m in every(old)} - {m["id"] for m in every(new)}
 if gone:
     print(f"refusing: model ids gone: {', '.join(sorted(gone))}", file=sys.stderr)

@@ -26,6 +26,13 @@ struct VehicleView: View {
         return base.isEmpty ? count : "\(base) · \(count)"
     }
 
+    /// How many of its model you have, and of how many: today's fleet, as the model page counts
+    /// it, or, for a retired vehicle, all the model had.
+    private func ownedOf(_ model: VehicleModel) -> (have: Int, of: Int) {
+        model.counts(number) ? (sightings.stats.progress(model: model), model.progressFleet)
+            : (sightings.stats.ownedCount(modelId: model.id), model.fleet)
+    }
+
     var body: some View {
         let model = Fleet.catalog.model(id: modelId)
         let mine = sightings.filter { $0.number == number && $0.modelId == modelId }
@@ -66,16 +73,7 @@ struct VehicleView: View {
                             .fixedSize(horizontal: false, vertical: true)
                         Mono(place(model, batch), size: 11, color: Palette.sub)
                             .lineLimit(1)
-                        if let livery = model?.livery(of: number) {
-                            HStack(spacing: 5) {
-                                Image(systemName: "paintbrush.fill")
-                                    .font(.system(size: 9, weight: .bold))
-                                Mono(livery.name, size: 10, weight: 700, spacing: 0.1, color: Palette.yellow)
-                            }
-                            .foregroundStyle(Palette.yellow)
-                            .padding(.top, 5)
-                            .accessibilityLabel(Text("Special livery: \(livery.name.lowercased())"))
-                        }
+                        VehicleTags(model: model, number: number)
                         // The wraps you caught it in, newest first.
                         let worn = wornWraps(mine)
                         if !worn.isEmpty {
@@ -148,8 +146,8 @@ struct VehicleView: View {
                     }
                     Spacer()
                     if let model {
-                        let ownedOfModel = sightings.stats.ownedCount(modelId: model.id)
-                        Text("\(ownedOfModel) of \(model.fleet) \(model.name)\nin your book")
+                        let ownedOfModel = ownedOf(model)
+                        Text("\(ownedOfModel.have) of \(ownedOfModel.of) \(model.name)\nin your book")
                             .font(TaborFont.grotesk(11.5))
                             .foregroundStyle(Palette.sub)
                             .multilineTextAlignment(.trailing)
@@ -305,7 +303,7 @@ struct VehicleView: View {
             var made: [ShareCard.Style: CatchShare] = [:]
             for style in styles {
                 made[style] = CatchShare.make(number: number, model: model, sighting: shown, sticker: sticker, photo: photo,
-                                              owned: sightings.stats.ownedCount(modelId: modelId), partner: partner,
+                                              owned: model.map { ownedOf($0).have } ?? 0, partner: partner,
                                               style: style)
                 shares = made
                 await Task.yield()
@@ -816,5 +814,63 @@ struct FlowRow: Layout {
         }
         if !cur.items.isEmpty { rows.append(cur) }
         return rows
+    }
+}
+
+/// Under the vehicle's name: a special livery, and whether it has left Warsaw or is about to.
+/// Their own view, which also keeps the page's body within what the compiler will check.
+private struct VehicleTags: View {
+    let model: VehicleModel?
+    let number: Int
+
+    var body: some View {
+        if let livery = model?.livery(of: number) {
+            HStack(spacing: 5) {
+                Image(systemName: "paintbrush.fill")
+                    .font(.system(size: 9, weight: .bold))
+                Mono(livery.name, size: 10, weight: 700, spacing: 0.1, color: Palette.yellow)
+            }
+            .foregroundStyle(Palette.yellow)
+            .padding(.top, 5)
+            .accessibilityLabel(Text("Special livery: \(livery.name.lowercased())"))
+        }
+        DepartureTag(model: model, number: number)
+    }
+}
+
+/// RETIRED, LEAVING 30 NOV or LAST RUNS, in the words HUNT's card uses; nothing for one that
+/// isn't going anywhere. One short line: the long "LEAVING WARSAW" wording wrapped into a block.
+private struct DepartureTag: View {
+    let model: VehicleModel?
+    let number: Int
+
+    private var text: String? {
+        guard let model else { return nil }
+        if model.isRetired(number) { return String(localized: "vehicle.retired", defaultValue: "RETIRED", comment: "Vehicle page tag: it has left Warsaw") }
+        guard let until = model.leaving(of: number) else { return nil }
+        if Leaving.isPast(until) { return String(localized: "LAST RUNS") }
+        let day = Leaving.date(until).map { $0.formatted(.dateTime.day().month(.abbreviated).locale(.app)).uppercased(with: .app) } ?? until
+        return String(localized: "LEAVING \(day)")
+    }
+
+    var body: some View {
+        if let text, let model, let info = DepartureInfo.vehicle(model, number: number) {
+            let gone = model.isRetired(number)
+            let ink = gone ? Palette.dim : Palette.hiVis
+            // Tap for what it means and why it's going.
+            DepartureInfoButton(info: info) {
+                HStack(spacing: 5) {
+                    Image(systemName: gone ? "archivebox.fill" : "hourglass")
+                        .font(.system(size: 9, weight: .bold))
+                    Mono(text, size: 10, weight: 700, spacing: 0.1, color: ink)
+                        .lineLimit(1)
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 9, weight: .semibold))
+                }
+                .foregroundStyle(ink)
+                .padding(.vertical, 3)
+            }
+            .padding(.top, 2)
+        }
     }
 }

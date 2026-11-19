@@ -40,7 +40,7 @@ public struct FleetCatalog: Sendable {
     private let byCode: [String: Int]
 
     public init(data: FleetData) {
-        var all = data.models + (data.worksModels ?? [])
+        var all = data.models + (data.worksModels ?? []) + (data.retiredModels ?? [])
         for m in data.codedWorksModels ?? [] {
             if let i = all.firstIndex(where: { $0.id == m.id }) { all[i] = all[i].adding(m) } else { all.append(m) }
         }
@@ -149,13 +149,17 @@ public struct FleetCatalog: Sendable {
     public var trailers: [Int] { models.flatMap(\.trailers).sorted() }
 
     /// Vehicles on regular routes; vintage, test and works stock don't count toward the fleet.
-    public var totalFleet: Int { models.filter { $0.regular }.reduce(0) { $0 + $1.fleet } }
+    /// Today's regular fleet: retired vehicles stay in the book but not in the fleet %.
+    public var totalFleet: Int { models.filter { $0.regular }.reduce(0) { $0 + $1.inService } }
 
     /// Manual assignments win, then the ZTM database.
     public func match(number: Int, kind: VehicleKind? = nil,
                       manual: [Int: String] = [:]) -> ModelMatch {
         if let id = manual[number], let m = byId[id] { return .certain(m) }
-        let hits = (byNumber[number] ?? []).filter { kind == nil || $0.kind == kind }
+        var hits = (byNumber[number] ?? []).filter { kind == nil || $0.kind == kind }
+        // A retired vehicle matches only when nothing in service has the number: an old number
+        // can come back on a new vehicle, and a bus that's left isn't the tram in front of you.
+        if hits.contains(where: { !$0.isRetired(number) }) { hits.removeAll { $0.isRetired(number) } }
         switch hits.count {
         case 0: return .unknown
         case 1: return .certain(hits[0])

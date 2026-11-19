@@ -54,7 +54,7 @@ defaults:
 
 env:
   BRANCH: fleet-refresh
-  FILES: Tabor/Resources/fleet.json data/ztm-pojazdy.json data/fleet-models.csv
+  FILES: Tabor/Resources/fleet.json data/ztm-pojazdy.json data/fleet-models.csv data/retired.json
   REVIEW_ABOVE: 20
   # The issues carry only their hints; what they mean is explained on thefilip.com/tabor/boty,
   # one section per issue, linked at the bottom of each.
@@ -175,6 +175,7 @@ jobs:
             Tabor/Resources/fleet.json
             data/ztm-pojazdy.json
             data/fleet-models.csv
+            data/retired.json
             changes.md
             subject.txt
             pr-body.md

@@ -8,7 +8,11 @@ Two sources, plus the hand-kept lists below:
 - The city's open-data vehicle list (dane.um.warszawa.pl, get_ztm_pojazdy), refreshed daily,
   data/ztm-pojazdy.json. It adds the vehicles the scrape hasn't got, each joining the model
   most of its type (idMarki) belongs to, plus each model's specs. It also says which vehicles
-  still run (a scrape row it has dropped is left out) and where they're based.
+  still run and where they're based.
+
+A vehicle the city stops listing is retired, never removed (build/drafts/retired-vehicles.md):
+data/retired.json remembers it, and its model carries it under "retiredBatches" (a model that
+has all gone, under "retiredModels"), which only apps that know retired vehicles read.
 
 Usage:  python3 scripts/fetch_fleet.py            # fetch the city's list + build
         python3 scripts/fetch_fleet.py --offline  # rebuild from the saved files
@@ -35,6 +39,7 @@ ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "ztm-vehicles.json"
 CITY = ROOT / "data" / "ztm-pojazdy.json"
 SETS = ROOT / "data" / "tramwar-sets.json"
+LEDGER = ROOT / "data" / "retired.json"
 OUT = ROOT / "Tabor" / "Resources" / "fleet.json"
 DANE = "https://dane.um.warszawa.pl/api/action/get_ztm_pojazdy"
 BASE = "https://www.ztm.waw.pl/baza-danych-pojazdow/"
@@ -214,8 +219,8 @@ def with_city(vehicles, city, report=True):
     """The scrape plus the vehicles only the city lists. A new number joins the model most
     numbers of its type (idMarki) already belong to; a type nothing known belongs to is
     printed for a human to place, and left out. A scrape row the city no longer lists is
-    gone from the fleet (printed), unless STILL_RUNNING keeps it. The city's depot wins: it's
-    refreshed daily, the scrape isn't."""
+    left out here (printed), unless STILL_RUNNING keeps it: the ledger brings it back as
+    retired (`retired_rows`). The city's depot wins: it's refreshed daily, the scrape isn't."""
     listed = {(c["kind"], c["number"]): c for c in city["vehicles"]}
     votes = defaultdict(Counter)
     # Hand-added deliveries count as known too: they're how a brand-new type gets placed.
@@ -253,7 +258,7 @@ def with_city(vehicles, city, report=True):
     for (kind, id_marki), numbers in sorted(unplaced.items()):
         print(f"  ? {kind} type {id_marki} fits no model yet, left out: {', '.join(numbers)}")
     for (kind, make, model), numbers in sorted(gone.items()):
-        print(f"  - gone from the city's list, left out: {kind} {make} {model} {span(numbers)}")
+        print(f"  - gone from the city's list, retired: {kind} {make} {model} {span(numbers)}")
     return out
 
 
@@ -291,6 +296,81 @@ def load_city():
 def source_rows():
     """Every vehicle row fleet.json is built from, before the hand-kept lists."""
     return with_city(load_raw(), load_city(), report=False) if CITY.exists() else load_raw()
+
+
+# ---------------------------------------------------------------- retired vehicles
+
+# A vehicle that leaves (a contract ends, it's scrapped or sold) stays in the book as retired:
+# people who caught it keep it, and its model keeps its rarity. data/retired.json is the
+# memory: each row as it was when the city's list last had it, plus the day it went missing.
+# Only a fetch of the city's list writes it, so --offline rebuilds stay reproducible.
+# Seeded on 2026-11-19 from the city list's git history (everything gone since 2026-09-28),
+# less PKS Polonus's Iveco Crossway LEs (#35531, #39532, #39533): the whole model left before
+# the App Store launch, and bringing it back would add an uncatchable LEGENDARY model to
+# older apps' "All n legendary".
+
+def load_ledger():
+    return json.loads(LEDGER.read_text())["vehicles"] if LEDGER.exists() else []
+
+
+def save_ledger(rows):
+    rows = sorted(rows, key=lambda r: (r["kind"], int(r["number"]), r["make"], r["model"]))
+    LEDGER.write_text("{\"vehicles\": [\n" + ",\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n]}\n")
+
+
+def ledger_row(v, city_row, day):
+    """A source row as the ledger keeps it: with the city's type and paint, for specs and liveries."""
+    row = {k: v[k] for k in ("kind", "number", "make", "model", "carrier", "depot", "year")}
+    if city_row:
+        row |= {"idMarki": city_row.get("idMarki"), "colour": city_row.get("colour")}
+    return {**row, "retired": day}
+
+
+def update_ledger(before, after, old_city, day):
+    """Rows the old city list gave and the new one doesn't are retired from `day`; ledger rows
+    the city lists again are back in service."""
+    now = {(v["kind"], v["number"]) for v in after}
+    city = {(c["kind"], c["number"]): c for c in old_city["vehicles"]}
+    ledger = [r for r in load_ledger() if (r["kind"], r["number"]) not in now]
+    back = len(load_ledger()) - len(ledger)
+    known = {(r["kind"], r["number"], r["make"], r["model"]) for r in ledger}
+    fresh = [ledger_row(v, city.get((v["kind"], v["number"])), day) for v in before
+             if (v["kind"], v["number"]) not in now and v["number"].isdigit()
+             and (v["kind"], v["number"], v["make"], v["model"]) not in known]
+    save_ledger(ledger + fresh)
+    if fresh or back:
+        print(f"  ledger: {len(fresh)} newly retired, {back} back in service")
+
+
+def retired_rows(rows):
+    """The ledger's rows, marked retired, except where the same vehicle is in service again."""
+    here = {(v["kind"], v["number"], v["make"], v["model"]) for v in rows}
+    return [{"ztmId": "", **r} for r in load_ledger() if (r["kind"], r["number"], r["make"], r["model"]) not in here]
+
+
+# Batches whose time in Warsaw ends on a known day: a contract ending, a sale. HUNT tags them
+# LEAVING until then and LAST RUNS after, while they're still on the feed, and a tap on the tag
+# says why. Only dates and reasons a source states. (model id, operator, last day, why in
+# English, why in Polish, source.) Emitted as "leaving"; older apps ignore it.
+LEAVING = [
+    # ReloBus's articulated-bus contract (50 duties, since 31 Aug 2019) ends on 30 Nov 2026; MANs
+    # #9701-9754 take over, and all 54 Urbinos are for sale (Warszawikia, phototrans, Autoline).
+    ("bus-solaris-urbino-18cng", "ReloBus", "2026-11-30",
+     "ReloBus's contract for its articulated buses ends on 30 November 2026. MAN Lion's City 18 "
+     "hybrids #9701–9754 take over, and these Urbinos are up for sale.",
+     "Umowa ReloBusu na autobusy przegubowe kończy się 30 listopada 2026. Zastąpią je hybrydowe "
+     "MAN-y Lion's City 18 #9701–9754, a te Urbino idą na sprzedaż.",
+     "Warszawikia, phototrans.eu"),
+    # ReloBus's midibus contract ran from 22 Dec 2018 to 25 Oct 2026 (phototrans's ReloBus page);
+    # the Vectio C hybrids #9001-9054 took over, and 34 old ones are for sale. 17 still ran on
+    # 2026-11-19.
+    ("bus-otokar-la16sr2bx", "ReloBus", "2026-10-25",
+     "ReloBus's contract for these midibuses ended on 25 October 2026, after almost eight years. "
+     "The new Otokar Vectio C hybrids #9001–9054 took over, and these are up for sale.",
+     "Umowa ReloBusu na te midibusy skończyła się 25 października 2026, po prawie ośmiu latach. "
+     "Zastąpiły je nowe hybrydowe Otokary Vectio C #9001–9054, a te idą na sprzedaż.",
+     "phototrans.eu"),
+]
 
 
 # What the city calls each drive, for the model page.
@@ -1310,6 +1390,34 @@ STILL_RUNNING = {
 }
 
 
+def batched(vs):
+    """A model's vehicle rows as batches: one operator's vehicles of one year at one depot."""
+    # A batch is one operator's vehicles of one year: KMKM's 1993 Ikarus 260 isn't part of
+    # MZA's (#36), and the "Every operator" badge credits the operator of the vehicle caught.
+    # And one depot's: a year's delivery is often split across depots (the 128Ns of 2014
+    # run from R-1, R-3 and R-5), and the depot badges go by the batch.
+    by_year = defaultdict(list)
+    for v in vs:
+        # Coded cars in batches of their own, so they can go under "codedWorksModels".
+        by_year[(v["year"], short_carrier(v["carrier"]), parse_depot(v["depot"]), is_coded(int(v["number"])))].append(v)
+    return [{"year": y, "depotCode": depot[0], "depotName": depot[1], "operator": carrier,
+             "numbers": sorted(int(v["number"]) for v in bvs)}
+            for (y, carrier, depot, _), bvs in sorted(by_year.items(), key=lambda kv: (kv[0][0] is None, -(kv[0][0] or 0), -len(kv[1])))]
+
+
+def retired_numbers(m):
+    return {n for b in m.get("retiredBatches", []) for n in b["numbers"]}
+
+
+def split_retired(models):
+    """A model with nothing left in service goes under "retiredModels", which only apps that
+    know retired vehicles read: older ones see it gone, as they always did (keeping it would have
+    handed 1.5 an uncatchable model). -> (models, retired models)"""
+    live = [m for m in models if m["batches"]]
+    gone = sorted((m for m in models if not m["batches"]), key=lambda m: (m["kind"], m["name"]))
+    return live, gone
+
+
 def with_vintage_extras(vehicles):
     """ZTM rows plus the preserved buses it doesn't list; marks split-out vintage rows."""
     out = []
@@ -1334,8 +1442,9 @@ def with_vintage_extras(vehicles):
                      "formerly": [*v.get("formerly", []), slug(f"{v['kind']}-{make}-{model}")]}
         split = VINTAGE_NUMBERS.get((v["kind"], v["make"], v["model"]), set())
         out.append({**v, "vintage": v["number"].isdigit() and int(v["number"]) in split})
-    # Once ZTM catches up and lists one of these itself, its own row wins.
-    listed = {(v["kind"], v["number"]) for v in vehicles}
+    # Once ZTM catches up and lists one of these itself, its own row wins. A retired row doesn't:
+    # Mobilis's Kent C #9650 left the city's list but is hand-added, and runs.
+    listed = {(v["kind"], v["number"]) for v in vehicles if not v.get("retired")}
     for make, model, number, owner, year, depot in EXTRA_BUSES:
         if ("BUS", str(number)) in listed:
             continue
@@ -1428,36 +1537,34 @@ def build(vehicles, city=None):
             continue  # a suffixed number RENUMBER doesn't know yet
         split = v["vintage"] and (v["kind"], v["make"], v["model"]) in VINTAGE_NUMBERS
         groups[(v["kind"], v["make"], v["model"], split, v.get("works"))].append(v)
+    # A retired row the hand-kept lists also have in service (EXTRA_BUSES) is that vehicle running.
+    for key, vs in groups.items():
+        running = {v["number"] for v in vs if not v.get("retired")}
+        groups[key] = [v for v in vs if not (v.get("retired") and v["number"] in running)]
+    # A retired row brings its own type and paint: the city's list may have given the number to
+    # another vehicle since.
+    def city_row(v):
+        if v.get("retired"):
+            return v if v.get("idMarki") else None
+        return None if v.get("unlisted") else city_rows.get((v["kind"], v["number"]))
 
     models = []
     for (kind, make, model, split, works), vs in groups.items():
         if len({v["number"] for v in vs}) != len(vs):
             raise ValueError(f"duplicate fleet number in {make} {model}")
-        # A batch is one operator's vehicles of one year: KMKM's 1993 Ikarus 260 isn't part of
-        # MZA's (#36), and the "Every operator" badge credits the operator of the vehicle caught.
-        # And one depot's: a year's delivery is often split across depots (the 128Ns of 2014
-        # run from R-1, R-3 and R-5), and the depot badges go by the batch.
-        by_year = defaultdict(list)
-        for v in vs:
-            # Coded cars in batches of their own, so they can go under "codedWorksModels".
-            by_year[(v["year"], short_carrier(v["carrier"]), parse_depot(v["depot"]), is_coded(int(v["number"])))].append(v)
-        batches = []
-        for (y, carrier, depot, _), bvs in sorted(by_year.items(), key=lambda kv: (kv[0][0] is None, -(kv[0][0] or 0), -len(kv[1]))):
-            batches.append({
-                "year": y,
-                "depotCode": depot[0], "depotName": depot[1],
-                "operator": carrier,
-                "numbers": sorted(int(v["number"]) for v in bvs),
-            })
-        years = [v["year"] for v in vs if v["year"]]
+        # Retired vehicles get batches of their own, under "retiredBatches": apps that don't know
+        # them see the model as if they'd simply gone (`split_retired`).
+        live = [v for v in vs if not v.get("retired")]
+        batches, retired_batches = batched(live), batched([v for v in vs if v.get("retired")])
+        shown = live or vs
+        years = [v["year"] for v in shown if v["year"]]
         model_id = (slug(f"tram-works-{works}-{model}") if works else
                     vs[0].get("id") or slug(f"{kind}-{make}-{model}") + ("-vintage" if split else ""))
         if len({v.get("id") for v in vs}) != 1:
             raise ValueError(f"{make} {model}: some numbers aren't in any SPLIT part")
         formerly = sorted({f for v in vs for f in v.get("formerly", [])} - {model_id})
         # Specs from the type most of this model's vehicles are, in the city's list.
-        in_city = [city_rows[(kind, v["number"])] for v in vs
-                   if (kind, v["number"]) in city_rows and not v.get("unlisted")]
+        in_city = [c for v in vs if (c := city_row(v))]
         majority = Counter(c["idMarki"] for c in in_city).most_common(1)
         model_specs = specs(types[(kind, majority[0][0])], kind) if majority and (kind, majority[0][0]) in types else None
         # Vehicles of another type with other specs: the 2010 Lion's City Gs are diesel, the
@@ -1491,8 +1598,8 @@ def build(vehicles, city=None):
             "make": vs[0]["builder"] if works else make,
             "code": f"{make} {model}".strip(),
             "kind": kind,
-            "operators": [c for c, _ in Counter(short_carrier(v["carrier"]) for v in vs).most_common()],
-            "fleet": len(vs),
+            "operators": [c for c, _ in Counter(short_carrier(v["carrier"]) for v in shown).most_common()],
+            "fleet": len(live),
             "firstYear": min(years) if years else None,
             "lastYear": max(years) if years else None,
             "batches": batches,
@@ -1510,6 +1617,8 @@ def build(vehicles, city=None):
             **({"notes": dict(sorted(notes.items(), key=lambda kv: int(kv[0])))} if notes else {}),
             # Ids this model's numbers were filed under before a SPLIT. Older apps ignore it.
             **({"formerly": formerly} if formerly else {}),
+            # Split off into "retiredBatches" at the end (`split_retired`).
+            **({"retiredBatches": retired_batches} if retired_batches else {}),
         })
     ids = Counter(m["id"] for m in models)
     noted = {(m["kind"], int(n)) for m in models for n in m.get("notes", {})}
@@ -1536,6 +1645,13 @@ def build(vehicles, city=None):
             m["trailers"] = trailers
         if m["id"] in TOWING:
             m["tows"] = True
+    for model_id, operator, until, about, about_pl, source in LEAVING:
+        m = next((m for m in models if m["id"] == model_id), None)
+        assert m, f"LEAVING: no model {model_id}"
+        going = sorted(n for b in m["batches"] if b["operator"] == operator for n in b["numbers"])
+        if going:
+            m.setdefault("leaving", []).append({"until": until, "numbers": going, "operator": operator, "about": about,
+                                                "aboutPl": about_pl, "source": source})
     # tramwar.pl's sets, on the coupled model that has every car of one. A set across models
     # (or with a car we don't have) is printed and left out. Emitted as "pairs", which older
     # app versions ignore.
@@ -1555,13 +1671,14 @@ def build(vehicles, city=None):
     missing = VINTAGE - {m["id"] for m in models}
     assert not missing, f"VINTAGE ids not in the data any more: {missing}"
 
-    depots = sorted({parse_depot(v["depot"]) + (v["kind"],) for v in vehicles if v["depot"]})
+    # In service only: a depot that has only retired vehicles left would be a new depot badge.
+    depots = sorted({parse_depot(v["depot"]) + (v["kind"],) for v in vehicles if v["depot"] and not v.get("retired")})
     raw = json.loads(RAW.read_text())
     depots = [{"code": c, "name": n, "kind": k} for c, n, k in depots]
     previous = json.loads(OUT.read_text()) if OUT.exists() else None
     # Works cars apart: only apps that know them read "worksModels" (see WORKS_TRAMS).
     works = [m for m in models if m.get("works")]
-    models = [m for m in models if not m.get("works")]
+    models, gone_models = split_retired([m for m in models if not m.get("works")])
     # And the coded ones apart from those (see CODED_WORKS): a model's coded batches go under
     # the same id, which the app adds to the plain model.
     coded = []
@@ -1587,6 +1704,7 @@ def build(vehicles, city=None):
     # --touch stamps it anyway (for a file whose old stamp phones already have).
     dressed = wraps(models + works + coded)
     if (previous and previous["models"] == models and previous.get("worksModels", []) == works
+            and previous.get("retiredModels", []) == gone_models
             and previous.get("codedWorksModels", []) == coded and previous.get("wraps", []) == dressed
             and previous["depots"] == depots and "--touch" not in sys.argv):
         fetched = previous["fetched"]
@@ -1596,8 +1714,9 @@ def build(vehicles, city=None):
     city_pl = f" i otwarte dane miasta (stan z {city['fetched']})" if city else ""
     # Phones show only the models fleet.json has, so a vanished id hides people's catches.
     if previous and "--allow-drop" not in sys.argv:
-        gone = ({m["id"] for m in previous["models"] + previous.get("worksModels", []) + previous.get("codedWorksModels", [])}
-                - {m["id"] for m in models + works + coded})
+        sections = ("models", "worksModels", "codedWorksModels", "retiredModels")
+        gone = ({m["id"] for s in sections for m in previous.get(s, [])}
+                - {m["id"] for m in models + works + coded + gone_models})
         if gone:
             print(f"refusing to write: model ids would disappear: {', '.join(sorted(gone))}\n"
                   "(rerun with --allow-drop if that's on purpose)", file=sys.stderr)
@@ -1613,11 +1732,13 @@ def build(vehicles, city=None):
         "models": models,
         "worksModels": works,
         "codedWorksModels": coded,
+        "retiredModels": gone_models,
         "wraps": dressed,
         "depots": depots,
     }) + "\n")
     total = sum(m["fleet"] for m in models)
-    print(f"wrote {OUT.relative_to(ROOT)}: {len(models)} models, {total} vehicles, {len(depots)} depots"
+    gone = sum(len(b["numbers"]) for m in models + gone_models for b in m.get("retiredBatches", []))
+    print(f"wrote {OUT.relative_to(ROOT)}: {len(models)} models, {total} vehicles in service, {gone} retired, {len(depots)} depots"
           f" (+ {len(works)} works models, {sum(m['fleet'] for m in works)} cars,"
           f" {sum(m['fleet'] for m in coded)} with codes; {len(dressed)} wraps)")
 
@@ -1628,6 +1749,12 @@ if __name__ == "__main__":
     if "--tramwar" in sys.argv:
         fetch_sets()
     if "--offline" not in sys.argv:
+        before = source_rows() if CITY.exists() else None
+        old_city = load_city() if CITY.exists() else None
         fetch_city()
+        if before is not None:
+            update_ledger(before, with_city(load_raw(), load_city(), report=False), old_city,
+                          date.today().isoformat())
     city = load_city()
-    build(with_city(load_raw(), city), city)
+    rows = with_city(load_raw(), city)
+    build(rows + retired_rows(rows), city)

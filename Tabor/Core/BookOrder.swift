@@ -30,7 +30,9 @@ public enum BookOrder: String, CaseIterable, Sendable {
             if oa > 0 {
                 switch self {
                 case .progress:
-                    let pa = Double(oa) / Double(a.fleet), pb = Double(ob) / Double(b.fleet)
+                    // As the rows show it: today's fleet.
+                    let pa = Double(stats.progress(model: a)) / Double(max(a.progressFleet, 1))
+                    let pb = Double(stats.progress(model: b)) / Double(max(b.progressFleet, 1))
                     if pa != pb { return pa > pb }
                 case .newest:
                     if let la = latest[a.id], let lb = latest[b.id], la != lb { return la > lb }

@@ -175,7 +175,7 @@ struct StatsSheet: View {
             return s.topModels.map { m in
                 let model = catalog.model(id: m.modelId)
                 return TopList.Row(name: model?.name ?? m.modelId, count: m.catches,
-                                   sub: model.map { String(localized: "\(m.owned) OF \($0.fleet)") } ?? "",
+                                   sub: model.map { String(localized: "\(m.owned) OF \($0.progressFleet)") } ?? "",
                                    color: model.map { $0.tier.bar } ?? Palette.sub,
                                    open: { onOpen(.model(m.modelId)) })
             }
@@ -743,9 +743,9 @@ private struct RecordsView: View {
     var body: some View {
         VStack(spacing: 10) {
             if let r = records.rarest, let model = catalog.model(id: r.modelId) {
-                let owned = Set(sightings.filter { $0.modelId == r.modelId }.map(\.number)).count
+                let owned = Set(sightings.filter { $0.modelId == r.modelId && model.counts($0.number) }.map(\.number)).count
                 wide(String(localized: "RAREST"), number: r.number, model: model,
-                     detail: String(localized: "\(model.tier.name) · \(owned) OF \(model.fleet)"), detailColor: model.tier.bar)
+                     detail: String(localized: "\(model.tier.name) · \(owned) OF \(model.progressFleet)"), detailColor: model.tier.bar)
             }
             if let m = records.mostSeen, let model = catalog.model(id: m.modelId) {
                 wide(String(localized: "MOST SEEN"), number: m.number, model: model,
@@ -904,7 +904,10 @@ struct StatsShare {
     @MainActor
     static func make(stats: PeriodStats, period: StatsPeriod, sightings: [Sighting], catalog: FleetCatalog) -> StatsShare? {
         guard stats.catches > 0 else { return nil }
-        let rarestOwned = stats.records.rarest.map { r in Set(sightings.filter { $0.modelId == r.modelId }.map(\.number)).count } ?? 0
+        let rarestOwned = stats.records.rarest.map { r in
+            let m = catalog.model(id: r.modelId)
+            return Set(sightings.filter { $0.modelId == r.modelId && (m?.counts($0.number) ?? true) }.map(\.number)).count
+        } ?? 0
         let card = StatsShareCard(stats: stats, period: period, stickers: stickers(stats: stats, period: period, sightings: sightings, catalog: catalog),
                                   rarestOwned: rarestOwned, catalog: catalog)
         let renderer = ImageRenderer(content: card)
@@ -1043,7 +1046,7 @@ private struct StatsShareCard: View {
             (s.topLines.first?.name ?? "–", String(localized: "TOP LINE"), Palette.ink),
         ]
         if let rarest {
-            items.append(("\(rarestOwned)/\(rarest.fleet)", rarest.tier.name, rarest.tier.bar))
+            items.append(("\(rarestOwned)/\(rarest.progressFleet)", rarest.tier.name, rarest.tier.bar))
         } else {
             items.append((s.daysOut.formatted(), String(localized: "DAYS OUT"), Palette.ink))
         }

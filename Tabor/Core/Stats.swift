@@ -146,7 +146,8 @@ public struct PeriodStats: Sendable {
             let key = "\(r.modelId)#\(r.number)"
             firstSeen[key] = min(firstSeen[key] ?? r.date, r.date)
             modelFirst[r.modelId] = min(modelFirst[r.modelId] ?? r.date, r.date)
-            ownedByModel[r.modelId, default: []].insert(r.number)
+            // Against today's fleet, as the book counts it ("12 OF 24").
+            if catalog.model(id: r.modelId)?.counts(r.number) ?? true { ownedByModel[r.modelId, default: []].insert(r.number) }
         }
 
         var seen: [String: (number: Int, modelId: String, times: Int, first: SightingRecord)] = [:]
@@ -182,8 +183,10 @@ public struct PeriodStats: Sendable {
         let total = catalog.totalFleet
         if total > 0 {
             let counted = period == .all ? Array(seen.keys) : newKeys
+            // Today's fleet, as `CollectionStats.fleetCaught` counts it.
             let regular = counted.filter { key in
-                seen[key].flatMap { catalog.model(id: $0.modelId) }?.regular ?? false
+                guard let v = seen[key], let m = catalog.model(id: v.modelId) else { return false }
+                return m.regular && m.has(v.number) && !m.isRetired(v.number)
             }
             fleetShare = Double(regular.count) / Double(total)
         } else {
@@ -225,7 +228,7 @@ public struct PeriodStats: Sendable {
         let thisYear = calendar.component(.year, from: now)
         var fleetYears = 0, fleetCount = 0
         for m in catalog.models where m.regular {
-            for b in m.batches { if let y = b.year { fleetYears += y * b.numbers.count; fleetCount += b.numbers.count } }
+            for b in m.batches { if let y = b.year { let n = m.inService(b).count; fleetYears += y * n; fleetCount += n } }
         }
         let withTemp = events.filter { $0.temperature != nil }
         records = StatsRecords(

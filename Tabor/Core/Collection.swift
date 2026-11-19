@@ -73,6 +73,12 @@ public struct CollectionStats: Sendable {
 
     public func owned(modelId: String) -> [OwnedVehicle] { byModel[modelId] ?? [] }
     public func ownedCount(modelId: String) -> Int { byModel[modelId]?.count ?? 0 }
+
+    /// What "you have n of `progressFleet`" counts: catches of this model's vehicles in service
+    /// (or of any, once the whole model has left). Retired catches stay in the book on the side.
+    public func progress(model: VehicleModel) -> Int {
+        (byModel[model.id] ?? []).filter { model.counts($0.number) }.count
+    }
     public var modelsTouched: Int { byModel.count }
 
     public func vehicle(number: Int, modelId: String) -> OwnedVehicle? {
@@ -91,9 +97,12 @@ public struct CollectionStats: Sendable {
         }.prefix(limit).map { $0 }
     }
 
-    /// Caught vehicles that count toward the fleet total (vintage, test, works and unknown models don't).
+    /// Caught vehicles that count toward the fleet total: today's regular fleet. Vintage, test,
+    /// works and unknown models don't, nor retired vehicles or numbers the fleet data hasn't got.
     public func fleetCaught(catalog: FleetCatalog) -> Int {
-        vehicles.filter { catalog.model(id: $0.modelId).map { $0.regular } ?? false }.count
+        vehicles.filter { v in
+            catalog.model(id: v.modelId).map { $0.regular && $0.has(v.number) && !$0.isRetired(v.number) } ?? false
+        }.count
     }
 
     /// Share of all known-size fleets that has been caught, 0...1.
@@ -177,10 +186,16 @@ public enum RevealHint {
         if model.works {
             return String(localized: "A works car — it carries no passengers and runs to no timetable. Good eye.")
         }
-        let modelLeft = model.numbers.filter { !owned.contains($0) }
+        if model.isRetired(number) || model.leaving(of: number).map({ Leaving.isPast($0) }) == true {
+            return String(localized: "Caught on its last runs — it's leaving Warsaw. A keepsake now.")
+        }
+        if model.leaving(of: number) != nil {
+            return String(localized: "Its days in Warsaw are numbered — this batch is leaving soon. Good timing.")
+        }
+        let modelLeft = model.numbersInService.filter { !owned.contains($0) }
         if modelLeft.isEmpty { return String(localized: "That's every \(name) in Warsaw. Model complete.") }
         if let batch = model.batch(containing: number), model.batches.count > 1, let year = batch.year {
-            let left = batch.numbers.filter { !owned.contains($0) }
+            let left = model.inService(batch).filter { !owned.contains($0) }
             let y = String(year)
             switch left.count {
             case 0: return String(localized: "That completes the \(y) batch of \(name). \(modelLeft.count) left in other batches.")
@@ -190,6 +205,7 @@ public enum RevealHint {
         }
         if modelLeft.count == 1 { return String(localized: "One more — \(String(modelLeft[0])) — and every \(name) is yours.") }
         if owned.count == 1 { return String(localized: "Your first \(name). \(modelLeft.count) more of them are out there.") }
-        return String(localized: "\(owned.count) of \(model.fleet) \(name) caught — \(modelLeft.count) still to find.")
+        let have = owned.filter(model.counts).count
+        return String(localized: "\(have) of \(model.progressFleet) \(name) caught — \(modelLeft.count) still to find.")
     }
 }

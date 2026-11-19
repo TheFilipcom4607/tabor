@@ -31,7 +31,7 @@ struct BookIndexView: View {
             case .bus: m.kind == .bus
             case .tram: m.kind == .tram
             // Prototype rule: under a quarter collected.
-            case .missing: Double(stats.ownedCount(modelId: m.id)) / Double(max(m.fleet, 1)) < 0.25
+            case .missing: Double(stats.progress(model: m)) / Double(max(m.progressFleet, 1)) < 0.25
             }
         }
         let sorted = order.sort(rows, stats: stats)
@@ -109,6 +109,14 @@ struct BookIndexView: View {
                         sectionHeader(.works, note: String(localized: "TRAMWAJE WARSZAWSKIE'S OWN CARS · NOT PART OF THE FLEET %"))
                         ForEach(works) { m in row(m, stats: stats, pictures: pictures) }
                     }
+                    // Models that have left Warsaw altogether: only once you've caught one, since
+                    // there's nothing left to go looking for.
+                    let gone = sorted.filter { $0.retiredOut && stats.ownedCount(modelId: $0.id) > 0 }
+                    if !gone.isEmpty {
+                        sectionHeader(String(localized: "RETIRED"), color: Palette.dim,
+                                      note: String(localized: "NO LONGER IN WARSAW · NOT PART OF THE FLEET %"))
+                        ForEach(gone) { m in row(m, stats: stats, pictures: pictures) }
+                    }
                     Mono(catalog.sourceDisplay.uppercased(), size: 9, spacing: 0.06, color: Palette.faint)
                         .multilineTextAlignment(.center)
                         .padding(.vertical, 18)
@@ -165,8 +173,12 @@ struct BookIndexView: View {
     }
 
     private func sectionHeader(_ tier: Tier, note: String) -> some View {
+        sectionHeader(tier.name, color: tier.color, note: note)
+    }
+
+    private func sectionHeader(_ name: String, color: Color, note: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Mono(tier.name, size: 10.5, weight: 700, spacing: 0.14, color: tier.color)
+            Mono(name, size: 10.5, weight: 700, spacing: 0.14, color: color)
             Mono(note, size: 9.5, color: Palette.faint)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -176,7 +188,7 @@ struct BookIndexView: View {
 
     private func row(_ m: VehicleModel, stats: CollectionStats, pictures: VehicleSightings) -> some View {
         BookLink(route: .model(m.id)) {
-            DexRow(model: m, owned: stats.ownedCount(modelId: m.id), latest: latestSticker(m.id, stats: stats, pictures: pictures),
+            DexRow(model: m, owned: stats.progress(model: m), latest: latestSticker(m.id, stats: stats, pictures: pictures),
                    selected: wide && router.bookPath.first == .model(m.id))
         }
         .buttonStyle(RowPressStyle())
@@ -211,9 +223,9 @@ struct DexRow: View {
                     name(15).lineLimit(2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                OwnedCount(owned: owned, fleet: model.fleet, size: 13)
+                OwnedCount(owned: owned, fleet: model.progressFleet, size: 13)
             }
-            ProgressBar(fraction: Double(owned) / Double(max(model.fleet, 1)), color: model.tier.bar, height: 5)
+            ProgressBar(fraction: Double(owned) / Double(max(model.progressFleet, 1)), color: model.tier.bar, height: 5)
             HStack {
                 Mono(detail, size: 10.5, spacing: 0.1)
                 Spacer()

@@ -358,7 +358,7 @@ struct CorrectionSheet: View {
                 KindTag(kind: m.kind)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(m.name).font(TaborFont.grotesk(15, 600)).lineLimit(1)
-                    Mono([m.operators.first?.uppercased(), m.yearsDisplay, String(localized: "\(m.fleet) EXIST")]
+                    Mono([m.operators.first?.uppercased(), m.yearsDisplay, String(localized: "\(m.progressFleet) EXIST")]
                         .compactMap { $0 }.joined(separator: " · "), size: 9.5)
                 }
                 Spacer()

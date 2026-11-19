@@ -131,7 +131,7 @@ struct ShareCard: View {
             HStack(alignment: .center) {
                 if let model {
                     (Text("\(owned)").foregroundStyle(Palette.ink)
-                        + Text(" / \(model.fleet) IN MY BOOK").foregroundStyle(Palette.faint))
+                        + Text(" / \(model.counts(number) ? model.progressFleet : model.fleet) IN MY BOOK").foregroundStyle(Palette.faint))
                         .font(TaborFont.mono(10, 600))
                         .em(0.08, size: 10)
                 }

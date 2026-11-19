@@ -281,7 +281,8 @@ public enum Achievements {
     // MARK: Rarity
 
     static func unicorn(_ c: Context) -> Achievement? {
-        let singles = c.catalog.models.filter { $0.regular && $0.fleet == 1 }
+        // By the size it had, like its tier: a unicorn that has left is still the one you caught.
+        let singles = c.catalog.models.filter { $0.serviceStock && $0.fleet == 1 }
         guard !singles.isEmpty else { return nil }
         return Achievement(id: "unicorn", title: String(localized: "Unicorn"), detail: String(localized: "The only vehicle of its kind in Warsaw"),
                            symbol: "wand.and.stars", progress: singles.contains(where: c.has) ? 1 : 0, goal: 1,
@@ -290,7 +291,8 @@ public enum Achievements {
 
     /// One of every model in a tier.
     static func tierSet(_ c: Context, _ tier: Tier, id: String, symbol: String) -> Achievement? {
-        let models = c.catalog.models.filter { $0.tier == tier }
+        // A model that has left Warsaw keeps its colour but no longer stands in the way.
+        let models = c.catalog.models.filter { $0.tier == tier && !$0.retiredOut }
         guard !models.isEmpty else { return nil }
         let n = models.count
         let (title, detail) = switch tier {
@@ -341,11 +343,14 @@ public enum Achievements {
         var best: (have: Int, size: Int, label: String)?
         for m in c.catalog.models {
             let mine = c.owned[m.id] ?? []
-            for b in m.batches where b.numbers.count >= 2 {
-                let have = b.numbers.filter(mine.contains).count
+            // A batch whose last few have gone is complete without them (`needed`).
+            for b in m.batches {
+                let numbers = m.needed(b.numbers, mine: mine)
+                guard numbers.count >= 2 else { continue }
+                let have = numbers.filter(mine.contains).count
                 guard have > 0 else { continue }
-                if best.map({ have * $0.size > $0.have * b.numbers.count }) ?? true {
-                    best = (have, b.numbers.count, [b.year.map(String.init), m.name].compactMap { $0 }.joined(separator: " "))
+                if best.map({ have * $0.size > $0.have * numbers.count }) ?? true {
+                    best = (have, numbers.count, [b.year.map(String.init), m.name].compactMap { $0 }.joined(separator: " "))
                 }
             }
         }
@@ -357,10 +362,13 @@ public enum Achievements {
     /// Every vehicle of one model (two or more of them; a single is the Unicorn).
     static func modelComplete(_ c: Context) -> Achievement {
         var best: (have: Int, size: Int, name: String)?
-        for m in c.catalog.models where m.regular && m.fleet >= 2 {
-            let have = m.numbers.filter((c.owned[m.id] ?? []).contains).count
+        for m in c.catalog.models where m.serviceStock {
+            let mine = c.owned[m.id] ?? []
+            let numbers = m.needed(m.numbers, mine: mine)
+            guard numbers.count >= 2 else { continue }
+            let have = numbers.filter(mine.contains).count
             guard have > 0 else { continue }
-            if best.map({ have * $0.size > $0.have * m.fleet }) ?? true { best = (have, m.fleet, m.name) }
+            if best.map({ have * $0.size > $0.have * numbers.count }) ?? true { best = (have, numbers.count, m.name) }
         }
         return Achievement(id: "model-complete", title: String(localized: "Complete set"),
                            detail: best.map { String(localized: "Every vehicle of one model. Closest: \($0.name)") } ?? String(localized: "Every vehicle of one model"),
@@ -423,7 +431,7 @@ public enum Achievements {
 
     static func veteran(_ c: Context) -> Achievement {
         let ages = c.sightings.compactMap { s -> (SightingRecord, Int)? in
-            guard let m = c.model(s), m.regular, let y = m.batch(containing: s.number)?.year else { return nil }
+            guard let m = c.model(s), m.serviceStock, let y = m.batch(containing: s.number)?.year else { return nil }
             return (s, c.year(s.date) - y)
         }.sorted { $0.1 > $1.1 }
         let oldest = ages.first?.1 ?? 0
@@ -439,10 +447,11 @@ public enum Achievements {
     /// ReloBus, and #9925 is ReloBus's (#35). Older fleet files fall back to the model's main one.
     static func allOperators(_ c: Context) -> Achievement? {
         let regular = c.catalog.models.filter { $0.regular }
-        let all = Set(regular.flatMap { m in m.batches.compactMap { $0.operator ?? m.operators.first } })
+        // Operators still running something: one whose last bus has left can't be caught.
+        let all = Set(regular.flatMap { m in m.batches.filter { !m.inService($0).isEmpty }.compactMap { $0.operator ?? m.operators.first } })
         guard !all.isEmpty else { return nil }
         let op = { (s: SightingRecord) -> String? in
-            guard let m = c.model(s), m.regular else { return nil }
+            guard let m = c.model(s), m.serviceStock else { return nil }
             return m.batch(containing: s.number)?.operator ?? m.operators.first
         }
         // Your first catch from each operator.
@@ -623,7 +632,9 @@ public enum Achievements {
     static func depots(_ c: Context) -> [Achievement] {
         c.catalog.depots.compactMap { d in
             let atDepot = { (b: Batch) in b.depotCode == d.code && b.depotName == d.name }
-            let models = c.catalog.models.filter { m in m.regular && m.kind == d.kind && m.batches.contains(where: atDepot) }
+            // Models with something still based there: a batch that has all left doesn't count.
+            let based = { (m: VehicleModel) in m.batches.contains { atDepot($0) && !m.inService($0).isEmpty } }
+            let models = c.catalog.models.filter { m in m.regular && m.kind == d.kind && based(m) }
             guard !models.isEmpty else { return nil }
             let caught = { (m: VehicleModel) in
                 let mine = c.owned[m.id] ?? []

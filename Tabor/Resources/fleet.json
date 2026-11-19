@@ -1,7 +1,7 @@
 {
  "source": "Warsaw ZTM vehicle database (fetched 2026-09-22) and the city's open data (fetched 2026-11-18), plus Warszawikia, the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
  "sourcePl": "Baza pojazdów ZTM Warszawa (stan z 2026-09-22) i otwarte dane miasta (stan z 2026-11-18), a także Warszawikia, klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
- "fetched": "2026-11-18 08:28 UTC",
+ "fetched": "2026-11-19 15:54 UTC",
  "models": [
   {
    "id": "bus-solaris-urbino-18",
@@ -367,7 +367,7 @@
      8310, 8311, 8312, 8313, 8314, 8315, 8316, 8317, 8318, 8319,
      8320, 8321, 8322, 8323, 8324, 8325, 8326, 8327, 8328, 8329,
      8330, 8331, 8332, 8333, 8334, 8335, 8336, 8337, 8338, 8339,
-     8340, 8341, 8342, 8343, 8344, 8345, 8346, 8347, 8348,
+     8340, 8341, 8342, 8343, 8344, 8345, 8346, 8347, 8348, 8349,
      8350, 8351, 8352, 8353, 8354, 8355, 8356, 8357, 8358, 8359,
      8360, 8361, 8362, 8363, 8364, 8365, 8366, 8367, 8368, 8369,
      8441, 8442, 8443, 8444, 8445, 8446, 8447, 8448, 8449,
@@ -383,13 +383,14 @@
      8570, 8571, 8572, 8573, 8574, 8575, 8576, 8577, 8578, 8579,
      8580, 8581, 8582, 8583, 8584, 8585, 8586, 8587, 8588, 8589,
      8590, 8591, 8592, 8593, 8594, 8595,
-     8800, 8802, 8804, 8805, 8807, 8808,
-     8813, 8814, 8816, 8817,
-     8820, 8821, 8822, 8823, 8824, 8825, 8826, 8828,
-     8831,
-     8843, 8846, 8847,
-     8851, 8855,
-     8879,
+     8800, 8802, 8804, 8805, 8807, 8808, 8809,
+     8810, 8812, 8813, 8814, 8815, 8816, 8817, 8818, 8819,
+     8820, 8821, 8822, 8823, 8824, 8825, 8826, 8827, 8828, 8829,
+     8830, 8831, 8832, 8833, 8835, 8836, 8837, 8839,
+     8841, 8842, 8843, 8844, 8845, 8846, 8847, 8848,
+     8850, 8851, 8852, 8853, 8854, 8855, 8856, 8857, 8858, 8859,
+     8860, 8861, 8862, 8863, 8864, 8865, 8866, 8867, 8868, 8869,
+     8870, 8871, 8872, 8873, 8874, 8875, 8876, 8877, 8878, 8879,
      8880, 8881, 8882, 8883, 8884, 8885, 8886, 8887, 8888, 8889,
      8890, 8891, 8892, 8893, 8894, 8895, 8896, 8897, 8898, 8899
     ]
@@ -407,7 +408,49 @@
      "source": "Warszawikia",
      "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_18"
     }
-   }
+   },
+   "retiredBatches": [
+    {
+     "year": 2011,
+     "depotCode": "R-1",
+     "depotName": "Woronicza",
+     "operator": "MZA",
+     "numbers": [8349]
+    },
+    {
+     "year": 2008,
+     "depotCode": "R-4",
+     "depotName": "Stalowa",
+     "operator": "MZA",
+     "numbers": [
+      8856, 8857, 8858, 8859,
+      8860, 8861, 8862, 8863, 8864, 8865, 8866, 8867, 8868, 8869,
+      8870, 8871, 8872, 8873, 8874, 8875, 8876, 8877, 8878
+     ]
+    },
+    {
+     "year": 2008,
+     "depotCode": "R-3",
+     "depotName": "Ostrobramska",
+     "operator": "MZA",
+     "numbers": [
+      8827, 8829,
+      8830, 8832, 8833, 8835, 8836, 8837, 8839,
+      8841, 8842, 8844, 8845, 8848,
+      8850, 8852, 8853, 8854
+     ]
+    },
+    {
+     "year": 2008,
+     "depotCode": "R-1",
+     "depotName": "Woronicza",
+     "operator": "MZA",
+     "numbers": [
+      8809,
+      8810, 8812, 8815, 8818, 8819
+     ]
+    }
+   ]
   },
   {
    "id": "bus-solaris-urbino-18e",
@@ -892,10 +935,28 @@
       "places": 92,
       "seats": 27
      },
-     "numbers": [1862, 1863]
+     "numbers": [
+      1809,
+      1833, 1839,
+      1840, 1845, 1849,
+      1851, 1855, 1856, 1857, 1858, 1859,
+      1862, 1863
+     ]
     }
    ],
    "liveries": {
+    "1809": "oldYellowRed",
+    "1833": "oldYellowRed",
+    "1839": "oldYellowRed",
+    "1840": "oldYellowRed",
+    "1845": "oldYellowRed",
+    "1849": "oldYellowRed",
+    "1851": "oldYellowRed",
+    "1855": "oldYellowRed",
+    "1856": "oldYellowRed",
+    "1857": "oldYellowRed",
+    "1858": "oldYellowRed",
+    "1859": "oldYellowRed",
     "1862": "oldYellowRed",
     "1863": "oldYellowRed"
    },
@@ -905,25 +966,78 @@
      740, 741, 743, 744, 746, 747, 748, 749,
      750, 753, 754, 755, 756, 757, 758,
      761,
+     1401,
      1411, 1412, 1413, 1414, 1415, 1416, 1417, 1418, 1419,
      1420, 1421, 1422, 1423, 1424, 1425, 1426, 1427, 1428, 1429,
      1430,
+     1500, 1502,
      1520, 1521, 1522, 1523, 1524, 1525, 1526, 1527, 1528, 1529,
-     1530, 1531, 1532, 1534, 1535, 1536, 1537, 1538, 1539,
+     1530, 1531, 1532, 1533, 1534, 1535, 1536, 1537, 1538, 1539,
      1540, 1541, 1542, 1543, 1544, 1545, 1546, 1548, 1549,
      1550, 1551, 1552, 1553, 1554, 1555,
+     1851, 1855, 1856, 1857, 1858, 1859,
      1862, 1863,
      9311, 9312, 9313, 9314, 9315, 9316, 9317, 9318, 9319,
      9320, 9321, 9322, 9323, 9324, 9325, 9326, 9327, 9328, 9329,
      9330, 9331, 9332, 9333, 9334, 9335, 9336, 9337, 9338, 9339,
-     9340, 9342, 9343, 9344, 9345, 9346, 9347, 9348, 9349,
+     9340, 9341, 9342, 9343, 9344, 9345, 9346, 9347, 9348, 9349,
      9350, 9351, 9352, 9353, 9354, 9355, 9356, 9357, 9358, 9359
     ],
     "4": [
      721, 722, 723, 724,
      774, 775, 776, 777, 778, 779
     ]
-   }
+   },
+   "retiredBatches": [
+    {
+     "year": 2017,
+     "depotCode": "",
+     "depotName": "Klementowicka PKS",
+     "operator": "PKS Grodzisk",
+     "numbers": [9341]
+    },
+    {
+     "year": 2011,
+     "depotCode": "R-3",
+     "depotName": "Ostrobramska",
+     "operator": "MZA",
+     "numbers": [1533]
+    },
+    {
+     "year": 2008,
+     "depotCode": "R-4",
+     "depotName": "Stalowa",
+     "operator": "MZA",
+     "numbers": [
+      1800, 1801, 1802, 1803, 1804, 1805, 1806, 1807, 1808, 1809,
+      1810, 1811, 1812, 1813, 1814, 1815, 1816, 1817, 1818, 1819,
+      1833, 1839,
+      1844, 1846,
+      1856
+     ]
+    },
+    {
+     "year": 2008,
+     "depotCode": "R-3",
+     "depotName": "Ostrobramska",
+     "operator": "MZA",
+     "numbers": [
+      1830, 1835, 1838,
+      1840, 1842, 1843, 1845, 1848, 1849,
+      1851, 1855, 1857, 1858, 1859
+     ]
+    },
+    {
+     "year": 2007,
+     "depotCode": "R-4",
+     "depotName": "Stalowa",
+     "operator": "MZA",
+     "numbers": [
+      1401,
+      1500, 1502
+     ]
+    }
+   ]
   },
   {
    "id": "bus-man-a23",
@@ -1104,7 +1218,24 @@
      9940, 9941, 9942, 9943, 9944, 9945, 9946, 9947, 9948, 9949,
      9950, 9951, 9952, 9953, 9954, 9955
     ]
-   }
+   },
+   "leaving": [
+    {
+     "until": "2026-11-30",
+     "numbers": [
+      9901, 9902, 9903, 9904, 9905, 9906, 9907, 9908, 9909,
+      9910, 9911, 9912, 9913, 9914, 9915, 9916, 9917, 9918, 9919,
+      9920, 9921, 9922, 9923, 9924, 9925, 9926, 9927, 9928, 9929,
+      9930, 9932, 9933, 9934, 9935, 9936, 9937, 9938, 9939,
+      9940, 9941, 9942, 9943, 9944, 9945, 9946, 9947, 9948, 9949,
+      9950, 9951, 9952, 9953, 9954, 9955
+     ],
+     "operator": "ReloBus",
+     "about": "ReloBus's contract for its articulated buses ends on 30 November 2026. MAN Lion's City 18 hybrids #9701–9754 take over, and these Urbinos are up for sale.",
+     "aboutPl": "Umowa ReloBusu na autobusy przegubowe kończy się 30 listopada 2026. Zastąpią je hybrydowe MAN-y Lion's City 18 #9701–9754, a te Urbino idą na sprzedaż.",
+     "source": "Warszawikia, phototrans.eu"
+    }
+   ]
   },
   {
    "id": "bus-mercedes-benz-628b02",
@@ -1181,6 +1312,15 @@
       6230, 6231, 6232, 6233, 6234, 6235, 6236, 6237, 6238, 6239,
       6240, 6241, 6242, 6243, 6244
      ]
+    }
+   ],
+   "retiredBatches": [
+    {
+     "year": 2016,
+     "depotCode": "",
+     "depotName": "Posag 7 Panien MOB",
+     "operator": "Mobilis",
+     "numbers": [9816]
     }
    ]
   },
@@ -1322,7 +1462,23 @@
      "source": "htp.org.pl",
      "url": "https://www.htp.org.pl/warszawa-10-lat-od-zakonczenia-dostaw-autobusow-solbus-sm18-do-mza/"
     }
-   }
+   },
+   "retiredBatches": [
+    {
+     "year": 2015,
+     "depotCode": "R-3",
+     "depotName": "Ostrobramska",
+     "operator": "MZA",
+     "numbers": [7305]
+    },
+    {
+     "year": 2014,
+     "depotCode": "R-3",
+     "depotName": "Ostrobramska",
+     "operator": "MZA",
+     "numbers": [7301]
+    }
+   ]
   },
   {
    "id": "bus-solbus-sm12",
@@ -1398,7 +1554,7 @@
       "seats": 26
      },
      "numbers": [
-      1020, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029,
+      1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029,
       1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038, 1039
      ]
     },
@@ -1415,6 +1571,15 @@
       1060, 1061, 1062, 1063, 1064, 1065, 1066, 1067, 1068, 1069,
       1070, 1071, 1072, 1073, 1074, 1075, 1076, 1077, 1078, 1079
      ]
+    }
+   ],
+   "retiredBatches": [
+    {
+     "year": 2011,
+     "depotCode": "R-1",
+     "depotName": "Woronicza",
+     "operator": "MZA",
+     "numbers": [1021]
     }
    ]
   },
@@ -2320,7 +2485,16 @@
     "80204": "suburbanBlue",
     "80205": "suburbanBlue",
     "80206": "suburbanBlue"
-   }
+   },
+   "retiredBatches": [
+    {
+     "year": 2021,
+     "depotCode": "",
+     "depotName": "Klementowicka PKS",
+     "operator": "PKS Grodzisk",
+     "numbers": [70022]
+    }
+   ]
   },
   {
    "id": "bus-solaris-urbino-12cng",
@@ -2955,7 +3129,34 @@
     "places": 58,
     "airCon": true,
     "floor": "LE"
-   }
+   },
+   "retiredBatches": [
+    {
+     "year": 2018,
+     "depotCode": "",
+     "depotName": "Estrady RLB",
+     "operator": "ReloBus",
+     "numbers": [
+      9061, 9063, 9064, 9065, 9066, 9068, 9069,
+      9070, 9071, 9072
+     ]
+    }
+   ],
+   "leaving": [
+    {
+     "until": "2026-10-25",
+     "numbers": [
+      9062, 9067,
+      9073, 9074, 9075, 9076, 9077, 9078, 9079,
+      9080, 9081, 9082, 9083, 9084, 9085, 9086, 9087, 9088, 9089,
+      9090, 9091, 9092, 9093, 9094
+     ],
+     "operator": "ReloBus",
+     "about": "ReloBus's contract for these midibuses ended on 25 October 2026, after almost eight years. The new Otokar Vectio C hybrids #9001–9054 took over, and these are up for sale.",
+     "aboutPl": "Umowa ReloBusu na te midibusy skończyła się 25 października 2026, po prawie ośmiu latach. Zastąpiły je nowe hybrydowe Otokary Vectio C #9001–9054, a te idą na sprzedaż.",
+     "source": "phototrans.eu"
+    }
+   ]
   },
   {
    "id": "bus-zaz-a08",
@@ -3042,7 +3243,16 @@
     "70038": "suburbanBlue",
     "70039": "suburbanBlue",
     "70040": "suburbanBlue"
-   }
+   },
+   "retiredBatches": [
+    {
+     "year": 2021,
+     "depotCode": "",
+     "depotName": "Klementowicka PKS",
+     "operator": "PKS Grodzisk",
+     "numbers": [70024]
+    }
+   ]
   },
   {
    "id": "bus-ursus-cs2",
@@ -3309,7 +3519,16 @@
     "70005": "suburbanBlue",
     "70006": "suburbanBlue",
     "70007": "suburbanBlue"
-   }
+   },
+   "retiredBatches": [
+    {
+     "year": 2019,
+     "depotCode": "",
+     "depotName": "Piaseczno",
+     "operator": "PKS Polonus",
+     "numbers": [70001]
+    }
+   ]
   },
   {
    "id": "bus-man-a37",
@@ -3463,8 +3682,17 @@
     "8399": "greyRed"
    },
    "generations": {
-    "3": [8396, 8397, 8399]
-   }
+    "3": [8396, 8397, 8398, 8399]
+   },
+   "retiredBatches": [
+    {
+     "year": 2011,
+     "depotCode": "R-3",
+     "depotName": "Ostrobramska",
+     "operator": "MZA",
+     "numbers": [8398]
+    }
+   ]
   },
   {
    "id": "bus-jelcz-043",
@@ -6964,6 +7192,7 @@
    "works": true
   }
  ],
+ "retiredModels": [],
  "wraps": [],
  "depots": [
   {

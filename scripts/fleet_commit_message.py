@@ -23,10 +23,11 @@ from fetch_fleet import code_of, is_coded  # noqa: E402
 
 FLEET = "Tabor/Resources/fleet.json"
 CITY = "data/ztm-pojazdy.json"
-SECTIONS = ("models", "worksModels", "codedWorksModels")
+# retiredModels: models that have all left (fetch_fleet.py's ledger), still in the book.
+SECTIONS = ("models", "worksModels", "codedWorksModels", "retiredModels")
 # Worked out from the vehicles, or shown per vehicle, so the model-level check skips them.
 PER_VEHICLE = {"batches", "fleet", "firstYear", "lastYear", "operators", "specs", "variants",
-               "liveries", "generations", "name"}
+               "liveries", "generations", "name", "retiredBatches"}
 LIVERIES = {"suburbanBlue": "suburban blue", "oldYellowRed": "old yellow and red",
             "greyRed": "grey and red", "autosanPrototype": "Autosan's prototype stickers",
             "lastRedYellow": "the last red and yellow", None: "everyday paint"}
@@ -37,7 +38,8 @@ SPECS = {"length": "length", "drive": "drive", "seats": "seats", "places": "plac
 KEYS = {"namePl": "Polish name", "coupled": "coupling", "sets": "fixed sets", "pairs": "usual sets",
         "trailers": "trailers", "tows": "what it tows", "trial": "trial note", "trialPl": "trial note",
         "trialEnded": "trial end", "runs": "where it runs", "runsPl": "where it runs",
-        "formerly": "former ids", "make": "make", "code": "model code", "coded": "codes"}
+        "formerly": "former ids", "make": "make", "code": "model code", "coded": "codes",
+        "leaving": "leaving date"}
 
 
 def load(ref, path):
@@ -61,7 +63,8 @@ def tier(m):
         return "ON TEST"
     if m.get("works"):
         return "WORKS"
-    f = m["fleet"]
+    # By every vehicle it has had, retired ones included, as the app does.
+    f = m["fleet"] + sum(len(b["numbers"]) for b in m.get("retiredBatches", []))
     return "LEGENDARY" if f <= 12 else "GOLD" if f <= 48 else "RARE" if f <= 80 else "COMMON"
 
 
@@ -213,7 +216,7 @@ def message(old, new, old_city=None, new_city=None):
 
     lines = []
     lines += section("New in the book:", added)
-    lines += section("Gone from the city's list, so out of the book:", gone)
+    lines += section("Gone from the city's list, so retired in the book:", gone)
     lines += section("Changed:", changed)
 
     om, nm = {m["id"]: m for m in models(old)}, {m["id"]: m for m in models(new)}

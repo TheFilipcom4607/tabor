@@ -71,6 +71,9 @@ struct ModelPageView: View {
         let stats = sightings.stats
         let owned = stats.owned(modelId: model.id)
         let ownedByNumber = Dictionary(uniqueKeysWithValues: owned.map { ($0.number, $0) })
+        // Today's fleet, as the fleet % counts it; retired catches go in a section of their own.
+        let counted = owned.filter { model.counts($0.number) }.count
+        let retiredCaught = owned.filter { model.isRetired($0.number) }.map(\.number)
         let pictures = VehicleSightings(sightings)
         // The site leaves out works cars that carry only a code.
         let onSite = !model.numbers.allSatisfy { FleetNumber.code(of: $0) != nil }
@@ -101,7 +104,7 @@ struct ModelPageView: View {
                     KindTag(kind: model.kind)
                     TierPill(tier: model.tier, fleet: model.fleet)
                     Spacer(minLength: 0)
-                    if owned.count < model.fleet {
+                    if !model.retiredOut, counted < model.inService {
                         showOnMapButton(model, haveSome: !owned.isEmpty)
                     }
                 }
@@ -137,10 +140,22 @@ struct ModelPageView: View {
                 .padding(.top, -6)
                 .padding(.bottom, 12)
             }
+            if let going = leavingLine(model) {
+                DepartureInfoButton(info: going.info) {
+                    Mono(text: Text(going.text) + Text(verbatim: " ") + Text(Image(systemName: "info.circle")),
+                         size: 10.5, weight: 400, spacing: 0.1, color: model.tier.color)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.horizontal, 22)
+                .padding(.top, -6)
+                .padding(.bottom, 12)
+            }
 
             HStack(spacing: 11) {
-                ProgressBar(fraction: Double(owned.count) / Double(max(model.fleet, 1)), color: model.tier.bar)
-                OwnedCount(owned: owned.count, fleet: model.fleet)
+                ProgressBar(fraction: Double(counted) / Double(max(model.progressFleet, 1)), color: model.tier.bar)
+                OwnedCount(owned: counted, fleet: model.progressFleet)
             }
             .padding(.horizontal, 22)
             // The scroll's soft top edge makes up the rest of the gap.
@@ -164,17 +179,20 @@ struct ModelPageView: View {
                                 .padding(.top, model.spread == nil ? Self.softEdge : 0)
                                 .padding(.bottom, 16)
                         }
-                        ForEach(Array(model.batches.enumerated()), id: \.offset) { i, batch in
-                            batchHeader(batch, have: batch.numbers.filter { ownedByNumber[$0] != nil }.count, trial: model.trialDisplay,
-                                        drive: model.drive(of: batch))
+                        // Today's fleet, batch by batch: a batch that has all left is only in RETIRED.
+                        let shown = model.batches.enumerated().filter { !model.inService($0.element).isEmpty }
+                        ForEach(shown, id: \.offset) { i, batch in
+                            let numbers = model.inService(batch)
+                            batchHeader(batch, numbers: numbers, have: numbers.filter { ownedByNumber[$0] != nil }.count,
+                                        trial: model.trialDisplay, drive: model.drive(of: batch))
                                 // The first one clears the soft top edge itself when there's no specs
                                 // row above it (works cars, older vintage): otherwise it starts faded.
-                                .padding(.top, i == 0 ? (model.spread == nil && !onSite ? Self.softEdge : 6) : 18)
+                                .padding(.top, i == shown.first?.offset ? (model.spread == nil && !onSite ? Self.softEdge : 6) : 18)
                                 .padding(.bottom, 10)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .overlay(alignment: .top) { Rectangle().fill(Color.white.opacity(0.08)).frame(height: 1) }
-                                .padding(.top, i == 0 ? 0 : 14)
-                            stickerRows(ordered(batch.numbers, owned: ownedByNumber), grid: i) { n in
+                                .padding(.top, i == shown.first?.offset ? 0 : 14)
+                            stickerRows(ordered(numbers, owned: ownedByNumber), grid: i) { n in
                                 if let v = ownedByNumber[n] {
                                     sticker(n, model: model, timesSeen: v.timesSeen, pictures: pictures)
                                 } else {
@@ -185,6 +203,17 @@ struct ModelPageView: View {
                                     }
                                     .buttonStyle(.plain)
                                 }
+                            }
+                        }
+                        if !model.retired.isEmpty {
+                            // Uncaught retired vehicles stay hidden: slots you could never fill.
+                            DepartureInfoButton(info: DepartureInfo.retiredSection(model)) {
+                                retiredHeader(count: model.retired.count, have: retiredCaught.count)
+                            }
+                                .padding(.top, shown.isEmpty ? (model.spread == nil && !onSite ? Self.softEdge : 6) : 32)
+                                .padding(.bottom, retiredCaught.isEmpty ? 0 : 10)
+                            stickerRows(ordered(retiredCaught, owned: ownedByNumber), grid: Self.retiredGrid) { n in
+                                sticker(n, model: model, timesSeen: ownedByNumber[n]?.timesSeen ?? 1, pictures: pictures)
                             }
                         }
                         let strays = owned.filter { v in !model.numbers.contains(v.number) }
@@ -258,6 +287,8 @@ struct ModelPageView: View {
     private static let cell: CGFloat = 104, columns = 3
     /// The strays' grid, after the batches.
     private static let strays = -1
+    /// The retired vehicles' grid, between the batches and the strays.
+    private static let retiredGrid = -2
 
     /// One row of stickers, the scroll's target for a catch in it.
     private struct Row: Hashable {
@@ -307,9 +338,13 @@ struct ModelPageView: View {
     /// The row a caught number's sticker is in, laid out as the page draws it.
     private func row(of n: Int, model: VehicleModel, owned: [OwnedVehicle]) -> Row? {
         guard owned.contains(where: { $0.number == n }) else { return nil }
+        let byNumber = Dictionary(uniqueKeysWithValues: owned.map { ($0.number, $0) })
+        if model.isRetired(n) {
+            let caught = owned.map(\.number).filter(model.isRetired)
+            return ordered(caught, owned: byNumber).firstIndex(of: n).map { Row(grid: Self.retiredGrid, index: $0 / Self.columns) }
+        }
         if let i = model.batches.firstIndex(where: { $0.numbers.contains(n) }) {
-            let byNumber = Dictionary(uniqueKeysWithValues: owned.map { ($0.number, $0) })
-            return ordered(model.batches[i].numbers, owned: byNumber).firstIndex(of: n).map { Row(grid: i, index: $0 / Self.columns) }
+            return ordered(model.inService(model.batches[i]), owned: byNumber).firstIndex(of: n).map { Row(grid: i, index: $0 / Self.columns) }
         }
         // In the order the strays' rows draw them.
         return owned.filter { !model.numbers.contains($0.number) }.firstIndex { $0.number == n }
@@ -368,11 +403,12 @@ struct ModelPageView: View {
 
     /// "2022 BATCH · R-3 MOKOTÓW · 4209—4282" with how much of it you have; green once complete.
     /// The drive goes after the year when the model has more than one.
-    private func batchHeader(_ b: Batch, have: Int, trial: String?, drive: ModelSpecs.Drive?) -> some View {
+    /// `numbers`: the batch's vehicles still in service.
+    private func batchHeader(_ b: Batch, numbers: [Int], have: Int, trial: String?, drive: ModelSpecs.Drive?) -> some View {
         let year = b.year.map { String(localized: "\(String($0)) BATCH") } ?? trial ?? String(localized: "YEAR UNKNOWN")
-        let done = have == b.numbers.count
+        let done = have == numbers.count
         return HStack(spacing: 8) {
-            Mono([year, drive?.name ?? "", b.placeDisplay, b.rangeDisplay].filter { !$0.isEmpty }.joined(separator: " · "),
+            Mono([year, drive?.name ?? "", b.placeDisplay, NumberSpan.display(numbers)].filter { !$0.isEmpty }.joined(separator: " · "),
                  size: 10, spacing: 0.14, color: Palette.dim)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
@@ -382,10 +418,39 @@ struct ModelPageView: View {
                     .font(.system(size: 9, weight: .heavy))
                     .foregroundStyle(Palette.green)
             }
-            Mono("\(have)/\(b.numbers.count)", size: 10, weight: done ? 700 : 400, spacing: 0.06,
+            Mono("\(have)/\(numbers.count)", size: 10, weight: done ? 700 : 400, spacing: 0.06,
                  color: done ? Palette.green : have > 0 ? Palette.sub : Palette.faint)
                 .fixedSize()
         }
+    }
+
+    /// "RETIRED · LEFT WARSAW" with how many of them you caught before they went.
+    private func retiredHeader(count: Int, have: Int) -> some View {
+        HStack(spacing: 8) {
+            Mono("RETIRED · LEFT WARSAW", size: 10, spacing: 0.14, color: Palette.dim)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+            Image(systemName: "info.circle")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Palette.dim)
+            Spacer(minLength: 0)
+            Mono("\(have)/\(count)", size: 10, spacing: 0.06, color: have > 0 ? Palette.sub : Palette.faint)
+                .fixedSize()
+        }
+        .padding(.top, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .top) { Rectangle().fill(Color.white.opacity(0.08)).frame(height: 1) }
+    }
+
+    /// "54 LEAVING WARSAW ON 30 NOV", or "17 ON THEIR LAST RUNS · LEAVING WARSAW SOON" once the
+    /// day has gone by.
+    private func leavingLine(_ m: VehicleModel) -> (text: String, info: DepartureInfo)? {
+        let going = m.leaving.map { l in (l, l.numbers.filter { !m.isRetired($0) }) }.filter { !$0.1.isEmpty }
+        guard let (l, numbers) = going.first else { return nil }
+        let past = Leaving.isPast(l.until)
+        if past { return (String(localized: "\(numbers.count) ON THEIR LAST RUNS · LEAVING WARSAW SOON"), .leaving(l, past: true)) }
+        let day = Leaving.date(l.until).map { $0.formatted(.dateTime.day().month(.abbreviated).locale(.app)).uppercased(with: .app) } ?? l.until
+        return (String(localized: "\(numbers.count) LEAVING WARSAW ON \(day)"), .leaving(l, past: false))
     }
 
     /// Owned first (as the design shows), then the rest, by number or catch date.

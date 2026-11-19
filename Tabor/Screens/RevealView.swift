@@ -97,13 +97,18 @@ struct RevealView: View {
         let number = draft.number
         let existing = (model != nil && number != nil) ? stats.vehicle(number: number!, modelId: model!.id) : nil
         let isNewVehicle = existing == nil
-        let modelOwned = model.map { stats.ownedCount(modelId: $0.id) } ?? 0
+        // Counted as the model page does: today's fleet, so retired catches go apart. A
+        // vehicle on its last runs, already off the city's list, is counted among those.
+        let countsHere = number.map { n in model?.counts(n) ?? true } ?? true
+        let counted = model.map { m in stats.owned(modelId: m.id).filter { m.counts($0.number) == countsHere }.count } ?? 0
+        let modelAll = model.map { stats.ownedCount(modelId: $0.id) } ?? 0
         // A coupled tram's other car goes in the book too, so the counts include it.
         let partner = secondCar(model: model, number: number)
         let partnerIsNew = partner.map { stats.vehicle(number: $0.number, modelId: $0.model.id) == nil } ?? false
         // A trailer and its motor car are different models: only a same-model car adds to this one's count.
         let added = (isNewVehicle ? 1 : 0) + (partnerIsNew && partner?.model.id == model?.id ? 1 : 0)
-        let isNewModel = modelOwned == 0
+        let isNewModel = modelAll == 0
+        let modelOwned = counted
         let tier = model?.tier ?? .common
         let ready = model != nil && number != nil
         let choices = choices
@@ -146,11 +151,13 @@ struct RevealView: View {
                                           comment: "Reveal tile: your Nth sighting of this vehicle"),
                              value: Ordinal.string(isNewVehicle ? modelOwned + added : seen),
                              valueColor: Palette.yellow,
-                             caption: isNewVehicle ? String(localized: "of \(model.fleet)")
-                                 : String(localized: "caption.sighting", defaultValue: "sighting"))
-                    StatTile(label: String(localized: "MODEL"), value: isNewModel ? String(localized: "NEW", comment: "Reveal tile: a model new to you") : "\(modelOwned + added)",
+                             caption: !isNewVehicle ? String(localized: "caption.sighting", defaultValue: "sighting")
+                                 : countsHere ? String(localized: "of \(model.progressFleet)")
+                                 : String(localized: "of \(model.retired.count) retired"))
+                    let modelCount = countsHere ? modelOwned + added : stats.progress(model: model)
+                    StatTile(label: String(localized: "MODEL"), value: isNewModel ? String(localized: "NEW", comment: "Reveal tile: a model new to you") : "\(modelCount)",
                              valueColor: isNewModel ? Palette.green : Palette.ink,
-                             caption: isNewModel ? String(localized: "species") : String(localized: "of \(model.fleet)"))
+                             caption: isNewModel ? String(localized: "species") : String(localized: "of \(model.progressFleet)"))
                     if Calendar.current.isDateInToday(draft.date) {
                         let streak = draft.book.streak
                         StatTile(label: String(localized: "STREAK"), value: "\(streak)",
@@ -1116,7 +1123,10 @@ struct RevealView: View {
         save(model: model, number: number)
 
         let owned = ownedBefore.union(cars)
-        let batchDone = cars.contains { model.batch(containing: $0)?.numbers.allSatisfy(owned.contains) ?? false }
+        // As the badges count: what's in service, plus the retired ones you have.
+        let batchDone = cars.contains { car in
+            model.batch(containing: car).map { model.needed($0.numbers, mine: owned).allSatisfy(owned.contains) } ?? false
+        }
         let firstTime = !ownedBefore.isSuperset(of: cars)
         if let step {
             step.done(draft)
@@ -1124,7 +1134,7 @@ struct RevealView: View {
             router.openModel(model.id, landing: number)
             dismiss()
         }
-        if firstTime, batchDone || model.numbers.allSatisfy(owned.contains) {
+        if firstTime, batchDone || model.needed(model.numbers, mine: owned).allSatisfy(owned.contains) {
             try? await Task.sleep(for: .milliseconds(450))
             Haptics.shared.completed()
         }
