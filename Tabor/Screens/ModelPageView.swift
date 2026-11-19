@@ -75,8 +75,6 @@ struct ModelPageView: View {
         let counted = owned.filter { model.counts($0.number) }.count
         let retiredCaught = owned.filter { model.isRetired($0.number) }.map(\.number)
         let pictures = VehicleSightings(sightings)
-        // The site leaves out works cars that carry only a code.
-        let onSite = !model.numbers.allSatisfy { FleetNumber.code(of: $0) != nil }
 
         return VStack(alignment: .leading, spacing: 0) {
             TopBar {
@@ -172,11 +170,6 @@ struct ModelPageView: View {
                         if let spread = model.spread {
                             specsRow(spread, kind: model.kind)
                                 .padding(.top, Self.softEdge)
-                                .padding(.bottom, onSite ? 9 : 16)
-                        }
-                        if onSite {
-                            websiteLink(model)
-                                .padding(.top, model.spread == nil ? Self.softEdge : 0)
                                 .padding(.bottom, 16)
                         }
                         // Today's fleet, batch by batch: a batch that has all left is only in RETIRED.
@@ -187,7 +180,7 @@ struct ModelPageView: View {
                                         trial: model.trialDisplay, drive: model.drive(of: batch))
                                 // The first one clears the soft top edge itself when there's no specs
                                 // row above it (works cars, older vintage): otherwise it starts faded.
-                                .padding(.top, i == shown.first?.offset ? (model.spread == nil && !onSite ? Self.softEdge : 6) : 18)
+                                .padding(.top, i == shown.first?.offset ? (model.spread == nil ? Self.softEdge : 6) : 18)
                                 .padding(.bottom, 10)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .overlay(alignment: .top) { Rectangle().fill(Color.white.opacity(0.08)).frame(height: 1) }
@@ -210,7 +203,7 @@ struct ModelPageView: View {
                             DepartureInfoButton(info: DepartureInfo.retiredSection(model)) {
                                 retiredHeader(count: model.retired.count, have: retiredCaught.count)
                             }
-                                .padding(.top, shown.isEmpty ? (model.spread == nil && !onSite ? Self.softEdge : 6) : 32)
+                                .padding(.top, shown.isEmpty ? (model.spread == nil ? Self.softEdge : 6) : 32)
                                 .padding(.bottom, retiredCaught.isEmpty ? 0 : 10)
                             stickerRows(ordered(retiredCaught, owned: ownedByNumber), grid: Self.retiredGrid) { n in
                                 sticker(n, model: model, timesSeen: ownedByNumber[n]?.timesSeen ?? 1, pictures: pictures)
@@ -477,41 +470,6 @@ struct ModelPageView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Show on the HUNT map")
-    }
-
-    /// The model's page on the site: a photo and the facts in full (#111). A card like the
-    /// spec tiles above it, so it reads as more about the model rather than a stray button.
-    /// It goes by id, so the site's own slugs can change.
-    private func websiteLink(_ model: VehicleModel) -> some View {
-        Link(destination: URL(string: "https://thefilip.com/tabor/m/\(model.id)")!) {
-            HStack(spacing: 12) {
-                Image(systemName: "photo")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Palette.ink)
-                    .frame(width: 34, height: 34)
-                    .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                VStack(alignment: .leading, spacing: 3) {
-                    Mono(String("THEFILIP.COM"), size: 10, spacing: 0.12)
-                    Text("Photo, facts and every number")
-                        .font(TaborFont.grotesk(14, 600))
-                        .foregroundStyle(Palette.ink)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(Palette.sub)
-            }
-            .padding(.vertical, 10)
-            .padding(.leading, 10)
-            .padding(.trailing, 14)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.hairline))
-            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Photo and facts on the website")
     }
 
     private func ordered(_ numbers: [Int], owned: [Int: OwnedVehicle]) -> [Int] {

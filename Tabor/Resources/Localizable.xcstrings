@@ -31,26 +31,6 @@
         }
       }
     },
-    "Photo, facts and every number": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zdjęcie, dane i wszystkie numery"
-          }
-        }
-      }
-    },
-    "Photo and facts on the website": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zdjęcie i dane na stronie"
-          }
-        }
-      }
-    },
     "It's already at that stop or past it.": {
       "localizations": {
         "pl": {
