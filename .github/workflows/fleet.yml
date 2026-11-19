@@ -137,6 +137,15 @@ jobs:
           fi
           echo "action=$action" | tee -a "$GITHUB_OUTPUT"
 
+      # What czynaczas.pl calls each type the city's list has no model for, for the waiting issue.
+      # Last night's copy on the Worker (the hints job below refreshes it); without it the issue
+      # just goes without the names.
+      - name: Get czynaczas.pl's names for types with no model
+        continue-on-error: true
+        env:
+          ROUTES_UPLOAD_TOKEN: ${{ secrets.ROUTES_UPLOAD_TOKEN }}
+        run: python3 scripts/czynaczas.py hints "$RUNNER_TEMP/czynaczas.json"
+
       - name: Write the description
         run: |
           grep -E '^  [+?-] ' "$RUNNER_TEMP/build.log" | sed 's/^  //' | sort > "$RUNNER_TEMP/build.txt" || true
@@ -162,7 +171,8 @@ jobs:
             # Most nights there are none, and grep finding nothing would fail the step.
             { grep '^?' "$RUNNER_TEMP/build.txt" || true; } \
               | sed -E 's/^\? BUS type ([0-9]+) fits no model yet, left out: /- typ \1 (autobusy): /;
-                        s/^\? TRAM type ([0-9]+) fits no model yet, left out: /- typ \1 (tramwaje): /'
+                        s/^\? TRAM type ([0-9]+) fits no model yet, left out: /- typ \1 (tramwaje): /' \
+              | python3 scripts/czynaczas.py annotate "$RUNNER_TEMP/czynaczas.json"
             echo
             echo "<sub>[Nie wiesz, co to?](https://thefilip.com/tabor/boty#bez-modelu)</sub>"
           } > waiting.md
@@ -201,10 +211,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      # czynaczas.pl's partner data (czynaczas.py): remarks for the app go to the Worker, and the
-      # special vehicles to the wraps step below. His terms keep all of it out of the repo, these
-      # logs and the artifacts, so the file stays in RUNNER_TEMP and the script prints counts only.
-      # Without it, the wraps issue just goes without his list.
+      # czynaczas.pl's partner data (czynaczas.py): remarks for the app and each vehicle's model
+      # (for the trials and waiting issues) go to the Worker, and the special vehicles to the wraps
+      # step below. His terms keep his data out of the repo, these logs and the artifacts, so the
+      # file stays in RUNNER_TEMP and the script prints counts only; the issues may show single
+      # entries, credited. Without it, the wraps issue just goes without his list.
       - name: Bring czynaczas.pl's data to the Worker
         continue-on-error: true
         env:
@@ -256,7 +267,7 @@ jobs:
             if [ -n "$number" ]; then
               # A vehicle by its line, not its last-seen time, and a post by its link, not Jev's
               # odds: both change every night.
-              hints() { grep -E '^(\| (BUS|TRAM) #|- [0-9]|- kod )' \
+              hints() { grep -E '^(\| (BUS|TRAM) #|- [0-9])' \
                 | sed -E 's/^(\| [^|]+\| [^|]+\|).*/\1/; s/^(- .*\]\([^)]*\)).*/\1/' | sort || true; }
               added=$(comm -13 <(gh issue view "$number" --json body --jq .body | hints) <(hints < wraps.md))
               gh issue edit "$number" --body-file wraps.md

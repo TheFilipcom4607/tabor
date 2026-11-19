@@ -3,21 +3,27 @@
 
 czynaczas.pl (Marcin Bittel) gave TABOR a partner API on 2026-11-09: special vehicles (wraps,
 trial buses), remarks on vehicles, tram sets, models and years. His terms: none of it sits in
-plain form in the public repo, and nobody gets all of it in one go. The repo and its Actions
-logs are public, so this script prints counts only, never his data, unless you run `show`
-on your own Mac.
+plain form in the public repo, and nobody gets all of it in one go. He's relaxed about the
+rest ("te dane to nie jest nic prywatnego"), so the bot's issues may show a special entry or a
+single vehicle's model, credited; the remarks, his own writing, only ever reach the app, one at
+a time. The logs print counts only.
 
   sync <special.json>   The nightly fleet Action. Asks the Worker for the last upload's ETag,
                         fetches the API with If-None-Match (his request; usually a 304), and on
                         a change PUTs the remarks and the special-vehicles list to the Worker.
                         Either way, writes the special vehicles to <special.json> for
                         possible_wraps.py. Keep that file out of artifacts: those are public.
+                        Brand, model and year per vehicle go to the Worker too, for `hints`.
                         With data/czynaczas-en.json (your Mac only, see below) it also sends
                         the English, so it fetches the whole reply instead of asking for a 304.
+  hints <out.json>      For the trials and waiting-vehicles issues: the special vehicles and
+                        each vehicle's brand, model and year, from the Worker (not from him,
+                        so the hourly trials run doesn't call his API every hour).
+  annotate <hints.json> Reads the waiting-vehicles issue's lines on stdin and adds what his data
+                        calls each type. Without the file, passes them through.
   todo                  On your Mac: the remarks with no English yet, or whose Polish changed
                         since it was translated, for whoever adds them to the file.
-  show                  On your Mac: the special vehicles, each with the code the wraps issue
-                        uses for it, and the remarks with their English.
+  show                  On your Mac: the special vehicles and the remarks with their English.
 
 The English is written by hand, not by a model, and kept in data/czynaczas-en.json as
 {"3/5869": {"pl": "…", "en": "…"}}. It's his text, so the file stays out of git
@@ -29,6 +35,8 @@ The Worker's token is ROUTES_UPLOAD_TOKEN, as for routes.json. His limits: 5 cal
 30 an hour, then a 429 with Retry-After. Once a night is far below that; never retry on a 429.
 
 Usage:  python3 scripts/czynaczas.py sync <special.json>
+        python3 scripts/czynaczas.py hints <out.json>
+        python3 scripts/czynaczas.py annotate <hints.json> < lines
         python3 scripts/czynaczas.py todo
         python3 scripts/czynaczas.py show
 """
@@ -74,8 +82,8 @@ def secret(env, xcconfig):
 
 
 def code(entry):
-    """A short code for a special vehicle that says nothing about it, for the public wraps issue.
-    `show` prints it next to the entry, so you can tell which one the issue means."""
+    """The wraps issue showed special vehicles only as this code until 2026-11-19. Hints dismissed
+    under a code stay dismissed, so possible_wraps.py still checks it."""
     raw = f"{entry.get('id')}|{entry.get('start_date')}|{entry.get('text')}"
     return hashlib.sha256(raw.encode()).hexdigest()[:6]
 
@@ -127,27 +135,71 @@ def trimmed(reply):
     return remarks, special
 
 
+def models(reply):
+    """{"3/960": {"brand", "model", "year"}}: what the issues need, without the long operator names."""
+    return {k: {"brand": v.get("brand"), "model": v.get("brandModel"), "year": v.get("productionYear")}
+            for k, v in reply["vehicles"].items() if isinstance(v, dict) and (v.get("brand") or v.get("brandModel"))}
+
+
 def sync(out):
     meta = worker("GET", "/meta")
     hand = english()
-    # With English to send, the body is needed even when nothing of his changed.
-    status, reply, etag = fetch(None if hand else meta and meta.get("etag"))
+    # With English to send, the body is needed even when nothing of his changed, and so it is
+    # when the Worker has no vehicles yet (the first sync after they were added).
+    fresh = hand or not (meta and meta.get("vehicles"))
+    status, reply, etag = fetch(None if fresh else meta and meta.get("etag"))
     if status == 304:
         print(f"czynaczas: unchanged since {meta['updated'][:16]} ({meta['remarks']} remarks, "
               f"{meta.get('english', 0)} in English, {len(meta['special'])} special vehicles)")
         special = meta["special"]
     else:
         remarks, special = trimmed(reply)
+        # Vehicles first: the ETag below says they're in.
+        cars = models(reply)
+        worker("PUT", "/vehicles", cars)
         # Only a translation of the Polish as it is now; a stale one would say something else.
         body = {k: {"pl": pl, "en": hand[k]["en"]} if hand.get(k, {}).get("pl") == pl else pl
                 for k, pl in remarks.items()}
-        result = worker("PUT", body={"etag": etag or "", "remarks": body, "special": special})
+        result = worker("PUT", body={"etag": etag or "", "remarks": body, "special": special, "vehicles": len(cars)})
         print(f"czynaczas: uploaded {result['remarks']} remarks ({result['english']} in English), "
-              f"{result['special']} special vehicles")
+              f"{result['special']} special vehicles, {len(cars)} vehicles' models")
         if result["english"] < result["remarks"]:
             print(f"{result['remarks'] - result['english']} remarks have no English yet: "
                   "python3 scripts/czynaczas.py todo, on the Mac")
     Path(out).write_text(json.dumps(special, ensure_ascii=False))
+
+
+def hints(out):
+    meta = worker("GET", "/meta") or {}
+    cars = worker("GET", "/vehicles") or {}
+    Path(out).write_text(json.dumps({"special": meta.get("special", []), "vehicles": cars}, ensure_ascii=False))
+    print(f"czynaczas: {len(meta.get('special', []))} special vehicles, {len(cars)} vehicles' models")
+
+
+def name(car):
+    """His row as an issue shows it: "Otokar Vectio C, 2018"."""
+    if not car:
+        return None
+    text = " ".join(x for x in (car.get("brand"), car.get("model")) if x)
+    return text + (f", {car['year']}" if car.get("year") else "")
+
+
+def annotate(path):
+    """The waiting issue's "- typ 5909 (autobusy): 9001, 9006, ..." lines, each with the name his
+    data gives most of the type's numbers: a type is one model, so a stray row can't mislead."""
+    cars = json.loads(Path(path).read_text())["vehicles"] if Path(path).exists() else {}
+    for line in sys.stdin.read().splitlines():
+        m = re.match(r"- typ \d+ \((autobusy|tramwaje)\): (.*)", line)
+        if m and cars:
+            kind = "3" if m.group(1) == "autobusy" else "0"
+            rows = [cars[k] for n in re.findall(r"\d+", m.group(2)) if (k := f"{kind}/{n}") in cars]
+            names = [name(dict(r, year=None)) for r in rows]
+            if any(names):
+                best = max(set(filter(None, names)), key=names.count)
+                years = sorted({r["year"] for r, n in zip(rows, names) if n == best and r.get("year")})
+                span = f", {years[0]}" + (f"–{years[-1]}" if len(years) > 1 else "") if years else ""
+                line += f" · [czynaczas.pl](https://czynaczas.pl): {best}{span}"
+        print(line)
 
 
 def todo():
@@ -167,9 +219,9 @@ def todo():
 def show():
     _, reply, _ = fetch()
     remarks, special = trimmed(reply)
-    print("Special vehicles (code · id · dates · text):")
+    print("Special vehicles (id · dates · text):")
     for s in special:
-        print(f"  {code(s)}  {s['id']:>7}  {s['start_date'][:10]} → {s['expiration_date'][:10]}  "
+        print(f"  {s['id']:>7}  {s['start_date'][:10]} → {s['expiration_date'][:10]}  "
               f"{s['text']}" + (f" ({s['detailsText']})" if s.get("detailsText") not in (None, s["text"]) else ""))
     hand = english()
     print(f"\nRemarks ({len(remarks)}):")
@@ -182,6 +234,10 @@ def show():
 if __name__ == "__main__":
     if sys.argv[1:2] == ["sync"] and len(sys.argv) == 3:
         sync(sys.argv[2])
+    elif sys.argv[1:2] == ["hints"] and len(sys.argv) == 3:
+        hints(sys.argv[2])
+    elif sys.argv[1:2] == ["annotate"] and len(sys.argv) == 3:
+        annotate(sys.argv[2])
     elif sys.argv[1:] == ["show"]:
         show()
     elif sys.argv[1:] == ["todo"]:

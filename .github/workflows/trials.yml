@@ -9,6 +9,9 @@ name: Look for buses on trial
 # used to run once a night in fleet.yml, which missed a trial bus whose GPS came on in the day
 # (#956 on 16 Nov 2026); hourly, a new bus shows within the hour. One call to the feed, one
 # issue read and one edit an hour, through the day only: trial buses run in service hours.
+# Each bus comes with what czynaczas.pl knows of it (make, model, year, his special entry and
+# its dates), read from the Worker, which the nightly fleet run fills: his API is asked once a
+# night, never hourly.
 on:
   schedule:
     # 05:23-23:23 in Warsaw in winter, 06:23-00:23 in summer (cron is UTC). Off the hour: GitHub
@@ -41,8 +44,16 @@ jobs:
           ref: main
           sparse-checkout: |
             scripts/trial_buses.py
+            scripts/czynaczas.py
             Tabor/Resources/fleet.json
           sparse-checkout-cone-mode: false
+
+      # Without it the issue just goes without his names and dates.
+      - name: Get czynaczas.pl's names for them
+        continue-on-error: true
+        env:
+          ROUTES_UPLOAD_TOKEN: ${{ secrets.ROUTES_UPLOAD_TOKEN }}
+        run: python3 scripts/czynaczas.py hints "$RUNNER_TEMP/czynaczas.json"
 
       # A feed that can't be read leaves no marker, so the issue is left as it is.
       - name: Look for buses on trial in the live feed
@@ -53,7 +64,7 @@ jobs:
           if [ -n "$number" ]; then
             gh issue view "$number" --json body --jq .body > previous.md 2>/dev/null || rm -f previous.md
           fi
-          python3 scripts/trial_buses.py trials.md previous.md
+          python3 scripts/trial_buses.py trials.md previous.md --czynaczas "$RUNNER_TEMP/czynaczas.json"
           touch trials-checked
 
       # A trial can be over in a few weeks, so a bus that joins an open issue gets a comment
@@ -77,7 +88,12 @@ jobs:
               buses() { grep -o '^| #9[0-9][0-9]' | sed 's/^| //' | sort || true; }
               added=$(comm -13 <(buses <<< "$body") <(buses < trials.md) | paste -sd ' ' -)
               [ "$body" = "$(cat trials.md)" ] || gh issue edit "$number" --body-file trials.md
-              [ -z "$added" ] || gh issue comment "$number" --body "Nowe: $added"
+              # "Nowe: #960 (Solaris Urbino 10.5 electric)", the model from the bus's own row.
+              named=$(for n in $added; do
+                m=$(grep "^| $n |" trials.md | cut -d'|' -f3 | sed 's/^ *//; s/ *$//')
+                [ -z "$m" ] || [ "$m" = "?" ] && echo "$n" || echo "$n ($m)"
+              done | paste -sd ',' - | sed 's/,/, /g')
+              [ -z "$added" ] || gh issue comment "$number" --body "Nowe: $named"
             else
               gh issue create --title "$TRIALS_TITLE" --body-file trials.md --label BOT
             fi

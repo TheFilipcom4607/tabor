@@ -16,9 +16,9 @@ confirms them. This looks for the hints and lists them for a human:
   the same in Config/Secrets.xcconfig), or when the model can't be reached, every
   post is listed, as before.
 
-- czynaczas.pl's special vehicles (--special, written by czynaczas.py sync), now or coming up.
-  His list is accurate, but his terms keep it out of anything public, so the issue shows each
-  entry only as a code; `python3 scripts/czynaczas.py show` on your Mac says which is which.
+- czynaczas.pl's special vehicles (--special, written by czynaczas.py sync), now or coming up,
+  with his text and dates, credited. Trial buses (9xx) are left to the trials issue. His list
+  is hand-kept, so the dates are hints both ways (his email, 2026-11-10).
 
 The city's December "Świąteczne pojazdy" post has no search to poll, so that one stays a habit.
 
@@ -26,7 +26,8 @@ Writes a Markdown issue body to the given path when there's anything, nothing wh
 Exits 1 if neither the feed nor MZA could be read, so the caller leaves the issue alone.
 
 --skip leaves out hints a human has already dismissed: one per line, a post's URL, a vehicle
-as `BUS #1976 | M`, or a special vehicle's `kod ab12cd`. The Action builds it from the wraps issues a human closed, for any reason;
+as `BUS #1976 | M`, a special vehicle as `BUS #5887 | Autobus Wakacyjny Radia Kolor`, or the
+`kod ab12cd` such entries showed as until 2026-11-19. The Action builds it from the wraps issues a human closed, for any reason;
 the bot's own close dismisses nothing.
 
 --check asks the model about the given posts and prints its odds.
@@ -185,7 +186,8 @@ def wrap_odds(posts):
 
 
 def special_vehicles(path, fleet, today, skip):
-    """Codes of czynaczas's special vehicles that are out now or coming, and not in already."""
+    """czynaczas's special vehicles that are out now or coming, and not in already, as
+    (kind, number, text, dates)."""
     from czynaczas import code
     kinds = {"3": "BUS", "0": "TRAM"}
     on_test = {(m["kind"], n) for m in fleet["models"] if m.get("onTest") for b in m["batches"] for n in b["numbers"]}
@@ -193,14 +195,20 @@ def special_vehicles(path, fleet, today, skip):
     for s in json.loads(Path(path).read_text()):
         kind, _, number = s["id"].partition("/")
         kind, start, end = kinds.get(kind), s["start_date"][:10], s["expiration_date"][:10]
-        if not number.isdigit() or end < today.isoformat() or f"kod {code(s)}" in skip:
+        text = " ".join((s.get("detailsText") or s.get("text") or "").replace("|", "/").split())
+        if (not number.isdigit() or end < today.isoformat() or f"kod {code(s)}" in skip
+                or f"{kind} #{number} | {text}" in skip):
+            continue
+        # Trial buses have their own issue, "Autobusy na testach", with his entry in it.
+        if kind == "BUS" and re.fullmatch(r"9\d\d", number):
             continue
         # A wrap row or a trial bus already in fleet.json: nothing left to do about it.
         if (kind, int(number)) in on_test or any(
                 (w["kind"], str(w["number"])) == (kind, number) and w["from"] <= end and start <= w["to"]
                 for w in fleet.get("wraps", [])):
             continue
-        out.append(code(s))
+        dates = " → ".join(f"{d[8:10]}.{d[5:7]}.{d[:4]}" for d in (start, end))
+        out.append((kind, number, text, dates))
     return out
 
 
@@ -271,8 +279,11 @@ def main():
         out += [f"| {k} #{n} | {l} | {t} |" for k, n, l, t in lines]
         out.append("")
     if special:
-        out += ["**Pojazdy specjalne w [czynaczas.pl](https://czynaczas.pl)**", ""]
-        out += [f"- kod {c}" for c in special]
+        # A table like the feed's, so the workflow dismisses and diffs it the same way: by the
+        # first two cells, the vehicle and his text.
+        out += ["**Pojazdy specjalne w [czynaczas.pl](https://czynaczas.pl)**", "",
+                "| Pojazd | Opis | Kiedy |", "|---|---|---|"]
+        out += [f"| {k} #{n} | {t} | {d} |" for k, n, t, d in special]
         out.append("")
     if failed:
         out += ["Nie udało się odczytać: " + "; ".join(failed) + ".", ""]
