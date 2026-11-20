@@ -1064,10 +1064,10 @@ struct CatchView: View {
         finishing = true
         defer { finishing = false }
         let book = (try? context.fetch(FetchDescriptor<Sighting>())) ?? []
-        let drafts = await router.burst.finish(book: book)
-        guard !drafts.isEmpty else { return }
+        let dealt = await router.burst.finish(book: book)
+        guard !dealt.isEmpty else { return }
         camera.stop()
-        cards = BurstCards(drafts: drafts)
+        cards = BurstCards(cards: dealt)
     }
 
     /// The photo waiting in the share inbox, if any and if nothing else is being caught.

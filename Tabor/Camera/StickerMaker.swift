@@ -191,9 +191,15 @@ enum StickerMaker {
         return (people.map { lift.people[$0] }, grown, below)
     }
 
+    /// A cut sticker and how whole the vehicle in it looks.
+    struct Cutout {
+        let image: CGImage
+        let shape: CutShape?
+    }
+
     /// One object of the lift as a sticker, without anyone standing in front of it, unless
     /// erasing them would bite into it (see `Notch`).
-    static func cut(_ lift: Lift, instance: Int, options: Options = Options()) -> Result<CGImage, Failure> {
+    static func cut(_ lift: Lift, instance: Int, options: Options = Options()) -> Result<Cutout, Failure> {
         let cg = lift.image
         var maskBuffer: CVPixelBuffer
         do {
@@ -223,6 +229,9 @@ enum StickerMaker {
             }
         }
         guard let box = boundingBox(of: maskBuffer), box.width > 20, box.height > 20 else { return .failure(.tinySubject) }
+        // Measured on what's cut, after any people are gone: rapid fire keeps the wholest.
+        let shape = CutShape.measure(bytes(maskBuffer), width: CVPixelBufferGetWidth(maskBuffer),
+                                     height: CVPixelBufferGetHeight(maskBuffer))
 
         // The white border scales with the subject, not the photo.
         let r = max(6, max(box.width, box.height) * options.border)
@@ -263,7 +272,7 @@ enum StickerMaker {
         guard let out = context.createCGImage(composed, from: crop, format: .RGBA8,
                                               colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
         else { return .failure(.render) }
-        return .success(out)
+        return .success(Cutout(image: out, shape: shape))
     }
 
     /// The mask minus the people's own pixels inside `boxes` (normalised, top-left origin),
@@ -414,6 +423,8 @@ enum StickerMaker {
 /// A catch's sticker and what it would take to cut a different object instead.
 struct StickerCut: Sendable {
     var png: Data
+    /// How whole the vehicle in it looks.
+    var shape: CutShape?
     let lift: StickerMaker.Lift
     /// Labels worth cutting, best first; `index` is the one showing.
     let order: [Int]
@@ -430,9 +441,9 @@ struct StickerCut: Sendable {
         var failure = StickerMaker.Failure.noSubject
         for (i, label) in pick.order.enumerated() {
             switch StickerMaker.cut(lift, instance: label) {
-            case .success(let cg):
-                guard let png = StickerMaker.pngData(cg) else { return .failure(.render) }
-                return .success(StickerCut(png: png, lift: lift, order: pick.order, index: i, reason: pick.reason))
+            case .success(let c):
+                guard let png = StickerMaker.pngData(c.image) else { return .failure(.render) }
+                return .success(StickerCut(png: png, shape: c.shape, lift: lift, order: pick.order, index: i, reason: pick.reason))
             case .failure(let f):
                 failure = f
             }
@@ -456,7 +467,7 @@ struct StickerCut: Sendable {
               let first = pick.order.first
         else { return .none }
         guard first != label else { return .sameObject }
-        guard let cg = try? StickerMaker.cut(lift, instance: first).get(), let png = StickerMaker.pngData(cg)
+        guard let c = try? StickerMaker.cut(lift, instance: first).get(), let png = StickerMaker.pngData(c.image)
         else { return .none }
         return .sticker(png)
     }
@@ -468,9 +479,10 @@ struct StickerCut: Sendable {
     func next() -> StickerCut? {
         for step in 1..<max(order.count, 1) {
             let i = (index + step) % order.count
-            if let cg = try? StickerMaker.cut(lift, instance: order[i]).get(), let png = StickerMaker.pngData(cg) {
+            if let c = try? StickerMaker.cut(lift, instance: order[i]).get(), let png = StickerMaker.pngData(c.image) {
                 var out = self
                 out.png = png
+                out.shape = c.shape
                 out.index = i
                 return out
             }

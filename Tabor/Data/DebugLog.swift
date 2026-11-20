@@ -48,6 +48,9 @@ final class DebugRecord: @unchecked Sendable {
         var recuts: Int?
         /// The number's box the cut went by, as in `Obs.box`.
         var numberBox: String?
+        /// How whole the cut-out is (`CutShape`), which rapid fire picks its shot by.
+        var solidity: Double?
+        var edges: Int?
     }
 
     struct Event: Codable {

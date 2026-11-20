@@ -39,7 +39,8 @@ enum CatchReader {
                 let failure: String? = if case .failure(let f) = result { f.description } else { nil }
                 record.update {
                     $0.sticker = .init(ok: cut != nil, durationMs: ms, failure: failure, pickedBy: cut?.reason.rawValue,
-                                       subjects: cut?.order.count, numberBox: box.map(DebugRecord.describe))
+                                       subjects: cut?.order.count, numberBox: box.map(DebugRecord.describe),
+                                       solidity: cut?.shape.map { ($0.solidity * 1000).rounded() / 1000 }, edges: cut?.shape?.edges)
                 }
                 if let png = cut?.png { record.attach(sticker: png) }
             }

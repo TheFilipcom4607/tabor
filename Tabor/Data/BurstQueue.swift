@@ -1,5 +1,12 @@
 import SwiftUI
 
+/// One vehicle's shots from a burst, in the order they were taken, and the one its card shows.
+struct BurstCard {
+    var shots: [CatchDraft]
+    var shown: Int
+    var draft: CatchDraft { shots[shown] }
+}
+
 /// Rapid fire's shots (and the Lock Screen camera's), read one at a time in the background
 /// while you carry on shooting, then dealt out as cards (`Burst`) once you're done.
 @Observable @MainActor
@@ -49,7 +56,7 @@ final class BurstQueue {
 
     /// The cards to show, in order, once every shot is read and cut; the queue starts over.
     /// `book` is everything caught before these.
-    func finish(book: [Sighting]) async -> [CatchDraft] {
+    func finish(book: [Sighting]) async -> [BurstCard] {
         await tail?.value
         let drafts = shots.compactMap(\.draft)
         shots = []
@@ -61,18 +68,22 @@ final class BurstQueue {
         for (i, d) in drafts.enumerated() {
             let model = d.modelId.flatMap(catalog.model(id:))
             let score = await d.photoRead?.value.candidates.first { $0.number == d.number }?.score ?? 0
-            let sticker = await d.sticker?.value != nil
+            let cut = await d.sticker?.value
             order.append(Burst.Shot(
-                index: i, number: d.number, modelId: d.modelId, tier: model?.tier, score: score, hasSticker: sticker,
+                index: i, number: d.number, modelId: d.modelId, tier: model?.tier, score: score, hasSticker: cut != nil,
+                cut: cut?.shape?.quality,
                 needsYou: d.number == nil || model == nil,
                 isNew: d.number.map { n in model.map { stats.vehicle(number: n, modelId: $0.id) == nil } ?? true } ?? true,
                 mayWearWrap: d.number.map { n in model.map { !catalog.wraps(kind: $0.kind, number: n, on: d.date).isEmpty } ?? false } ?? false))
         }
         let dates = book.map(\.date)
-        return Burst.cards(order).map { i in
-            var d = drafts[i]
-            d.book = BookBefore(stats: stats, streak: Streak.days(dates + [d.date]))
-            return d
+        return Burst.deal(order).map { card in
+            let shots = card.shots.map { i in
+                var d = drafts[i]
+                d.book = BookBefore(stats: stats, streak: Streak.days(dates + [d.date]))
+                return d
+            }
+            return BurstCard(shots: shots, shown: card.shots.firstIndex(of: card.shown) ?? 0)
         }
     }
 

@@ -5,6 +5,10 @@ import SwiftUI
 struct BurstStep {
     let index: Int
     let count: Int
+    /// Every shot of this vehicle, in the order they were taken; the card can switch to any.
+    var shots: [CatchDraft] = []
+    /// The one it opens on.
+    var shown = 0
     /// The catch as it went into the book, or nil when it was skipped.
     let done: (CatchDraft?) -> Void
 }
@@ -12,7 +16,7 @@ struct BurstStep {
 /// A burst's shots, read, grouped and ordered (`BurstQueue.finish`), ready to deal out.
 struct BurstCards: Identifiable {
     let id = UUID()
-    let drafts: [CatchDraft]
+    let cards: [BurstCard]
 }
 
 /// Rapid fire's shots (or the Lock Screen camera's) dealt out one card at a time, rarest last,
@@ -30,7 +34,7 @@ struct BurstRevealView: View {
     init(cards: BurstCards, reread: @escaping (CatchDraft, Data) async -> CatchDraft) {
         self.cards = cards
         self.reread = reread
-        _current = State(initialValue: cards.drafts)
+        _current = State(initialValue: cards.cards.map(\.draft))
     }
 
     var body: some View {
@@ -38,11 +42,12 @@ struct BurstRevealView: View {
             Palette.bg.ignoresSafeArea()
             if index < current.count {
                 RevealView(draft: current[index], reread: reread,
-                           step: BurstStep(index: index, count: current.count, done: next))
+                           step: BurstStep(index: index, count: current.count, shots: shots(index), shown: cards.cards[index].shown,
+                                           done: next))
                     .id(index)
                     .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .opacity))
             } else {
-                BurstSummary(before: cards.drafts.first?.book.stats ?? CollectionStats(sightings: []), stuck: stuck) {
+                BurstSummary(before: cards.cards.first?.draft.book.stats ?? CollectionStats(sightings: []), stuck: stuck) {
                     dismiss()
                 } openBook: { modelId in
                     router.openModel(modelId)
@@ -60,6 +65,13 @@ struct BurstRevealView: View {
             BookQuiet.end()
             router.revealGone()
         }
+    }
+
+    /// The card's other shots count from where the book is now, like the card itself.
+    private func shots(_ i: Int) -> [CatchDraft] {
+        let card = cards.cards[i]
+        guard card.shots.count > 1 else { return [] }
+        return card.shots.map { var d = $0; d.book = current[i].book; return d }
     }
 
     private func next(_ draft: CatchDraft?) {

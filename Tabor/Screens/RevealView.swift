@@ -64,6 +64,9 @@ struct RevealView: View {
     /// banner that says this one has a story: nobody knew to open the vehicle page for it.
     @State private var remark: VehicleRemark?
     @State private var readingNote = false
+    /// Which of a burst card's shots is showing, once you've switched (`step.shown` until then).
+    @State private var shotPicked: Int?
+    @State private var switchingShot = false
 
     private let catalog = Fleet.catalog
     private let holdDuration = 0.55
@@ -332,10 +335,13 @@ struct RevealView: View {
                     // An opened foldable: the sticker big on the left, what it is and what to do
                     // with it in a phone's column on the right.
                     HStack(spacing: 0) {
-                        stage(number: number, model: model, tier: tier, isNew: isNewVehicle && ready, foil: wrap != nil)
-                            .scaleEffect(1.2)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .padding(.leading, 16)
+                        VStack(spacing: 22) {
+                            stage(number: number, model: model, tier: tier, isNew: isNewVehicle && ready, foil: wrap != nil)
+                                .scaleEffect(1.2)
+                            shotStrip
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.leading, 16)
                         VStack(alignment: .leading, spacing: 0) {
                             header
                             details
@@ -352,6 +358,9 @@ struct RevealView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: tall ? 340 : 250)
                         .padding(.top, 12)
+                    shotStrip
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 6)
                     details
                     Spacer(minLength: 16)
                     actions
@@ -858,8 +867,8 @@ struct RevealView: View {
                         }
                     stickerCaption(number: number, model: model, tier: tier, batch: batch)
                 }
-                // A re-cut slaps down like the first one did.
-                .id(cut?.index ?? 0)
+                // A re-cut or another shot slaps down like the first one did.
+                .id("\(shown)/\(cut?.index ?? 0)")
                 .transition(.asymmetric(insertion: .scale(scale: 1.35).combined(with: .opacity), removal: .opacity))
             }
         }
@@ -878,6 +887,91 @@ struct RevealView: View {
                                                 height: max(-90, min(90, v.translation.height))) }
                 .onEnded { _ in withAnimation(.spring(response: 0.5, dampingFraction: 0.45)) { tilt = .zero } }
         )
+    }
+
+    private var shown: Int { shotPicked ?? step?.shown ?? 0 }
+
+    /// A burst card's shots of this vehicle, in the order they were taken, for when the pick
+    /// isn't the one you'd keep: tap another and it takes over the card.
+    @ViewBuilder
+    private var shotStrip: some View {
+        if let shots = step?.shots, shots.count > 1 {
+            HStack(spacing: 7) {
+                ForEach(shots.indices, id: \.self) { i in
+                    let on = i == shown
+                    Button { showShot(i) } label: {
+                        Group {
+                            if let img = shots[i].preview {
+                                Image(uiImage: img).resizable().scaledToFill()
+                            } else {
+                                Palette.photoWell
+                            }
+                        }
+                        .frame(width: 46, height: 32)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(on ? Palette.yellow : Color.white.opacity(0.14), lineWidth: on ? 2 : 1))
+                        .opacity(on ? 1 : 0.55)
+                        .scaleEffect(on ? 1.06 : 1)
+                        // The thumbnails are small: the tap reaches past them.
+                        .padding(4)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(switchingShot || sticking)
+                    .accessibilityLabel(String(localized: "Shot \(i + 1) of \(shots.count)",
+                                               comment: "A burst card's thumbnail of one of the vehicle's shots"))
+                    .accessibilityAddTraits(on ? .isSelected : [])
+                }
+            }
+            .padding(.vertical, -4)
+            .opacity(landed ? 1 : 0)
+            .animation(.spring(response: 0.35, dampingFraction: 0.7), value: shown)
+            .animation(.easeOut(duration: 0.3), value: landed)
+        }
+    }
+
+    /// Puts another of the card's shots on it: its photo, sticker and read. What you fixed by
+    /// hand (number, model, line, second car) stays, and so does a wrap you confirmed if this
+    /// shot leaves it unsure too.
+    private func showShot(_ i: Int) {
+        guard let step, step.shots.indices.contains(i), i != shown, !switchingShot, !sticking, !stuck else { return }
+        let other = step.shots[i]
+        switchingShot = true
+        Haptics.shared.tick()
+        shotPicked = i
+        let typedLine = (draft.line ?? "") != (draft.autoLine ?? "")
+        draft.photo = other.photo
+        draft.preview = other.preview
+        draft.sticker = other.sticker
+        draft.photoNumbers = other.photoNumbers
+        draft.photoRead = other.photoRead
+        draft.debug = other.debug
+        draft.date = other.date
+        draft.nearby = other.nearby
+        draft.wrapFinding = nil
+        if !typedLine {
+            draft.line = other.line
+            draft.autoLine = other.autoLine
+        }
+        cut = nil
+        recuts = 0
+        misreads = []
+        alsoStickers = [:]
+        photoNumbers = []
+        photoReport = nil
+        draft.debug?.log("shot", number: draft.number, modelId: draft.modelId, note: "\(i + 1) of \(step.shots.count)")
+        Task {
+            let made = await other.sticker?.value
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.62)) {
+                cut = made
+                stickerPNG = made?.png
+                stickerImage = made.flatMap { UIImage(data: $0.png) }
+            }
+            switchingShot = false
+            await checkWrap(sticker: made?.png)
+            await loadReads()
+        }
     }
 
     private var photoCard: some View {

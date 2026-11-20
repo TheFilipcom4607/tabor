@@ -2,9 +2,10 @@ import Testing
 @testable import TaborCore
 
 private func shot(_ index: Int, _ number: Int?, _ tier: Tier? = .common, model: String? = nil, score: Double = 1,
-                  sticker: Bool = true, needsYou: Bool = false, new: Bool = false, wrap: Bool = false) -> Burst.Shot {
+                  sticker: Bool = true, cut: Double? = nil, needsYou: Bool = false, new: Bool = false,
+                  wrap: Bool = false) -> Burst.Shot {
     Burst.Shot(index: index, number: number, modelId: number == nil ? nil : model ?? "m\(number!)", tier: tier,
-               score: score, hasSticker: sticker, needsYou: needsYou, isNew: new, mayWearWrap: wrap)
+               score: score, hasSticker: sticker, cut: cut, needsYou: needsYou, isNew: new, mayWearWrap: wrap)
 }
 
 @Test func rarestComesLast() {
@@ -52,4 +53,28 @@ private func shot(_ index: Int, _ number: Int?, _ tier: Tier? = .common, model: 
     // Bus 2021 and tram 2021 in one burst are two vehicles.
     let cards = Burst.cards([shot(0, 2021, model: "bus"), shot(1, 2021, model: "tram")])
     #expect(cards == [0, 1])
+}
+
+@Test func theWholestBusWinsOverTheClearestNumber() {
+    // The Otokar in rapid fire: a perfect shot, one with bushes eating half the bus but its
+    // number bigger in the frame, and one more.
+    let cards = Burst.cards([shot(0, 9605, score: 3.1, cut: 0.95), shot(1, 9605, score: 3.6, cut: 0.71),
+                             shot(2, 9605, score: 3.0, cut: 0.93)])
+    #expect(cards == [0])
+}
+
+@Test func aboutAsWholeGoesByTheRead() {
+    let cards = Burst.cards([shot(0, 9605, score: 3.1, cut: 0.95), shot(1, 9605, score: 3.6, cut: 0.94)])
+    #expect(cards == [1])
+}
+
+@Test func anyStickerBeatsNone() {
+    let cards = Burst.cards([shot(0, 9605, score: 3.6, sticker: false), shot(1, 9605, score: 2.0, cut: 0.7)])
+    #expect(cards == [1])
+}
+
+@Test func aCardKeepsAllItsShotsInOrder() {
+    let cards = Burst.deal([shot(0, 9605, cut: 0.7), shot(1, 1996, .legendary), shot(2, 9605, cut: 0.95),
+                            shot(3, 9605, cut: 0.8)])
+    #expect(cards == [Burst.Card(shown: 2, shots: [0, 2, 3]), Burst.Card(shown: 1, shots: [1])])
 }

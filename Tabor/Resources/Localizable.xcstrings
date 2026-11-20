@@ -11486,6 +11486,17 @@
           }
         }
       }
+    },
+    "Shot %lld of %lld": {
+      "comment": "A burst card's thumbnail of one of the vehicle's shots",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zdjęcie %1$lld z %2$lld"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
