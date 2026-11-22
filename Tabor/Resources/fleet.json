@@ -1,7 +1,7 @@
 {
- "source": "Warsaw ZTM vehicle database (fetched 2026-09-22) and the city's open data (fetched 2026-11-18), plus Warszawikia, the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
- "sourcePl": "Baza pojazdów ZTM Warszawa (stan z 2026-09-22) i otwarte dane miasta (stan z 2026-11-18), a także Warszawikia, klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
- "fetched": "2026-11-19 15:54 UTC",
+ "source": "Warsaw ZTM vehicle database (fetched 2026-09-22) and the city's open data (fetched 2026-11-22), plus Warszawikia, the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
+ "sourcePl": "Baza pojazdów ZTM Warszawa (stan z 2026-09-22) i otwarte dane miasta (stan z 2026-11-22), a także Warszawikia, klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
+ "fetched": "2026-11-22 07:56 UTC",
  "models": [
   {
    "id": "bus-solaris-urbino-18",
@@ -761,7 +761,7 @@
      "depotName": "Ostrobramska",
      "operator": "MZA",
      "numbers": [
-      1520, 1521, 1522, 1523, 1524, 1525, 1527, 1528, 1529,
+      1520, 1521, 1522, 1523, 1524, 1525, 1526, 1527, 1528, 1529,
       1530, 1531, 1532, 1534, 1535, 1536, 1537, 1538, 1539,
       1540, 1541, 1542, 1543, 1544, 1545, 1546, 1548, 1549,
       1550
@@ -772,10 +772,7 @@
      "depotCode": "R-4",
      "depotName": "Stalowa",
      "operator": "MZA",
-     "numbers": [
-      1526,
-      1551, 1552, 1553, 1554, 1555
-     ]
+     "numbers": [1551, 1552, 1553, 1554, 1555]
     },
     {
      "year": 2010,
