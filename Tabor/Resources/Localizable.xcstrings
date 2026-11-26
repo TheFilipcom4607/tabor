@@ -10194,12 +10194,32 @@
         }
       }
     },
-    "Something broken, or a bus it got wrong? Write to me:": {
+    "Something broken, or a bus it got wrong? Open an issue on GitHub, or write to me:": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Coś nie działa albo autobus rozpoznany źle? Napisz do mnie:"
+            "value": "Coś nie działa albo autobus rozpoznany źle? Zgłoś to na GitHubie albo napisz do mnie:"
+          }
+        }
+      }
+    },
+    "GitHub issues": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zgłoszenia na GitHubie"
+          }
+        }
+      }
+    },
+    "TABOR's code is public on [GitHub](https://github.com/TheFilipcom4607/tabor).": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kod TABORU jest publiczny, na [GitHubie](https://github.com/TheFilipcom4607/tabor)."
           }
         }
       }

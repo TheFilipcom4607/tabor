@@ -915,11 +915,19 @@ extension SettingsSheet {
             Text("Thank you for using TABOR 💛")
                 .font(TaborFont.grotesk(15, 600))
                 .foregroundStyle(Palette.ink)
-            Text("Something broken, or a bus it got wrong? Write to me:")
+            // GitHub first (#127): an issue form asks for what a fix needs, and others can see it.
+            Text("Something broken, or a bus it got wrong? Open an issue on GitHub, or write to me:")
                 .multilineTextAlignment(.center)
+            Link("GitHub issues", destination: URL(string: "https://github.com/TheFilipcom4607/tabor/issues/new/choose")!)
+                .font(TaborFont.grotesk(14, 600))
+                .foregroundStyle(Palette.yellow)
             Link("tabor@thefilip.com", destination: URL(string: "mailto:tabor@thefilip.com")!)
                 .font(TaborFont.grotesk(14, 600))
                 .foregroundStyle(Palette.yellow)
+            // "Public", not "open source": the repo has no licence, so the code isn't free to reuse.
+            Text("TABOR's code is public on [GitHub](https://github.com/TheFilipcom4607/tabor).")
+                .multilineTextAlignment(.center)
+                .padding(.top, 6)
             // The testers whose GitHub issues shaped the app (#76). Handles, so never translated.
             Text("Thanks to everyone who tested the beta, above all \(["Szpieg0", "Pepe-PL", "flyingkonstal"].formatted(.list(type: .and))).")
                 .multilineTextAlignment(.center)
