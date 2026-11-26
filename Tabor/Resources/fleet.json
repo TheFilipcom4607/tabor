@@ -1,7 +1,7 @@
 {
  "source": "Warsaw ZTM vehicle database (fetched 2026-09-22) and the city's open data (fetched 2026-11-22), plus Warszawikia, the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
  "sourcePl": "Baza pojazdów ZTM Warszawa (stan z 2026-09-22) i otwarte dane miasta (stan z 2026-11-22), a także Warszawikia, klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
- "fetched": "2026-11-22 13:52 UTC",
+ "fetched": "2026-11-26 17:16 UTC",
  "models": [
   {
    "id": "bus-solaris-urbino-18",
@@ -1478,6 +1478,238 @@
    ]
   },
   {
+   "id": "bus-solaris-urbino-12e",
+   "name": "Solaris Urbino 12 electric",
+   "make": "Solaris",
+   "code": "Solaris Urbino 12E",
+   "kind": "BUS",
+   "operators": ["MZA", "KM Łomianki"],
+   "fleet": 63,
+   "firstYear": 2015,
+   "lastYear": 2026,
+   "batches": [
+    {
+     "year": 2026,
+     "depotCode": "R-4",
+     "depotName": "Stalowa",
+     "operator": "MZA",
+     "numbers": [
+      1700, 1701, 1702, 1703, 1704, 1705, 1706,
+      1710, 1711, 1712, 1713, 1714, 1715, 1716, 1718, 1719,
+      1720, 1721, 1722, 1723, 1724, 1725, 1726, 1727, 1728
+     ]
+    },
+    {
+     "year": 2026,
+     "depotCode": "",
+     "depotName": "Rolnicza",
+     "operator": "KM Łomianki",
+     "numbers": [725, 726, 727, 728]
+    },
+    {
+     "year": 2024,
+     "depotCode": "R-4",
+     "depotName": "Stalowa",
+     "operator": "MZA",
+     "numbers": [
+      1921, 1922, 1923, 1924, 1925, 1926, 1927, 1928, 1929,
+      1930, 1931, 1932
+     ]
+    },
+    {
+     "year": 2019,
+     "depotCode": "",
+     "depotName": "Rolnicza",
+     "operator": "KM Łomianki",
+     "numbers": [772, 773]
+    },
+    {
+     "year": 2018,
+     "depotCode": "R-4",
+     "depotName": "Stalowa",
+     "operator": "MZA",
+     "numbers": [
+      1911, 1912, 1913, 1914, 1915, 1916, 1917, 1918,
+      1920
+     ]
+    },
+    {
+     "year": 2018,
+     "depotCode": "R-1",
+     "depotName": "Woronicza",
+     "operator": "MZA",
+     "numbers": [1919]
+    },
+    {
+     "year": 2015,
+     "depotCode": "R-1",
+     "depotName": "Woronicza",
+     "operator": "MZA",
+     "numbers": [
+      1901, 1902, 1903, 1904, 1905, 1906, 1907, 1908, 1909,
+      1910
+     ]
+    }
+   ],
+   "vintage": false,
+   "onTest": false,
+   "specs": {
+    "length": 12000,
+    "drive": "electric",
+    "seats": 27,
+    "places": 70,
+    "airCon": true,
+    "floor": "LF"
+   },
+   "variants": [
+    {
+     "specs": {
+      "airCon": true,
+      "drive": "electric",
+      "floor": "LF",
+      "length": 12000,
+      "places": 72,
+      "seats": 31
+     },
+     "numbers": [
+      725, 726, 727, 728,
+      1705,
+      1716, 1719,
+      1725
+     ]
+    },
+    {
+     "specs": {
+      "airCon": true,
+      "drive": "electric",
+      "floor": "LF",
+      "length": 12000,
+      "places": 75,
+      "seats": 26
+     },
+     "numbers": [772, 773]
+    },
+    {
+     "specs": {
+      "airCon": true,
+      "drive": "electric",
+      "floor": "LF",
+      "length": 12000,
+      "places": 70,
+      "seats": 25
+     },
+     "numbers": [
+      1901, 1902, 1903, 1904, 1905, 1906, 1907, 1908, 1909,
+      1910
+     ]
+    },
+    {
+     "specs": {
+      "airCon": true,
+      "drive": "electric",
+      "floor": "LF",
+      "length": 12000,
+      "places": 80,
+      "seats": 24
+     },
+     "numbers": [
+      1911, 1912, 1913, 1914, 1915, 1916, 1917, 1918, 1919,
+      1920
+     ]
+    }
+   ],
+   "generations": {
+    "3": [
+     1901, 1902, 1903, 1904, 1905, 1906, 1907, 1908, 1909,
+     1910
+    ],
+    "4": [
+     725, 726, 727, 728,
+     772, 773,
+     1700, 1701, 1702, 1703, 1704, 1705, 1706,
+     1710, 1711, 1712, 1713, 1714, 1715, 1716, 1718, 1719,
+     1720, 1721, 1722, 1723, 1724, 1725, 1726, 1727, 1728,
+     1911, 1912, 1913, 1914, 1915, 1916, 1917, 1918, 1919,
+     1920, 1921, 1922, 1923, 1924, 1925, 1926, 1927, 1928, 1929,
+     1930, 1931, 1932
+    ]
+   },
+   "notes": {
+    "1901": {
+     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
+     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
+     "source": "Warszawikia",
+     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
+    },
+    "1902": {
+     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
+     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
+     "source": "Warszawikia",
+     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
+    },
+    "1903": {
+     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
+     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
+     "source": "Warszawikia",
+     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
+    },
+    "1904": {
+     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
+     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
+     "source": "Warszawikia",
+     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
+    },
+    "1905": {
+     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
+     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
+     "source": "Warszawikia",
+     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
+    },
+    "1906": {
+     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
+     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
+     "source": "Warszawikia",
+     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
+    },
+    "1907": {
+     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
+     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
+     "source": "Warszawikia",
+     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
+    },
+    "1908": {
+     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
+     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
+     "source": "Warszawikia",
+     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
+    },
+    "1909": {
+     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
+     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
+     "source": "Warszawikia",
+     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
+    },
+    "1910": {
+     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
+     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
+     "source": "Warszawikia",
+     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
+    },
+    "1915": {
+     "pl": "W walentynki 2026 jeździł jako „Zakochany autobus” na specjalnej linii W26.",
+     "en": "For Valentine's Day 2026 it ran as the “Zakochany autobus” (“bus in love”) on special line W26.",
+     "source": "radiokolor.pl",
+     "url": "https://radiokolor.pl"
+    },
+    "1919": {
+     "pl": "W grudniu 2025 jeździł jako „Prezentobus”, świąteczny autobus Radia Kolor i MZA.",
+     "en": "In December 2025 it ran as the “Prezentobus”, Radio Kolor and MZA's Christmas gift bus.",
+     "source": "radiokolor.pl",
+     "url": "https://radiokolor.pl"
+    }
+   }
+  },
+  {
    "id": "bus-solbus-sm12",
    "name": "Solbus Solcity 12",
    "make": "Solbus",
@@ -1615,238 +1847,6 @@
     "places": 146,
     "airCon": true,
     "floor": "LF"
-   }
-  },
-  {
-   "id": "bus-solaris-urbino-12e",
-   "name": "Solaris Urbino 12 electric",
-   "make": "Solaris",
-   "code": "Solaris Urbino 12E",
-   "kind": "BUS",
-   "operators": ["MZA", "KM Łomianki"],
-   "fleet": 60,
-   "firstYear": 2015,
-   "lastYear": 2026,
-   "batches": [
-    {
-     "year": 2026,
-     "depotCode": "R-4",
-     "depotName": "Stalowa",
-     "operator": "MZA",
-     "numbers": [
-      1700, 1701, 1702, 1704, 1705,
-      1711, 1712, 1713, 1714, 1715, 1716, 1718, 1719,
-      1720, 1721, 1722, 1723, 1724, 1725, 1726, 1727, 1728
-     ]
-    },
-    {
-     "year": 2026,
-     "depotCode": "",
-     "depotName": "Rolnicza",
-     "operator": "KM Łomianki",
-     "numbers": [725, 726, 727, 728]
-    },
-    {
-     "year": 2024,
-     "depotCode": "R-4",
-     "depotName": "Stalowa",
-     "operator": "MZA",
-     "numbers": [
-      1921, 1922, 1923, 1924, 1925, 1926, 1927, 1928, 1929,
-      1930, 1931, 1932
-     ]
-    },
-    {
-     "year": 2019,
-     "depotCode": "",
-     "depotName": "Rolnicza",
-     "operator": "KM Łomianki",
-     "numbers": [772, 773]
-    },
-    {
-     "year": 2018,
-     "depotCode": "R-4",
-     "depotName": "Stalowa",
-     "operator": "MZA",
-     "numbers": [
-      1911, 1912, 1913, 1914, 1915, 1916, 1917, 1918,
-      1920
-     ]
-    },
-    {
-     "year": 2018,
-     "depotCode": "R-1",
-     "depotName": "Woronicza",
-     "operator": "MZA",
-     "numbers": [1919]
-    },
-    {
-     "year": 2015,
-     "depotCode": "R-1",
-     "depotName": "Woronicza",
-     "operator": "MZA",
-     "numbers": [
-      1901, 1902, 1903, 1904, 1905, 1906, 1907, 1908, 1909,
-      1910
-     ]
-    }
-   ],
-   "vintage": false,
-   "onTest": false,
-   "specs": {
-    "length": 12000,
-    "drive": "electric",
-    "seats": 27,
-    "places": 70,
-    "airCon": true,
-    "floor": "LF"
-   },
-   "variants": [
-    {
-     "specs": {
-      "airCon": true,
-      "drive": "electric",
-      "floor": "LF",
-      "length": 12000,
-      "places": 72,
-      "seats": 31
-     },
-     "numbers": [
-      725, 726, 727, 728,
-      1705,
-      1716, 1719,
-      1725
-     ]
-    },
-    {
-     "specs": {
-      "airCon": true,
-      "drive": "electric",
-      "floor": "LF",
-      "length": 12000,
-      "places": 75,
-      "seats": 26
-     },
-     "numbers": [772, 773]
-    },
-    {
-     "specs": {
-      "airCon": true,
-      "drive": "electric",
-      "floor": "LF",
-      "length": 12000,
-      "places": 70,
-      "seats": 25
-     },
-     "numbers": [
-      1901, 1902, 1903, 1904, 1905, 1906, 1907, 1908, 1909,
-      1910
-     ]
-    },
-    {
-     "specs": {
-      "airCon": true,
-      "drive": "electric",
-      "floor": "LF",
-      "length": 12000,
-      "places": 80,
-      "seats": 24
-     },
-     "numbers": [
-      1911, 1912, 1913, 1914, 1915, 1916, 1917, 1918, 1919,
-      1920
-     ]
-    }
-   ],
-   "generations": {
-    "3": [
-     1901, 1902, 1903, 1904, 1905, 1906, 1907, 1908, 1909,
-     1910
-    ],
-    "4": [
-     725, 726, 727, 728,
-     772, 773,
-     1700, 1701, 1702, 1704, 1705,
-     1711, 1712, 1713, 1714, 1715, 1716, 1718, 1719,
-     1720, 1721, 1722, 1723, 1724, 1725, 1726, 1727, 1728,
-     1911, 1912, 1913, 1914, 1915, 1916, 1917, 1918, 1919,
-     1920, 1921, 1922, 1923, 1924, 1925, 1926, 1927, 1928, 1929,
-     1930, 1931, 1932
-    ]
-   },
-   "notes": {
-    "1901": {
-     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
-     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
-     "source": "Warszawikia",
-     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
-    },
-    "1902": {
-     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
-     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
-     "source": "Warszawikia",
-     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
-    },
-    "1903": {
-     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
-     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
-     "source": "Warszawikia",
-     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
-    },
-    "1904": {
-     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
-     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
-     "source": "Warszawikia",
-     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
-    },
-    "1905": {
-     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
-     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
-     "source": "Warszawikia",
-     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
-    },
-    "1906": {
-     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
-     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
-     "source": "Warszawikia",
-     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
-    },
-    "1907": {
-     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
-     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
-     "source": "Warszawikia",
-     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
-    },
-    "1908": {
-     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
-     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
-     "source": "Warszawikia",
-     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
-    },
-    "1909": {
-     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
-     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
-     "source": "Warszawikia",
-     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
-    },
-    "1910": {
-     "pl": "Jeden z dziesięciu pierwszych elektrycznych autobusów MZA. Od czerwca 2015 woziły pasażerów linią 222 po Trakcie Królewskim.",
-     "en": "One of MZA's first ten electric buses. From June 2015 they carried passengers on line 222 along the Royal Route.",
-     "source": "Warszawikia",
-     "url": "https://warszawa.fandom.com/wiki/Solaris_Urbino_12_electric"
-    },
-    "1915": {
-     "pl": "W walentynki 2026 jeździł jako „Zakochany autobus” na specjalnej linii W26.",
-     "en": "For Valentine's Day 2026 it ran as the “Zakochany autobus” (“bus in love”) on special line W26.",
-     "source": "radiokolor.pl",
-     "url": "https://radiokolor.pl"
-    },
-    "1919": {
-     "pl": "W grudniu 2025 jeździł jako „Prezentobus”, świąteczny autobus Radia Kolor i MZA.",
-     "en": "In December 2025 it ran as the “Prezentobus”, Radio Kolor and MZA's Christmas gift bus.",
-     "source": "radiokolor.pl",
-     "url": "https://radiokolor.pl"
-    }
    }
   },
   {

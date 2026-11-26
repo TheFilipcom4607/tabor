@@ -1298,7 +1298,8 @@ SPLIT = {
 # MZA's new Solaris Urbino 12 electrics (#17xx, 2026): the city files them under a type of
 # their own (idMarki 5956) and listed 4 on 2026-10-22, all at R-4 Stalowa; phototrans had 21
 # that day (issue #104). The depot of the other 17 is assumed from those 4. #1700 (WX 3400F on
-# phototrans) came up on the live feed on 2026-11-20, on line 204 (issue #126).
+# phototrans) came up on the live feed on 2026-11-20, on line 204 (issue #126), and #1703
+# (WX 3403F), #1706 (WX 3406F) and #1710 between 24 and 26 November (issue #128).
 # ReloBus's new Otokar Vectio C mild hybrids (#9001-9054, 2026): not the 2018 diesel Vectio Cs
 # (#9061-9094), and the city gives them a type of their own (idMarki 5909, fewer seats). It listed
 # 15 on 2026-10-25, all at Estrady; phototrans has all 54 (checked #9001, #9012, #9026, #9050;
@@ -1311,8 +1312,8 @@ EXTRA_BUSES = [
       for n in (5803, 5804, 5805, 5806, 5807, 5808, 5811, 5814, 5815, 5816, 5817, 5819, 5821,
                 5822, 5823, 5827, 5828, 5829, 5830, 5831, 5833, 5835)],
     *[("Solaris", "Urbino 12E", n, "MZA", 2026, 'R-4 "Stalowa" (R-13)')
-      for n in (1700, 1701, 1702, 1704, 1705, 1711, 1712, 1713, 1714, 1715, 1716, 1718, 1719, 1720,
-                1721, 1722, 1723, 1724, 1725, 1726, 1727, 1728)],
+      for n in (1700, 1701, 1702, 1703, 1704, 1705, 1706, 1710, 1711, 1712, 1713, 1714, 1715, 1716,
+                1718, 1719, 1720, 1721, 1722, 1723, 1724, 1725, 1726, 1727, 1728)],
     *[("Otokar", "Vectio C Mild Hybrid", n, "ReloBus", 2026, "Estrady RLB") for n in range(9001, 9055)],
 ]
 # Buses on loan for a trial, not (yet) in the ZTM database. The app tags them ON TEST:
