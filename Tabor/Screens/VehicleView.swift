@@ -707,7 +707,7 @@ private struct WrapForms: View {
         let caughtIn = Set(mine.compactMap(\.wrap))
         VStack(alignment: .leading, spacing: 9) {
             HStack(alignment: .firstTextBaseline) {
-                SectionLabel(text: String(localized: "FORMS"))
+                SectionLabel(text: String(localized: "EDITIONS"))
                 Spacer()
                 Mono("\(caughtIn.intersection(wraps.map(\.id)).count + (mine.contains { $0.wrap == nil } ? 1 : 0))/\(wraps.count + 1)",
                      size: 10.5, weight: 600, color: Palette.foilInk)

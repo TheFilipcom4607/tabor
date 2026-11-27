@@ -2520,7 +2520,7 @@ private struct PinCard: View {
                 Group {
                     if let wrap = pin.wrap, let until = wrap.until {
                         // The sources' plan, not what the photo will show: said as the plan.
-                        Text("Due out in its \(wrap.nameDisplay) wrap until \(until.formatted(.dateTime.day().month().locale(.app))). Catch it in it for a form of its own.")
+                        Text("Due out in its \(wrap.nameDisplay) wrap until \(until.formatted(.dateTime.day().month().locale(.app))). Catch it in it for an edition of its own.")
                     } else if let mine {
                         Text("In your book since \(mine.firstSeen.formatted(.dateTime.day().month().locale(.app))) · seen \(mine.timesSeen)×")
                     } else if pin.lastRuns {

@@ -10400,7 +10400,7 @@
         }
       }
     },
-    "Caught in its %@ wrap! It only wears it for a few weeks, so it goes in your book as a form of its own.": {
+    "Caught in its %@ wrap! It only wears it for a few weeks, so it goes in your book as an edition of its own.": {
       "localizations": {
         "pl": {
           "stringUnit": {
@@ -10420,7 +10420,7 @@
         }
       }
     },
-    "Due out in its %@ wrap until %@. Catch it in it for a form of its own.": {
+    "Due out in its %@ wrap until %@. Catch it in it for an edition of its own.": {
       "localizations": {
         "pl": {
           "stringUnit": {
@@ -10431,7 +10431,7 @@
         "en": {
           "stringUnit": {
             "state": "new",
-            "value": "Due out in its %1$@ wrap until %2$@. Catch it in it for a form of its own."
+            "value": "Due out in its %1$@ wrap until %2$@. Catch it in it for an edition of its own."
           }
         }
       }
@@ -10486,7 +10486,7 @@
         }
       }
     },
-    "FORMS": {
+    "EDITIONS": {
       "localizations": {
         "pl": {
           "stringUnit": {
@@ -10507,7 +10507,7 @@
       },
       "comment": "An event wraps are made for"
     },
-    "In its %@ wrap again. You already have this form; it still counts toward your streak.": {
+    "In its %@ wrap again. You already have this edition; it still counts toward your streak.": {
       "localizations": {
         "pl": {
           "stringUnit": {
@@ -10547,7 +10547,7 @@
         }
       }
     },
-    "NEW FORM": {
+    "NEW EDITION": {
       "localizations": {
         "pl": {
           "stringUnit": {
@@ -10557,7 +10557,7 @@
         }
       }
     },
-    "NEW FORM · SIGHTING #%lld": {
+    "NEW EDITION · SIGHTING #%lld": {
       "localizations": {
         "pl": {
           "stringUnit": {
@@ -10649,7 +10649,7 @@
         }
       }
     },
-    "For Christmas, Valentine's or the summer holidays, a bus or tram gets a wrap of its own. Catch it in the wrap and it goes in your book as a separate form, in foil. The wrap has to be in your photo; HUNT tells you when one is out.": {
+    "For Christmas, Valentine's or the summer holidays, a bus or tram gets a wrap of its own. Catch it in the wrap and it goes in your book as a separate edition, in foil. The wrap has to be in your photo; HUNT tells you when one is out.": {
       "localizations": {
         "pl": {
           "stringUnit": {

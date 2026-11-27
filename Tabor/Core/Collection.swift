@@ -151,9 +151,9 @@ public enum RevealHint {
     public static func wrapped(_ wrap: Wrap, isNewVehicle: Bool, newForm: Bool) -> String {
         let name = wrap.nameDisplay
         if isNewVehicle || newForm {
-            return String(localized: "Caught in its \(name) wrap! It only wears it for a few weeks, so it goes in your book as a form of its own.")
+            return String(localized: "Caught in its \(name) wrap! It only wears it for a few weeks, so it goes in your book as an edition of its own.")
         }
-        return String(localized: "In its \(name) wrap again. You already have this form; it still counts toward your streak.")
+        return String(localized: "In its \(name) wrap again. You already have this edition; it still counts toward your streak.")
     }
 
     /// The green hint line on the reveal screen. `owned` includes the new catch.

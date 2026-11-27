@@ -122,7 +122,7 @@ struct RevealView: View {
 
         // The pieces, down the screen on a phone and beside the stage on a wide one.
         let header = VStack(alignment: .leading, spacing: 7) {
-            Mono(newForm && landed ? String(localized: "NEW FORM · SIGHTING #\((existing?.timesSeen ?? 0) + 1)")
+            Mono(newForm && landed ? String(localized: "NEW EDITION · SIGHTING #\((existing?.timesSeen ?? 0) + 1)")
                  : kicker(isNewVehicle: isNewVehicle, isNewModel: isNewModel, modelOwned: modelOwned, added: added, existing: existing),
                  size: 12, spacing: 0.16, color: accent)
             Text(model.map { m in number.map(m.name(of:)) ?? m.name } ?? (number == nil ? String(localized: "What did you catch?")

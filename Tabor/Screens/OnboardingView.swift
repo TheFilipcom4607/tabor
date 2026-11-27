@@ -446,7 +446,7 @@ private struct WrapsPage: View {
     var body: some View {
         PageLayout(kicker: String(localized: "EVENT WRAPS"),
                    title: String(localized: "And a few weeks a year, dressed up."),
-                   text: String(localized: "For Christmas, Valentine's or the summer holidays, a bus or tram gets a wrap of its own. Catch it in the wrap and it goes in your book as a separate form, in foil. The wrap has to be in your photo; HUNT tells you when one is out."),
+                   text: String(localized: "For Christmas, Valentine's or the summer holidays, a bus or tram gets a wrap of its own. Catch it in the wrap and it goes in your book as a separate edition, in foil. The wrap has to be in your photo; HUNT tells you when one is out."),
                    wordsShown: told) {
             GeometryReader { g in
                 let scale = min(1, g.size.width / Self.board.width, g.size.height / Self.board.height)

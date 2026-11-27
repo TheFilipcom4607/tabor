@@ -165,7 +165,7 @@ private struct CatchLogRow: View {
                             Mono("NEW VEHICLE", size: 9.5, weight: 700, spacing: 0.1, color: Palette.sub)
                                 .fixedSize()
                         case .newForm:
-                            Mono("NEW FORM", size: 9.5, weight: 700, spacing: 0.1, color: Palette.foilInk)
+                            Mono("NEW EDITION", size: 9.5, weight: 700, spacing: 0.1, color: Palette.foilInk)
                                 .fixedSize()
                         case .again:
                             EmptyView()
