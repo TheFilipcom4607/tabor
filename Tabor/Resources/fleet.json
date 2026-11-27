@@ -1,7 +1,7 @@
 {
  "source": "Warsaw ZTM vehicle database (fetched 2026-09-22) and the city's open data (fetched 2026-11-22), plus Warszawikia, the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
  "sourcePl": "Baza pojazdów ZTM Warszawa (stan z 2026-09-22) i otwarte dane miasta (stan z 2026-11-22), a także Warszawikia, klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
- "fetched": "2026-11-27 16:42 UTC",
+ "fetched": "2026-11-27 16:53 UTC",
  "models": [
   {
    "id": "bus-solaris-urbino-18",
@@ -1484,7 +1484,7 @@
    "code": "Solaris Urbino 12E",
    "kind": "BUS",
    "operators": ["MZA", "KM Łomianki"],
-   "fleet": 63,
+   "fleet": 66,
    "firstYear": 2015,
    "lastYear": 2026,
    "batches": [
@@ -1494,8 +1494,8 @@
      "depotName": "Stalowa",
      "operator": "MZA",
      "numbers": [
-      1700, 1701, 1702, 1703, 1704, 1705, 1706,
-      1710, 1711, 1712, 1713, 1714, 1715, 1716, 1718, 1719,
+      1700, 1701, 1702, 1703, 1704, 1705, 1706, 1708, 1709,
+      1710, 1711, 1712, 1713, 1714, 1715, 1716, 1717, 1718, 1719,
       1720, 1721, 1722, 1723, 1724, 1725, 1726, 1727, 1728
      ]
     },
@@ -1626,8 +1626,8 @@
     "4": [
      725, 726, 727, 728,
      772, 773,
-     1700, 1701, 1702, 1703, 1704, 1705, 1706,
-     1710, 1711, 1712, 1713, 1714, 1715, 1716, 1718, 1719,
+     1700, 1701, 1702, 1703, 1704, 1705, 1706, 1708, 1709,
+     1710, 1711, 1712, 1713, 1714, 1715, 1716, 1717, 1718, 1719,
      1720, 1721, 1722, 1723, 1724, 1725, 1726, 1727, 1728,
      1911, 1912, 1913, 1914, 1915, 1916, 1917, 1918, 1919,
      1920, 1921, 1922, 1923, 1924, 1925, 1926, 1927, 1928, 1929,
