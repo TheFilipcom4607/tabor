@@ -951,6 +951,11 @@ assert len(GENERATION) == sum(len(ns) for ns in SOLARIS_GENERATIONS.values()), "
 # summer 2026 live on as the tests' fixture (Tests/Fixtures/wraps-2021-2026.json).
 # (id, kind, number, from, to, name, Polish name, event, hues, words, lines)
 WRAPS = [
+    # TW's Instagram reel of 2026-11-27 ("Już w przyszłym tygodniu", "01.12") shows #3227 with the
+    # wrap on its side. It gives no end date; Christmas wraps have always come off on 6 Jan (the
+    # user's call). Red measured on the reel; the lower band reads grey, its lettering is cut off.
+    ("tram-3227-xmas-2026", "TRAM", 3227, "2026-12-01", "2027-01-06", "CHRISTMAS 2026", "ŚWIĘTA 2026",
+     "christmas", ["red"], [], []),
 ]
 
 

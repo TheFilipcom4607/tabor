@@ -1,7 +1,7 @@
 {
  "source": "Warsaw ZTM vehicle database (fetched 2026-09-22) and the city's open data (fetched 2026-11-22), plus Warszawikia, the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
  "sourcePl": "Baza pojazdów ZTM Warszawa (stan z 2026-09-22) i otwarte dane miasta (stan z 2026-11-22), a także Warszawikia, klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
- "fetched": "2026-11-26 17:16 UTC",
+ "fetched": "2026-11-27 16:42 UTC",
  "models": [
   {
    "id": "bus-solaris-urbino-18",
@@ -7190,7 +7190,21 @@
   }
  ],
  "retiredModels": [],
- "wraps": [],
+ "wraps": [
+  {
+   "id": "tram-3227-xmas-2026",
+   "kind": "TRAM",
+   "number": 3227,
+   "from": "2026-12-01",
+   "to": "2027-01-06",
+   "name": "CHRISTMAS 2026",
+   "namePl": "ŚWIĘTA 2026",
+   "event": "christmas",
+   "hues": ["red"],
+   "words": [],
+   "lines": []
+  }
+ ],
  "depots": [
   {
    "code": "",
