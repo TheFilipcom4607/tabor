@@ -1,5 +1,5 @@
 {
-"fetched": "2026-11-22",
+"fetched": "2026-11-28",
 "source": "https://dane.um.warszawa.pl/api/action/get_ztm_pojazdy",
 "vehicles": [
 {
@@ -8881,6 +8881,240 @@
 "number": "6244",
 "idMarki": 168,
 "year": 2017,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-4 \"Stalowa\" (R-13)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6301",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6302",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6303",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6306",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6307",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6308",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6309",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6310",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6311",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6312",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6313",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6314",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6315",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6316",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6317",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6319",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6321",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6322",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6323",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6324",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6325",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6326",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6327",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6328",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6329",
+"idMarki": 5957,
+"year": 2026,
+"carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
+"depot": "R-3 \"Ostrobramska\" (R-10)",
+"colour": "RAL 1003+3020"
+},
+{
+"kind": "BUS",
+"number": "6362",
+"idMarki": 5957,
+"year": 2026,
 "carrier": "Miejskie Zakłady Autobusowe Sp. z o.o.",
 "depot": "R-4 \"Stalowa\" (R-13)",
 "colour": "RAL 1003+3020"

@@ -1,7 +1,7 @@
 {
- "source": "Warsaw ZTM vehicle database (fetched 2026-09-22) and the city's open data (fetched 2026-11-22), plus Warszawikia, the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
- "sourcePl": "Baza pojazdów ZTM Warszawa (stan z 2026-09-22) i otwarte dane miasta (stan z 2026-11-22), a także Warszawikia, klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
- "fetched": "2026-11-28 12:28 UTC",
+ "source": "Warsaw ZTM vehicle database (fetched 2026-09-22) and the city's open data (fetched 2026-11-28), plus Warszawikia, the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
+ "sourcePl": "Baza pojazdów ZTM Warszawa (stan z 2026-09-22) i otwarte dane miasta (stan z 2026-11-28), a także Warszawikia, klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
+ "fetched": "2026-11-28 12:30 UTC",
  "models": [
   {
    "id": "bus-solaris-urbino-18",
@@ -10,7 +10,7 @@
    "code": "Solaris Urbino 18",
    "kind": "BUS",
    "operators": ["MZA", "KM Łomianki"],
-   "fleet": 356,
+   "fleet": 381,
    "firstYear": 2008,
    "lastYear": 2026,
    "batches": [
@@ -19,7 +19,18 @@
      "depotCode": "R-3",
      "depotName": "Ostrobramska",
      "operator": "MZA",
-     "numbers": [6301]
+     "numbers": [
+      6301, 6302, 6303, 6306, 6307, 6308, 6309,
+      6310, 6311, 6312, 6313, 6314, 6315, 6316, 6317, 6319,
+      6321, 6322, 6323, 6324, 6325, 6326, 6327, 6328, 6329
+     ]
+    },
+    {
+     "year": 2026,
+     "depotCode": "R-4",
+     "depotName": "Stalowa",
+     "operator": "MZA",
+     "numbers": [6362]
     },
     {
      "year": 2016,
@@ -271,6 +282,22 @@
       "drive": "diesel",
       "floor": "LF",
       "length": 18000,
+      "places": 133,
+      "seats": 39
+     },
+     "numbers": [
+      6301, 6302, 6303, 6306, 6307, 6308, 6309,
+      6310, 6311, 6312, 6313, 6314, 6315, 6316, 6317, 6319,
+      6321, 6322, 6323, 6324, 6325, 6326, 6327, 6328, 6329,
+      6362
+     ]
+    },
+    {
+     "specs": {
+      "airCon": true,
+      "drive": "diesel",
+      "floor": "LF",
+      "length": 18000,
       "places": 163,
       "seats": 42
      },
@@ -401,7 +428,12 @@
      8880, 8881, 8882, 8883, 8884, 8885, 8886, 8887, 8888, 8889,
      8890, 8891, 8892, 8893, 8894, 8895, 8896, 8897, 8898, 8899
     ],
-    "4": [6301]
+    "4": [
+     6301, 6302, 6303, 6306, 6307, 6308, 6309,
+     6310, 6311, 6312, 6313, 6314, 6315, 6316, 6317, 6319,
+     6321, 6322, 6323, 6324, 6325, 6326, 6327, 6328, 6329,
+     6362
+    ]
    },
    "notes": {
     "5408": {
