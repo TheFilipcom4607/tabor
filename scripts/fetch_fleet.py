@@ -266,7 +266,7 @@ def with_city(vehicles, city, report=True):
 
 def unplaced_about(t, rows):
     """What the city's list says about a type no model has yet, for the waiting issue, so placing
-    it doesn't start with a dig through the JSON: " · city's list: Solaris Urbino 18, Spalinowy,
+    it doesn't start with a dig through the JSON: " · city list: Solaris Urbino 18, Spalinowy,
     2026, R-4 "Stalowa" (R-13)". Mixed years or depots are counted ("R-2 … ×12, R-4 … ×8").
     The numbers come before it, and the issue's readers stop at the first " · "."""
     def counted(values):
@@ -279,7 +279,7 @@ def unplaced_about(t, rows):
     parts.append(counted(str(r["year"]) for r in rows if r.get("year")))
     parts.append(counted(r["depot"] or "no depot" for r in rows))
     parts = [p for p in parts if p]
-    return f" · city's list: {', '.join(parts)}" if parts else ""
+    return f" · city list: {', '.join(parts)}" if parts else ""
 
 
 def span(numbers):
