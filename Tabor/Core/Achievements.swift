@@ -318,8 +318,9 @@ public enum Achievements {
                            progress: hits.isEmpty ? 0 : 1, goal: 1, proof: c.proof(hits))
     }
 
-    /// One Urbino model caught in two generations. Only the Urbino 12 and 12 electric were
-    /// built as both a III and a IV, and each has just 10 of one, so it's a real hunt.
+    /// One Urbino model caught in two generations. Only the Urbino 12, the 12 electric and (since
+    /// MZA's 2026 diesels, #63xx) the Urbino 18 were built as both a III and a IV, and each is
+    /// mostly one of them, so it's a real hunt.
     static func facelift(_ c: Context) -> Achievement? {
         let models = c.catalog.models.filter { $0.regular && $0.generations.count >= 2 }
         guard !models.isEmpty else { return nil }

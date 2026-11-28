@@ -910,6 +910,8 @@ CITY_PAINTS = {"RAL 5010 (L)": "suburbanBlue", "RAL 1004+3003": "oldYellowRed"}
 # #1430, #1910, #1911, #5460 and #701 show the right front (IV: one dark panel from the
 # windscreen up over the display; III: an upright windscreen under a separate display band). Every number here must be a Solaris; a Solaris missing from it gets no
 # generation, and the build prints it. Ranges may cover numbers the book doesn't have.
+# SHARED_WITH_SOLARIS are other makes' buses with a Solaris's number (KMKM's Ikarus 260 #6306 and
+# MZA's 2026 Urbino 18 #6306): fine, since only Solaris models look generations up.
 def _span(a, b=None):
     return range(a, (b or a) + 1)
 
@@ -947,6 +949,11 @@ SOLARIS_GENERATIONS = {
         *_span(4300, 4339),                                         # MZA Urbino 12 CNG
         *_span(5800, 5999), 7100,                                   # MZA Urbino 18 electric
         *_span(7700, 7759),                                         # MZA Urbino 18 CNG
+        # MZA's diesel Urbino 18s of 2026 (issue #132): the first new ones since the IIIs of 2015-16,
+        # with a DAF MX-11 and a Voith DIWA (_przejazd_techniczny on Instagram, 2026-11-28). Not
+        # yet checked against phototrans's body, unlike the rest: going by the year alone, so check
+        # that #6301's page says "Solaris Urbino IV".
+        *_span(6301, 6329), 6362,
         *_span(721, 728), *_span(772, 779),                         # Łomianki Urbino 12 (electric)
         *_span(9901, 9955),                                         # ReloBus Urbino 18 CNG
         # Solaris's Urbino 10,5 electric demonstrator, on trial with MZA: "Solaris Urbino IV" on
@@ -955,6 +962,7 @@ SOLARIS_GENERATIONS = {
     ],
 }
 GENERATION = {n: g for g, ns in SOLARIS_GENERATIONS.items() for n in ns}
+SHARED_WITH_SOLARIS = {6306}
 assert len(GENERATION) == sum(len(ns) for ns in SOLARIS_GENERATIONS.values()), "a bus in two generations"
 
 # Event wraps: a vehicle dressed for an event between two dates, emitted as fleet.json's
@@ -1330,8 +1338,13 @@ SPLIT = {
 # (#9061-9094), and the city gives them a type of their own (idMarki 5909, fewer seats). It listed
 # 15 on 2026-10-25, all at Estrady; phototrans has all 54 (checked #9001, #9012, #9026, #9050;
 # issue #108). The depot of the other 39 is assumed from those 15.
+# MZA's new diesel Solaris Urbino 18s (#63xx, 2026; 170 ordered): the city files them under a type
+# of their own (idMarki 5957, "Spalinowy", 39 seats) and listed 26 on 2026-11-28, 25 at R-3
+# Ostrobramska and 1 at R-4 Stalowa, where the first was delivered (issue #132). One number places
+# the type, and the rest follow with the city's depots. #6306 is also KMKM's Ikarus 260: both keep it.
 # (make, model, number, operator, year, depot.)
 EXTRA_BUSES = [
+    ("Solaris", "Urbino 18", 6301, "MZA", 2026, 'R-3 "Ostrobramska" (R-10)'),
     *[("Otokar", "Kent C LF Mild Hybrid", n, "Mobilis", 2026, "Posag 7 Panien MOB") for n in range(9601, 9655)],
     *[("Yutong", "U12-B", n, "MZA", 2026, 'R-1 "Woronicza" (R-07)') for n in range(1940, 1970)],
     *[("Solaris", "Urbino 18E", n, "MZA", 2026, 'R-2 "Kleszczowa" (R-11)')
@@ -1658,7 +1671,8 @@ def build(vehicles, city=None):
             continue
         nums = {n for b in m["batches"] for n in b["numbers"]}
         if m["make"] != "Solaris":
-            assert not nums & GENERATION.keys(), f"{m['name']} has Solaris generations: {sorted(nums & GENERATION.keys())}"
+            stray = sorted(nums & GENERATION.keys() - SHARED_WITH_SOLARIS)
+            assert not stray, f"{m['name']} has Solaris generations: {stray}"
         elif missing := sorted(nums - GENERATION.keys()):
             print(f"  {m['name']}: no Solaris generation for {missing} (SOLARIS_GENERATIONS)")
     numbers = {m["id"]: {n for b in m["batches"] for n in b["numbers"]} for m in models}

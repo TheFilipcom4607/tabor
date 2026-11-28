@@ -1,7 +1,7 @@
 {
  "source": "Warsaw ZTM vehicle database (fetched 2026-09-22) and the city's open data (fetched 2026-11-22), plus Warszawikia, the KMKM club, tramwar.pl, TransInfo, phototrans.eu and live GPS",
  "sourcePl": "Baza pojazdów ZTM Warszawa (stan z 2026-09-22) i otwarte dane miasta (stan z 2026-11-22), a także Warszawikia, klub KMKM, tramwar.pl, TransInfo, phototrans.eu i GPS na żywo",
- "fetched": "2026-11-27 16:53 UTC",
+ "fetched": "2026-11-28 12:28 UTC",
  "models": [
   {
    "id": "bus-solaris-urbino-18",
@@ -10,10 +10,17 @@
    "code": "Solaris Urbino 18",
    "kind": "BUS",
    "operators": ["MZA", "KM Łomianki"],
-   "fleet": 355,
+   "fleet": 356,
    "firstYear": 2008,
-   "lastYear": 2016,
+   "lastYear": 2026,
    "batches": [
+    {
+     "year": 2026,
+     "depotCode": "R-3",
+     "depotName": "Ostrobramska",
+     "operator": "MZA",
+     "numbers": [6301]
+    },
     {
      "year": 2016,
      "depotCode": "R-2",
@@ -393,7 +400,8 @@
      8870, 8871, 8872, 8873, 8874, 8875, 8876, 8877, 8878, 8879,
      8880, 8881, 8882, 8883, 8884, 8885, 8886, 8887, 8888, 8889,
      8890, 8891, 8892, 8893, 8894, 8895, 8896, 8897, 8898, 8899
-    ]
+    ],
+    "4": [6301]
    },
    "notes": {
     "5408": {
