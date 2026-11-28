@@ -6,7 +6,7 @@ publishes them as data, so the rows in fetch_fleet.py's WRAPS are added by hand 
 confirms them. This looks for the hints and lists them for a human:
 
 - Vehicles on an event line in the live feed: anything that isn't a plain number or a routine
-  lettered line (suburban L, night N, replacement Z, express E, cemetery C). The Christmas gift
+  lettered line (suburban L, night N, replacement Z and ZS, express E, cemetery C). The Christmas gift
   bus ran as M, Valentine's as W26, the summer bus as WAKACJE.
 - New posts in MZA's news search for the words its wrap posts use. "spec" also catches
   timetable posts; that's the price of not missing "specjalnie oklejony". So each post's text
@@ -60,9 +60,9 @@ MODEL = "typesafe/jev-1.14"
 # Low on purpose (the user, 2026-10-30): a bad issue or two beats a missed wrap, which costs a
 # sticker nobody can get again. Only posts the model is fairly sure about are dropped.
 WRAP_ODDS = 0.1
-# Lines that run every day: suburban L-1/L11, night N01, replacement Z-4/Z12, express E-1,
-# cemetery C01 (around 1 November).
-ROUTINE = re.compile(r"\d+|[LNZEC]-?\d+")
+# Lines that run every day: suburban L-1/L11, night N01, replacement Z-4/Z12 and ZS2
+# ("zastępcza", #133), express E-1, cemetery C01 (around 1 November).
+ROUTINE = re.compile(r"\d+|(?:[LNZEC]|ZS)-?\d+")
 # The feed keeps each vehicle's last row after it stops; an event line runs a weekend or so.
 FEED_WINDOW = timedelta(days=3)
 POST_WINDOW = timedelta(days=21)
