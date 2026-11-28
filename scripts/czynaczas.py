@@ -192,7 +192,8 @@ def annotate(path):
     from phototrans import Phototrans
     photo = Phototrans(json.loads((ROOT / "Tabor/Resources/fleet.json").read_text()))
     for line in sys.stdin.read().splitlines():
-        m = re.match(r"- typ \d+ \((autobusy|tramwaje)\): (.*)", line)
+        # Only the numbers: what the city's list says about the type follows the first " · ".
+        m = re.match(r"- typ \d+ \((autobusy|tramwaje)\): ([^·]*)", line)
         # The first number's phototrans search: one look at it usually tells the whole type.
         first = m and re.search(r"\d+", m.group(2))
         tail = f" · {photo.link('BUS' if m.group(1) == 'autobusy' else 'TRAM', first.group())}" if first else ""

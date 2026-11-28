@@ -166,12 +166,14 @@ jobs:
             cat changes.md
           } > pr-body.md
           # To place a type, add one of its numbers to EXTRA_BUSES in fetch_fleet.py under its make
-          # and model; the rest of the type follows.
+          # and model; the rest of the type follows. Each line ends with what the city's list says
+          # about the type (make and model, power, years, depots), so that's where to start.
           {
             # Most nights there are none, and grep finding nothing would fail the step.
             { grep '^?' "$RUNNER_TEMP/build.txt" || true; } \
               | sed -E 's/^\? BUS type ([0-9]+) fits no model yet, left out: /- typ \1 (autobusy): /;
-                        s/^\? TRAM type ([0-9]+) fits no model yet, left out: /- typ \1 (tramwaje): /' \
+                        s/^\? TRAM type ([0-9]+) fits no model yet, left out: /- typ \1 (tramwaje): /;
+                        s/ · city's list: / · wykaz miasta: /; s/no depot/bez zajezdni/g' \
               | python3 scripts/czynaczas.py annotate "$RUNNER_TEMP/czynaczas.json"
             echo
             echo "<sub>[Nie wiesz, co to?](https://thefilip.com/tabor/boty#bez-modelu)</sub>"

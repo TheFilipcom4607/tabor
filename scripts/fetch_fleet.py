@@ -255,11 +255,31 @@ def with_city(vehicles, city, report=True):
         return out
     for model, n in added.most_common():
         print(f"  + {n} from the city's list: {model}")
+    types = {(kind, t["idMarki"]): t for kind, ts in city.get("types", {}).items() for t in ts}
     for (kind, id_marki), numbers in sorted(unplaced.items()):
-        print(f"  ? {kind} type {id_marki} fits no model yet, left out: {', '.join(numbers)}")
+        about = unplaced_about(types.get((kind, id_marki)), [listed[(kind, n)] for n in numbers])
+        print(f"  ? {kind} type {id_marki} fits no model yet, left out: {', '.join(numbers)}{about}")
     for (kind, make, model), numbers in sorted(gone.items()):
         print(f"  - gone from the city's list, retired: {kind} {make} {model} {span(numbers)}")
     return out
+
+
+def unplaced_about(t, rows):
+    """What the city's list says about a type no model has yet, for the waiting issue, so placing
+    it doesn't start with a dig through the JSON: " · city's list: Solaris Urbino 18, Spalinowy,
+    2026, R-4 "Stalowa" (R-13)". Mixed years or depots are counted ("R-2 … ×12, R-4 … ×8").
+    The numbers come before it, and the issue's readers stop at the first " · "."""
+    def counted(values):
+        c = Counter(values)
+        return ", ".join(v if len(c) == 1 else f"{v} ×{n}" for v, n in c.most_common())
+    parts = []
+    if t:
+        parts.append(" ".join(filter(None, (t.get("marka"), t.get("typ")))))
+        parts.append(t.get("rodzajZasilania") or "")
+    parts.append(counted(str(r["year"]) for r in rows if r.get("year")))
+    parts.append(counted(r["depot"] or "no depot" for r in rows))
+    parts = [p for p in parts if p]
+    return f" · city's list: {', '.join(parts)}" if parts else ""
 
 
 def span(numbers):
